@@ -70,10 +70,10 @@ class Settings: ObservableObject {
     ]
 
     static let enhancementModels = [
+        "gpt-5.1",
         "gpt-4o-mini",
         "gpt-4o",
-        "gpt-4-turbo",
-        "gpt-3.5-turbo"
+        "gpt-4-turbo"
     ]
 
     // MARK: - Initialization
@@ -85,7 +85,7 @@ class Settings: ObservableObject {
         self.elevenlabsApiKey = defaults.string(forKey: Keys.elevenlabsApiKey) ?? ""
         self.openaiModel = defaults.string(forKey: Keys.openaiModel) ?? "gpt-4o-transcribe"
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
-        self.enhancementModel = defaults.string(forKey: Keys.enhancementModel) ?? "gpt-4o-mini"
+        self.enhancementModel = defaults.string(forKey: Keys.enhancementModel) ?? "gpt-5.1"
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true
     }
 

@@ -89,6 +89,7 @@ class AppState: ObservableObject {
     let audioRecorder = AudioRecorder()
     let whisperService = WhisperService()
     let elevenlabsService = ElevenLabsService()
+    let enhancementService = EnhancementService()
     let textInserter = TextInserter()
     let hotkeyManager = HotkeyManager()
 
@@ -200,7 +201,16 @@ class AppState: ObservableObject {
             }
             debugLog("Transcription result: \(transcription)")
 
-            let finalText = transcription
+            // Step 2: Enhance (if enabled)
+            let finalText: String
+            if settings.enhancementEnabled {
+                debugLog("Starting enhancement...")
+                processingStage = "Enhancing..."
+                finalText = try await enhancementService.enhance(text: transcription)
+                debugLog("Enhanced result: \(finalText)")
+            } else {
+                finalText = transcription
+            }
 
             // Step 3: Insert at cursor
             debugLog("Inserting text...")
