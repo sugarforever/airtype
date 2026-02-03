@@ -8,22 +8,30 @@ class EnhancementService {
         self.settings = settings
     }
 
-    /// Enhance transcribed text using GPT
+    /// Enhance transcribed text using GPT with timeout and error handling
     func enhance(text: String) async throws -> String {
         guard settings.enhancementEnabled else {
             return text
+        }
+
+        // Skip enhancement for very short text
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedText.count < 3 {
+            return trimmedText
         }
 
         guard !settings.openaiApiKey.isEmpty else {
             throw EnhancementError.noAPIKey
         }
 
-        let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+        let baseURL = settings.openaiBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        let url = URL(string: "\(baseURL)/chat/completions")!
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(settings.openaiApiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60  // 1 minute timeout
 
         let requestBody = ChatCompletionRequest(
             model: settings.enhancementModel,
@@ -37,7 +45,21 @@ class EnhancementService {
 
         request.httpBody = try JSONEncoder().encode(requestBody)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .timedOut:
+                throw EnhancementError.networkTimeout
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw EnhancementError.apiError("No internet connection")
+            default:
+                throw EnhancementError.apiError("Network error: \(error.localizedDescription)")
+            }
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw EnhancementError.invalidResponse
@@ -45,9 +67,30 @@ class EnhancementService {
 
         if httpResponse.statusCode != 200 {
             if let errorResponse = try? JSONDecoder().decode(OpenAIErrorResponse.self, from: data) {
-                throw EnhancementError.apiError(errorResponse.error.message)
+                let message = errorResponse.error.message
+
+                // Detect specific error types
+                if message.lowercased().contains("rate limit") {
+                    throw EnhancementError.apiError("Rate limit exceeded. Text will be used without enhancement.")
+                }
+                if message.lowercased().contains("model") {
+                    throw EnhancementError.apiError("Model '\(settings.enhancementModel)' not available. Please check Settings.")
+                }
+
+                throw EnhancementError.apiError(message)
             }
-            throw EnhancementError.httpError(httpResponse.statusCode)
+
+            // Handle common HTTP status codes
+            switch httpResponse.statusCode {
+            case 401:
+                throw EnhancementError.apiError("Invalid API key")
+            case 429:
+                throw EnhancementError.apiError("Rate limit exceeded")
+            case 500, 502, 503:
+                throw EnhancementError.apiError("Server error. Using original text.")
+            default:
+                throw EnhancementError.httpError(httpResponse.statusCode)
+            }
         }
 
         let completion = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
@@ -55,7 +98,14 @@ class EnhancementService {
             throw EnhancementError.noContent
         }
 
-        return enhancedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = enhancedText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // If enhancement returned empty, use original
+        if result.isEmpty {
+            return trimmedText
+        }
+
+        return result
     }
 
     private var enhancementPrompt: String {
@@ -110,6 +160,7 @@ enum EnhancementError: LocalizedError {
     case httpError(Int)
     case apiError(String)
     case noContent
+    case networkTimeout
 
     var errorDescription: String? {
         switch self {
@@ -120,9 +171,11 @@ enum EnhancementError: LocalizedError {
         case .httpError(let code):
             return "HTTP error: \(code)"
         case .apiError(let message):
-            return "API error: \(message)"
+            return "Enhancement error: \(message)"
         case .noContent:
             return "No content in API response"
+        case .networkTimeout:
+            return "Enhancement timed out. Text used without enhancement."
         }
     }
 }

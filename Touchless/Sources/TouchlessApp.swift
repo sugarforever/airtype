@@ -83,6 +83,9 @@ class AppState: ObservableObject {
     @Published var isRecording = false
     @Published var isProcessing = false
     @Published var processingStage = ""
+    @Published var processingProgress: Double = 0.0  // 0.0 to 1.0
+    @Published var transcriptionChunkInfo = ""       // e.g., "Chunk 2/5"
+    @Published var partialTranscription = ""         // Accumulated text during chunked transcription
     @Published var lastError: String?
 
     let settings = Settings.shared
@@ -175,48 +178,83 @@ class AppState: ObservableObject {
 
         debugLog("Recording stopped, file: \(audioURL.path)")
 
-        // Check file size
+        // Check file size and validate
+        var fileSize: Int64 = 0
         if let attrs = try? FileManager.default.attributesOfItem(atPath: audioURL.path),
            let size = attrs[.size] as? Int64 {
+            fileSize = size
             debugLog("Audio file size: \(size) bytes")
+        }
+
+        // Check for empty/too short recording
+        if fileSize < 1000 {  // Less than 1KB is likely empty
+            debugLog("Recording too short, skipping")
+            lastError = "Recording too short. Please speak for longer."
+            audioRecorder.cleanupRecording(at: audioURL)
+            isRecording = false
+            return
         }
 
         isRecording = false
         isProcessing = true
+        processingProgress = 0.0
+        partialTranscription = ""
+        transcriptionChunkInfo = ""
 
         do {
-            // Step 1: Transcribe using selected provider (with streaming for OpenAI)
+            // Step 1: Transcribe using selected provider (with progress for OpenAI)
             debugLog("Starting transcription with \(settings.transcriptionProvider.rawValue)...")
             processingStage = "Transcribing..."
             let transcription: String
+
             switch settings.transcriptionProvider {
             case .openai:
-                transcription = try await whisperService.transcribeStreaming(audioURL: audioURL) { [weak self] partialText in
+                transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL) { [weak self] progress in
                     Task { @MainActor in
-                        self?.processingStage = partialText.isEmpty ? "Transcribing..." : partialText
+                        self?.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
+                        self?.partialTranscription = progress.partialText
+
+                        // Update stage with chunk info
+                        if progress.totalChunks > 1 {
+                            self?.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
+                            self?.processingStage = "\(progress.stage.rawValue) \(self?.transcriptionChunkInfo ?? "")"
+                        } else {
+                            self?.processingStage = progress.stage.rawValue
+                        }
                     }
                 }
             case .elevenlabs:
                 transcription = try await elevenlabsService.transcribe(audioURL: audioURL)
             }
+
             debugLog("Transcription result: \(transcription)")
+
+            // Check for empty transcription
+            if transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                throw WhisperError.emptyRecording
+            }
 
             // Step 2: Enhance (if enabled)
             let finalText: String
             if settings.enhancementEnabled {
                 debugLog("Starting enhancement...")
                 processingStage = "Enhancing..."
+                processingProgress = 0.75
                 finalText = try await enhancementService.enhance(text: transcription)
                 debugLog("Enhanced result: \(finalText)")
+                processingProgress = 0.9
             } else {
                 finalText = transcription
+                processingProgress = 0.9
             }
 
             // Step 3: Insert at cursor
             debugLog("Inserting text...")
             processingStage = "Inserting..."
+            processingProgress = 0.95
             try await textInserter.insert(text: finalText)
             debugLog("Text inserted successfully")
+            processingProgress = 1.0
 
             lastError = nil
         } catch {
@@ -228,6 +266,9 @@ class AppState: ObservableObject {
         audioRecorder.cleanupRecording(at: audioURL)
         isProcessing = false
         processingStage = ""
+        processingProgress = 0.0
+        partialTranscription = ""
+        transcriptionChunkInfo = ""
         debugLog("Processing complete")
     }
 

@@ -19,12 +19,16 @@ class Settings: ObservableObject {
     private enum Keys {
         static let transcriptionProvider = "transcription_provider"
         static let openaiApiKey = "openai_api_key"
+        static let openaiBaseURL = "openai_base_url"
         static let elevenlabsApiKey = "elevenlabs_api_key"
         static let openaiModel = "openai_transcription_model"
         static let elevenlabsModel = "elevenlabs_transcription_model"
         static let enhancementModel = "enhancement_model"
         static let enhancementEnabled = "enhancement_enabled"
     }
+
+    // MARK: - Constants
+    static let defaultOpenAIBaseURL = "https://api.openai.com/v1"
 
     // MARK: - Published Properties
 
@@ -34,6 +38,10 @@ class Settings: ObservableObject {
 
     @Published var openaiApiKey: String {
         didSet { defaults.set(openaiApiKey, forKey: Keys.openaiApiKey) }
+    }
+
+    @Published var openaiBaseURL: String {
+        didSet { defaults.set(openaiBaseURL, forKey: Keys.openaiBaseURL) }
     }
 
     @Published var elevenlabsApiKey: String {
@@ -70,7 +78,7 @@ class Settings: ObservableObject {
     ]
 
     static let enhancementModels = [
-        "gpt-5.1",
+        "gpt-4o",
         "gpt-4o-mini",
         "gpt-4o",
         "gpt-4-turbo"
@@ -82,10 +90,11 @@ class Settings: ObservableObject {
         self.transcriptionProvider = TranscriptionProvider(rawValue: providerRaw) ?? .openai
 
         self.openaiApiKey = defaults.string(forKey: Keys.openaiApiKey) ?? ""
+        self.openaiBaseURL = defaults.string(forKey: Keys.openaiBaseURL) ?? Settings.defaultOpenAIBaseURL
         self.elevenlabsApiKey = defaults.string(forKey: Keys.elevenlabsApiKey) ?? ""
         self.openaiModel = defaults.string(forKey: Keys.openaiModel) ?? "gpt-4o-transcribe"
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
-        self.enhancementModel = defaults.string(forKey: Keys.enhancementModel) ?? "gpt-5.1"
+        self.enhancementModel = defaults.string(forKey: Keys.enhancementModel) ?? "gpt-4o"
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true
     }
 

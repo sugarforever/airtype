@@ -91,7 +91,7 @@ struct SettingsView: View {
                 // OpenAI API Key
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 4) {
-                        Text("OpenAI")
+                        Text("OpenAI API Key")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                         if settings.transcriptionProvider == .elevenlabs {
@@ -103,6 +103,33 @@ struct SettingsView: View {
                     SecureField("sk-...", text: $settings.openaiApiKey)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 12, design: .monospaced))
+                }
+
+                // OpenAI Base URL (for OpenRouter, etc.)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Text("API Base URL")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text("(OpenRouter, Azure, etc.)")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    HStack(spacing: 8) {
+                        TextField(Settings.defaultOpenAIBaseURL, text: $settings.openaiBaseURL)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11, design: .monospaced))
+                        Button("Reset") {
+                            settings.openaiBaseURL = Settings.defaultOpenAIBaseURL
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    if settings.openaiBaseURL != Settings.defaultOpenAIBaseURL {
+                        Text("Using custom endpoint")
+                            .font(.system(size: 10))
+                            .foregroundColor(.orange)
+                    }
                 }
 
                 // ElevenLabs API Key

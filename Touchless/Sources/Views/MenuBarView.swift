@@ -8,24 +8,46 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Recording banner (prominent when recording)
             if appState.isRecording {
-                HStack(spacing: 10) {
-                    // Pulsing recording dot
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 12, height: 12)
-                        .scaleEffect(isPulsing ? 1.2 : 0.8)
-                        .opacity(isPulsing ? 1.0 : 0.6)
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isPulsing)
+                VStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        // Pulsing recording dot
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 10, height: 10)
+                            .scaleEffect(isPulsing ? 1.2 : 0.8)
+                            .opacity(isPulsing ? 1.0 : 0.6)
+                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isPulsing)
 
-                    Text("Recording...")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
+                        Text("Recording")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
 
-                    Spacer()
+                        Spacer()
 
+                        // Duration display
+                        Text(appState.audioRecorder.formattedDuration)
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+
+                    // Audio level meter
+                    AudioLevelMeter(level: appState.audioRecorder.audioLevel, peakLevel: appState.audioRecorder.peakLevel)
+
+                    // Hint text
                     Text("Release to transcribe")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.8))
+
+                    // Warning for long recordings
+                    if appState.audioRecorder.isLongRecording {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 10))
+                            Text("Long recording - may take longer to process")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.white.opacity(0.7))
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -60,32 +82,56 @@ struct MenuBarView: View {
                 .padding(.vertical, 10)
             }
 
-            // Processing indicator with streaming text
+            // Processing indicator with progress bar and streaming text
             if appState.isProcessing {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Stage and spinner
                     HStack(spacing: 8) {
                         ProgressView()
                             .scaleEffect(0.7)
                             .frame(width: 16, height: 16)
-                        Text(isStreamingText ? "Transcribing..." : appState.processingStage)
-                            .font(.system(size: 11))
+                        Text(appState.processingStage)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        // Percentage
+                        Text("\(Int(appState.processingProgress * 100))%")
+                            .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
 
-                    // Show streaming transcription text
-                    if isStreamingText {
-                        Text(appState.processingStage)
-                            .font(.system(size: 12))
-                            .foregroundColor(.primary)
-                            .lineLimit(4)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(6)
+                    // Progress bar
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.secondary.opacity(0.2))
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.accentColor)
+                                .frame(width: geometry.size.width * appState.processingProgress)
+                                .animation(.easeInOut(duration: 0.2), value: appState.processingProgress)
+                        }
+                    }
+                    .frame(height: 4)
+
+                    // Show partial transcription text during chunked transcription
+                    if !appState.partialTranscription.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Preview:")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Text(appState.partialTranscription)
+                                .font(.system(size: 11))
+                                .foregroundColor(.primary)
+                                .lineLimit(4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(8)
+                        .background(Color.secondary.opacity(0.08))
+                        .cornerRadius(6)
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+                .padding(.vertical, 8)
             }
 
             Divider()
@@ -154,15 +200,6 @@ struct MenuBarView: View {
     }
 
     // MARK: - Computed Properties
-
-    /// Check if processing stage contains streaming transcription text
-    private var isStreamingText: Bool {
-        let stage = appState.processingStage
-        return !stage.isEmpty &&
-               stage != "Transcribing..." &&
-               stage != "Enhancing..." &&
-               stage != "Inserting..."
-    }
 
     private var currentModel: String {
         switch appState.settings.transcriptionProvider {
@@ -267,5 +304,58 @@ struct MenuButton: View {
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+}
+
+// MARK: - Audio Level Meter Component
+
+/// Visual audio level meter with smooth animation
+struct AudioLevelMeter: View {
+    let level: Float      // Current audio level (0.0 - 1.0)
+    let peakLevel: Float  // Peak level for indicator
+
+    private let barCount = 20
+    private let activeColor = Color.white
+    private let inactiveColor = Color.white.opacity(0.2)
+    private let peakColor = Color.yellow
+
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 2) {
+                ForEach(0..<barCount, id: \.self) { index in
+                    let threshold = Float(index) / Float(barCount)
+                    let isActive = level > threshold
+                    let isPeak = peakLevel > threshold && peakLevel <= threshold + (1.0 / Float(barCount))
+
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(isPeak ? peakColor : (isActive ? activeColor : inactiveColor))
+                        .animation(.easeOut(duration: 0.05), value: isActive)
+                }
+            }
+        }
+        .frame(height: 6)
+    }
+}
+
+/// Alternative waveform-style visualization
+struct AudioWaveform: View {
+    let level: Float
+    let barCount: Int = 12
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<barCount, id: \.self) { index in
+                // Create varied heights based on index and current level
+                let baseHeight = CGFloat(level) * 20
+                let variation = sin(Double(index) * 0.5) * 0.3 + 0.7
+                let height = max(2, baseHeight * CGFloat(variation))
+
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.white)
+                    .frame(width: 3, height: height)
+                    .animation(.easeInOut(duration: 0.1), value: level)
+            }
+        }
+        .frame(height: 20)
     }
 }
