@@ -168,13 +168,13 @@ struct SettingsView: View {
     }
 
     private var enhancementSection: some View {
-        SettingsSection(title: "Text Enhancement") {
+        SettingsSection(title: "Error Correction") {
             VStack(alignment: .leading, spacing: 12) {
                 Toggle(isOn: $settings.enhancementEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable AI enhancement")
+                        Text("Enable AI error correction")
                             .font(.system(size: 12))
-                        Text("Clean up filler words, fix repetitions, add punctuation")
+                        Text("Fix misrecognized words, add punctuation, format numbers")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }

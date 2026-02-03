@@ -23,6 +23,16 @@ func debugLog(_ message: String) {
     fputs(line, stderr)
 }
 
+/// Print transcription output to stdout (for terminal streaming)
+func streamOutput(_ text: String, newline: Bool = true) {
+    if newline {
+        print(text)
+    } else {
+        print(text, terminator: "")
+    }
+    fflush(stdout)
+}
+
 @main
 struct TouchlessApp: App {
     @StateObject private var appState = AppState()
@@ -87,6 +97,9 @@ class AppState: ObservableObject {
     @Published var transcriptionChunkInfo = ""       // e.g., "Chunk 2/5"
     @Published var partialTranscription = ""         // Accumulated text during chunked transcription
     @Published var lastError: String?
+
+    // For streaming output tracking
+    private var lastStreamedLength = 0
 
     let settings = Settings.shared
     let audioRecorder = AudioRecorder()
@@ -205,21 +218,35 @@ class AppState: ObservableObject {
             // Step 1: Transcribe using selected provider (with progress for OpenAI)
             debugLog("Starting transcription with \(settings.transcriptionProvider.rawValue)...")
             processingStage = "Transcribing..."
+            streamOutput("\n--- Transcribing (\(settings.transcriptionProvider.rawValue))... ---")
+            lastStreamedLength = 0
             let transcription: String
 
             switch settings.transcriptionProvider {
             case .openai:
                 transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL) { [weak self] progress in
                     Task { @MainActor in
-                        self?.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
-                        self?.partialTranscription = progress.partialText
+                        guard let self = self else { return }
+                        self.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
+                        self.partialTranscription = progress.partialText
+
+                        // Stream partial results to terminal (chunk by chunk)
+                        if progress.totalChunks > 1 && !progress.partialText.isEmpty {
+                            let currentLength = progress.partialText.count
+                            if currentLength > self.lastStreamedLength {
+                                let startIndex = progress.partialText.index(progress.partialText.startIndex, offsetBy: self.lastStreamedLength)
+                                let newText = String(progress.partialText[startIndex...])
+                                streamOutput(newText, newline: false)
+                                self.lastStreamedLength = currentLength
+                            }
+                        }
 
                         // Update stage with chunk info
                         if progress.totalChunks > 1 {
-                            self?.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
-                            self?.processingStage = "\(progress.stage.rawValue) \(self?.transcriptionChunkInfo ?? "")"
+                            self.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
+                            self.processingStage = "\(progress.stage.rawValue) \(self.transcriptionChunkInfo)"
                         } else {
-                            self?.processingStage = progress.stage.rawValue
+                            self.processingStage = progress.stage.rawValue
                         }
                     }
                 }
@@ -228,6 +255,8 @@ class AppState: ObservableObject {
             }
 
             debugLog("Transcription result: \(transcription)")
+            streamOutput("\n\n--- Raw transcription ---")
+            streamOutput(transcription)
 
             // Check for empty transcription
             if transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -238,10 +267,13 @@ class AppState: ObservableObject {
             let finalText: String
             if settings.enhancementEnabled {
                 debugLog("Starting enhancement...")
-                processingStage = "Enhancing..."
+                processingStage = "Correcting..."
+                streamOutput("\n--- Correcting errors... ---")
                 processingProgress = 0.75
                 finalText = try await enhancementService.enhance(text: transcription)
                 debugLog("Enhanced result: \(finalText)")
+                streamOutput("\n--- Corrected text ---")
+                streamOutput(finalText)
                 processingProgress = 0.9
             } else {
                 finalText = transcription
@@ -251,9 +283,11 @@ class AppState: ObservableObject {
             // Step 3: Insert at cursor
             debugLog("Inserting text...")
             processingStage = "Inserting..."
+            streamOutput("\n--- Inserting at cursor ---")
             processingProgress = 0.95
             try await textInserter.insert(text: finalText)
             debugLog("Text inserted successfully")
+            streamOutput("Done!\n")
             processingProgress = 1.0
 
             lastError = nil

@@ -1,6 +1,7 @@
 import Foundation
 
-/// OpenAI GPT service for text enhancement
+/// OpenAI GPT service for speech-to-text error correction
+/// Fixes transcription errors while preserving the speaker's original words
 class EnhancementService {
     private let settings: Settings
 
@@ -8,7 +9,8 @@ class EnhancementService {
         self.settings = settings
     }
 
-    /// Enhance transcribed text using GPT with timeout and error handling
+    /// Correct transcription errors using GPT with timeout and error handling
+    /// Preserves original speech while fixing ASR mistakes
     func enhance(text: String) async throws -> String {
         guard settings.enhancementEnabled else {
             return text
@@ -39,7 +41,7 @@ class EnhancementService {
                 ChatMessage(role: "system", content: enhancementPrompt),
                 ChatMessage(role: "user", content: text)
             ],
-            temperature: 0.3,
+            temperature: 0.1,  // Low temperature for conservative corrections
             maxTokens: 2048
         )
 
@@ -110,19 +112,28 @@ class EnhancementService {
 
     private var enhancementPrompt: String {
         """
-        You are a text enhancement assistant. Your task is to clean up transcribed speech and make it ready for use.
+        You are a speech-to-text error corrector. Fix transcription errors while preserving the speaker's original words as much as possible.
 
-        Rules:
-        1. Remove filler words: um, uh, like, you know, basically, actually, literally, kind of, sort of, I mean
-        2. Remove false starts and repetitions (when someone restarts a sentence)
-        3. Fix self-corrections (use the corrected version only)
-        4. Add proper punctuation and capitalization
-        5. Keep the original meaning and tone intact
-        6. Do NOT add new information or change the intent
-        7. Do NOT use formal language unless the original was formal
-        8. Keep it concise and natural
+        CORRECT these issues:
+        - Misrecognized words due to pronunciation, accent, or background noise
+        - Homophones: choose contextually correct form (your/you're, their/there/they're, its/it's)
+        - Technical terms and proper nouns: use correct casing (react → React, ios → iOS, github → GitHub)
+        - Numbers and dates: convert to numerals (twenty three → 23, december fifth → December 5th)
+        - Missing punctuation and capitalization
+        - Sentence boundaries: split run-on sentences properly
+        - Immediate word stutters: remove duplicates (I I I think → I think, the the → the)
 
-        Return ONLY the cleaned text, nothing else. No explanations, no quotes around the text.
+        DO NOT change:
+        - Filler words (um, uh, like, you know) - keep them
+        - Self-corrections (keep "Monday, no wait, Tuesday" exactly as spoken)
+        - User's grammar or dialect (preserve "I seen him" if that's what they said)
+        - Repeated phrases for emphasis (keep "I think, I think we should")
+        - Word choices or sentence structure
+
+        IMPORTANT:
+        - When uncertain if something is an error or intentional, leave it unchanged
+        - Be conservative - only fix clear transcription errors
+        - Return ONLY the corrected text, nothing else
         """
     }
 }
