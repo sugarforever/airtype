@@ -19,14 +19,9 @@ struct FloatingView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            RoundedRectangle(cornerRadius: isExpanded ? 16 : 30)
-                .fill(Color.black.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: isExpanded ? 16 : 30)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+            // Background - rectangular to match window frame
+            Rectangle()
+                .fill(Color.black.opacity(0.92))
 
             // Content
             if isExpanded {
@@ -39,14 +34,25 @@ struct FloatingView: View {
             width: isExpanded ? expandedSize.width : pillSize.width,
             height: isExpanded ? expandedSize.height : pillSize.height
         )
+        .ignoresSafeArea()
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
         .onTapGesture {
-            withAnimation {
-                isExpanded.toggle()
-            }
+            toggleExpanded()
         }
         .onHover { hovering in
             isHovering = hovering
+        }
+    }
+
+    private func toggleExpanded() {
+        let newExpanded = !isExpanded
+        let newSize = newExpanded ? expandedSize : pillSize
+
+        // Resize the window first, then animate the content
+        appState.floatingWindowManager.resize(to: NSSize(width: newSize.width, height: newSize.height))
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isExpanded = newExpanded
         }
     }
 
@@ -142,7 +148,6 @@ struct FloatingView: View {
                     .foregroundColor(.white.opacity(0.5))
                     .frame(width: 24, height: 24)
                     .background(Color.white.opacity(0.1))
-                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
         }
@@ -223,7 +228,6 @@ struct FloatingView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
                         .background(Color.white.opacity(0.05))
-                        .cornerRadius(8)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -259,7 +263,6 @@ struct FloatingView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(Color.white.opacity(0.1))
-                        .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
             } else if !appState.partialTranscription.isEmpty && !appState.isProcessing && appState.settings.previewBeforeInsert {
@@ -271,7 +274,6 @@ struct FloatingView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(Color.white)
-                        .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
 
@@ -283,7 +285,6 @@ struct FloatingView: View {
                         .frame(width: 80)
                         .frame(height: 32)
                         .background(Color.white.opacity(0.1))
-                        .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
             }
@@ -381,12 +382,12 @@ struct FloatingProgressStyle: ProgressViewStyle {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Background track
-                RoundedRectangle(cornerRadius: 2)
+                Rectangle()
                     .fill(Color.white.opacity(0.2))
                     .frame(height: 4)
 
                 // Progress fill
-                RoundedRectangle(cornerRadius: 2)
+                Rectangle()
                     .fill(
                         LinearGradient(
                             colors: [Color.white, Color.white.opacity(0.8)],

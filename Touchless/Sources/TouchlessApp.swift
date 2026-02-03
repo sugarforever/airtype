@@ -85,12 +85,24 @@ class FloatingWindowManager: ObservableObject {
         guard let panel = panel else { return }
 
         let floatingView = FloatingView(appState: appState)
+            .ignoresSafeArea()
         let hostingView = NSHostingView(rootView: floatingView)
+
+        // Make hosting view background fully transparent
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
+        hostingView.layer?.isOpaque = false
+
         panel.contentView = hostingView
+        panel.backgroundColor = NSColor.clear
     }
 
     func reposition(to position: FloatingWindowPosition) {
         panel?.position(at: position)
+    }
+
+    func resize(to size: NSSize) {
+        panel?.animateResize(to: size, position: Settings.shared.floatingWindowPosition)
     }
 
     private func createPanel(with appState: AppState) {
@@ -100,10 +112,18 @@ class FloatingWindowManager: ObservableObject {
         panel = FloatingPanel(contentRect: contentRect)
 
         let floatingView = FloatingView(appState: appState)
+            .ignoresSafeArea()
         let hostingView = NSHostingView(rootView: floatingView)
         hostingView.frame = contentRect
 
+        // Make hosting view background fully transparent
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
+        hostingView.layer?.isOpaque = false
+
+        // Set after contentView is assigned for proper transparency
         panel?.contentView = hostingView
+        panel?.backgroundColor = NSColor.clear
     }
 }
 

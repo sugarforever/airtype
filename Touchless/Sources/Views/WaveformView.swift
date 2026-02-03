@@ -60,7 +60,7 @@ struct WaveformBar: View {
     @State private var animationTimer: Timer?
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 2)
+        Rectangle()
             .fill(
                 LinearGradient(
                     colors: [Color.white, Color.white.opacity(0.7)],
@@ -126,7 +126,7 @@ struct LiveWaveformView: View {
     var body: some View {
         HStack(spacing: spacing) {
             ForEach(0..<waveformValues.count, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1)
+                Rectangle()
                     .fill(barColor(for: index))
                     .frame(width: barWidth, height: waveformValues[index] * maxHeight)
             }

@@ -19,10 +19,14 @@ class FloatingPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = true
 
-        // Appearance
+        // Fully transparent appearance - critical for removing gray border
         isOpaque = false
-        backgroundColor = .clear
+        backgroundColor = NSColor.clear
         hasShadow = true
+
+        // Hide any title bar elements
+        titleVisibility = .hidden
+        titlebarAppearsTransparent = true
 
         // Don't show in dock or app switcher
         hidesOnDeactivate = false
@@ -168,18 +172,31 @@ class FloatingWindowController: ObservableObject {
 
         panel = FloatingPanel(contentRect: contentRect)
 
-        let hostingView = NSHostingView(rootView: content)
+        let hostingView = NSHostingView(rootView: content.ignoresSafeArea())
         hostingView.frame = contentRect
 
+        // Make hosting view background fully transparent (fixes gray border)
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
+        hostingView.layer?.isOpaque = false
+
         panel?.contentView = hostingView
+        panel?.backgroundColor = NSColor.clear
     }
 
     /// Update the content view
     func updateContent<Content: View>(_ content: Content) {
         guard let panel = panel else { return }
 
-        let hostingView = NSHostingView(rootView: content)
+        let hostingView = NSHostingView(rootView: content.ignoresSafeArea())
         hostingView.frame = panel.frame
+
+        // Make hosting view background fully transparent
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
+        hostingView.layer?.isOpaque = false
+
         panel.contentView = hostingView
+        panel.backgroundColor = NSColor.clear
     }
 }
