@@ -184,6 +184,15 @@ struct MenuBarView: View {
                 .padding(.vertical, 4)
 
             // Menu items
+            if appState.settings.showFloatingWindow {
+                MenuButton(
+                    title: appState.floatingWindowManager.isVisible ? "Hide Floating Window" : "Show Floating Window",
+                    shortcut: nil
+                ) {
+                    appState.floatingWindowManager.toggle(with: appState)
+                }
+            }
+
             MenuButton(title: "Settings...", shortcut: "⌘,") {
                 SettingsWindowController.shared.show()
             }
