@@ -47,6 +47,66 @@ struct TouchlessApp: App {
     }
 }
 
+/// Manages the floating window lifecycle within the app
+@MainActor
+class FloatingWindowManager: ObservableObject {
+    static let shared = FloatingWindowManager()
+
+    private var panel: FloatingPanel?
+    @Published var isVisible = false
+
+    private init() {}
+
+    func show(with appState: AppState) {
+        if panel == nil {
+            createPanel(with: appState)
+        }
+
+        updateContent(with: appState)
+        panel?.orderFront(nil)
+        panel?.position(at: appState.settings.floatingWindowPosition)
+        isVisible = true
+    }
+
+    func hide() {
+        panel?.orderOut(nil)
+        isVisible = false
+    }
+
+    func toggle(with appState: AppState) {
+        if isVisible {
+            hide()
+        } else {
+            show(with: appState)
+        }
+    }
+
+    func updateContent(with appState: AppState) {
+        guard let panel = panel else { return }
+
+        let floatingView = FloatingView(appState: appState)
+        let hostingView = NSHostingView(rootView: floatingView)
+        panel.contentView = hostingView
+    }
+
+    func reposition(to position: FloatingWindowPosition) {
+        panel?.position(at: position)
+    }
+
+    private func createPanel(with appState: AppState) {
+        let initialSize = NSSize(width: 280, height: 60)
+        let contentRect = NSRect(origin: .zero, size: initialSize)
+
+        panel = FloatingPanel(contentRect: contentRect)
+
+        let floatingView = FloatingView(appState: appState)
+        let hostingView = NSHostingView(rootView: floatingView)
+        hostingView.frame = contentRect
+
+        panel?.contentView = hostingView
+    }
+}
+
 /// Animated menu bar icon
 struct MenuBarIcon: View {
     let isRecording: Bool
@@ -108,6 +168,7 @@ class AppState: ObservableObject {
     let enhancementService = EnhancementService()
     let textInserter = TextInserter()
     let hotkeyManager = HotkeyManager()
+    let floatingWindowManager = FloatingWindowManager.shared
 
     var menuBarIcon: String {
         if isRecording {
@@ -169,6 +230,11 @@ class AppState: ObservableObject {
             debugLog("Recording started, saving to: \(url.path)")
             isRecording = true
             lastError = nil
+
+            // Show floating window if enabled
+            if settings.showFloatingWindow {
+                floatingWindowManager.show(with: self)
+            }
         } catch {
             debugLog("Failed to start recording: \(error)")
             lastError = error.localizedDescription
@@ -280,28 +346,55 @@ class AppState: ObservableObject {
                 processingProgress = 0.9
             }
 
-            // Step 3: Insert at cursor
-            debugLog("Inserting text...")
-            processingStage = "Inserting..."
-            streamOutput("\n--- Inserting at cursor ---")
-            processingProgress = 0.95
-            try await textInserter.insert(text: finalText)
-            debugLog("Text inserted successfully")
-            streamOutput("Done!\n")
-            processingProgress = 1.0
+            // Step 3: Insert at cursor (or preview if enabled)
+            if settings.previewBeforeInsert {
+                // Store for preview - user will manually apply
+                debugLog("Preview mode - waiting for user to apply")
+                processingStage = "Ready to apply"
+                streamOutput("\n--- Ready to apply (preview mode) ---")
+                partialTranscription = finalText
+                processingProgress = 1.0
+                isProcessing = false
+                // Don't clear partialTranscription - user needs to see it
+                lastError = nil
+            } else {
+                // Direct insert
+                debugLog("Inserting text...")
+                processingStage = "Inserting..."
+                streamOutput("\n--- Inserting at cursor ---")
+                processingProgress = 0.95
+                try await textInserter.insert(text: finalText)
+                debugLog("Text inserted successfully")
+                streamOutput("Done!\n")
+                processingProgress = 1.0
 
-            lastError = nil
+                lastError = nil
+
+                // Cleanup
+                isProcessing = false
+                processingStage = ""
+                processingProgress = 0.0
+                partialTranscription = ""
+                transcriptionChunkInfo = ""
+
+                // Hide floating window after successful insert (with delay for feedback)
+                if settings.showFloatingWindow {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 second
+                        floatingWindowManager.hide()
+                    }
+                }
+            }
         } catch {
             debugLog("Error: \(error)")
             lastError = error.localizedDescription
+            isProcessing = false
+            processingStage = ""
+            processingProgress = 0.0
         }
 
-        // Cleanup
+        // Cleanup audio file
         audioRecorder.cleanupRecording(at: audioURL)
-        isProcessing = false
-        processingStage = ""
-        processingProgress = 0.0
-        partialTranscription = ""
         transcriptionChunkInfo = ""
         debugLog("Processing complete")
     }

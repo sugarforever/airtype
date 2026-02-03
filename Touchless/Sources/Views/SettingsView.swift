@@ -17,6 +17,7 @@ struct SettingsView: View {
                     transcriptionSection
                     apiKeysSection
                     enhancementSection
+                    floatingWindowSection
                     shortcutsSection
                     permissionsSection
                 }
@@ -193,6 +194,53 @@ struct SettingsView: View {
                         }
                         .labelsHidden()
                     }
+                }
+            }
+        }
+    }
+
+    private var floatingWindowSection: some View {
+        SettingsSection(title: "Floating Window") {
+            VStack(alignment: .leading, spacing: 16) {
+                // Show floating window toggle
+                Toggle(isOn: $settings.showFloatingWindow) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show floating window")
+                            .font(.system(size: 12))
+                        Text("Display status and progress in a floating panel")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(.switch)
+
+                if settings.showFloatingWindow {
+                    // Window position
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Position")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Picker("", selection: $settings.floatingWindowPosition) {
+                            ForEach(FloatingWindowPosition.allCases) { position in
+                                Text(position.rawValue).tag(position)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                    }
+
+                    // Preview before insert
+                    Toggle(isOn: $settings.previewBeforeInsert) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Preview before inserting")
+                                .font(.system(size: 12))
+                            Text("Review transcription and click Apply to insert")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
                 }
             }
         }

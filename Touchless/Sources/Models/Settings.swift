@@ -9,6 +9,16 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+/// Position options for the floating window
+enum FloatingWindowPosition: String, CaseIterable, Identifiable {
+    case topRight = "Top Right"
+    case bottomRight = "Bottom Right"
+    case topLeft = "Top Left"
+    case bottomLeft = "Bottom Left"
+
+    var id: String { rawValue }
+}
+
 /// App settings stored in UserDefaults
 class Settings: ObservableObject {
     static let shared = Settings()
@@ -25,6 +35,10 @@ class Settings: ObservableObject {
         static let elevenlabsModel = "elevenlabs_transcription_model"
         static let enhancementModel = "enhancement_model"
         static let enhancementEnabled = "enhancement_enabled"
+        // Floating window settings
+        static let showFloatingWindow = "show_floating_window"
+        static let floatingWindowPosition = "floating_window_position"
+        static let previewBeforeInsert = "preview_before_insert"
     }
 
     // MARK: - Constants
@@ -64,6 +78,19 @@ class Settings: ObservableObject {
         didSet { defaults.set(enhancementEnabled, forKey: Keys.enhancementEnabled) }
     }
 
+    // Floating window settings
+    @Published var showFloatingWindow: Bool {
+        didSet { defaults.set(showFloatingWindow, forKey: Keys.showFloatingWindow) }
+    }
+
+    @Published var floatingWindowPosition: FloatingWindowPosition {
+        didSet { defaults.set(floatingWindowPosition.rawValue, forKey: Keys.floatingWindowPosition) }
+    }
+
+    @Published var previewBeforeInsert: Bool {
+        didSet { defaults.set(previewBeforeInsert, forKey: Keys.previewBeforeInsert) }
+    }
+
     // MARK: - Available Models
 
     static let openaiModels = [
@@ -96,6 +123,12 @@ class Settings: ObservableObject {
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
         self.enhancementModel = defaults.string(forKey: Keys.enhancementModel) ?? "gpt-4o"
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true
+
+        // Floating window settings
+        self.showFloatingWindow = defaults.object(forKey: Keys.showFloatingWindow) as? Bool ?? true
+        let positionRaw = defaults.string(forKey: Keys.floatingWindowPosition) ?? FloatingWindowPosition.bottomRight.rawValue
+        self.floatingWindowPosition = FloatingWindowPosition(rawValue: positionRaw) ?? .bottomRight
+        self.previewBeforeInsert = defaults.object(forKey: Keys.previewBeforeInsert) as? Bool ?? false
     }
 
     // MARK: - Validation
