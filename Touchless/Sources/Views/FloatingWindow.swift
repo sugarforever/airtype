@@ -22,6 +22,7 @@ class FloatingPanel: NSPanel {
         // Fully transparent appearance - critical for removing gray border
         isOpaque = false
         backgroundColor = NSColor.clear
+        // Use system window shadow for native macOS quality and smooth window dragging.
         hasShadow = true
 
         // Hide any title bar elements
@@ -33,6 +34,28 @@ class FloatingPanel: NSPanel {
 
         // Allow clicking through to other apps
         becomesKeyOnlyIfNeeded = true
+    }
+
+    /// Keep the panel shape consistent with the SwiftUI rounded container.
+    func applyRoundedMask(for size: NSSize? = nil) {
+        let targetHeight = size?.height ?? frame.height
+        let cornerRadius: CGFloat = targetHeight <= 80 ? 30 : 18
+
+        if let frameView = contentView?.superview {
+            frameView.wantsLayer = true
+            frameView.layer?.cornerCurve = .continuous
+            frameView.layer?.cornerRadius = cornerRadius
+            frameView.layer?.masksToBounds = true
+        }
+
+        if let contentView {
+            contentView.wantsLayer = true
+            contentView.layer?.cornerCurve = .continuous
+            contentView.layer?.cornerRadius = cornerRadius
+            contentView.layer?.masksToBounds = true
+        }
+
+        invalidateShadow()
     }
 
     /// Position the panel in a corner of the screen
@@ -68,6 +91,7 @@ class FloatingPanel: NSPanel {
         }
 
         setFrameOrigin(origin)
+        invalidateShadow()
     }
 
     /// Animate size change for expand/collapse
@@ -110,6 +134,7 @@ class FloatingPanel: NSPanel {
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animator().setFrame(newFrame, display: true)
         }
+        applyRoundedMask(for: newSize)
     }
 
     // Allow the panel to become key for text selection, but not main
@@ -167,7 +192,10 @@ class FloatingWindowController: ObservableObject {
 
     private func createPanel<Content: View>(with content: Content) {
         // Initial size for pill mode
-        let initialSize = NSSize(width: 280, height: 60)
+        let initialSize = NSSize(
+            width: FloatingView.pillSize.width,
+            height: FloatingView.pillSize.height
+        )
         let contentRect = NSRect(origin: .zero, size: initialSize)
 
         panel = FloatingPanel(contentRect: contentRect)
@@ -182,6 +210,7 @@ class FloatingWindowController: ObservableObject {
 
         panel?.contentView = hostingView
         panel?.backgroundColor = NSColor.clear
+        panel?.applyRoundedMask()
     }
 
     /// Update the content view
@@ -198,5 +227,6 @@ class FloatingWindowController: ObservableObject {
 
         panel.contentView = hostingView
         panel.backgroundColor = NSColor.clear
+        panel.applyRoundedMask()
     }
 }

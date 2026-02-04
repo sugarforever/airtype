@@ -3,6 +3,9 @@ import SwiftUI
 /// Main floating UI view with pill and expanded modes
 /// Dark minimal design inspired by Raycast/Spotlight
 struct FloatingView: View {
+    static let pillSize = CGSize(width: 280, height: 60)
+    static let expandedSize = CGSize(width: 380, height: 320)
+
     @ObservedObject var appState: AppState
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var isExpanded = false
@@ -14,26 +17,47 @@ struct FloatingView: View {
     }
 
     // Sizes
-    private let pillSize = CGSize(width: 280, height: 60)
-    private let expandedSize = CGSize(width: 380, height: 320)
+    private let pillSize = Self.pillSize
+    private let expandedSize = Self.expandedSize
+    private let pillCornerRadius: CGFloat = 30
+    private let expandedCornerRadius: CGFloat = 18
 
     var body: some View {
         ZStack {
-            // Background - rectangular to match window frame
-            Rectangle()
-                .fill(Color.black.opacity(0.92))
+            FloatingGlassBackgroundView(cornerRadius: currentCornerRadius)
+                .frame(width: currentContentSize.width, height: currentContentSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.black.opacity(isExpanded ? 0.68 : 0.74),
+                                    Color.black.opacity(isExpanded ? 0.60 : 0.66)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.6)
+                )
 
             // Content
-            if isExpanded {
-                expandedContent
-            } else {
-                pillContent
+            Group {
+                if isExpanded {
+                    expandedContent
+                } else {
+                    pillContent
+                }
             }
+            .frame(width: currentContentSize.width, height: currentContentSize.height)
+            .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         }
-        .frame(
-            width: isExpanded ? expandedSize.width : pillSize.width,
-            height: isExpanded ? expandedSize.height : pillSize.height
-        )
+        .frame(width: currentContentSize.width, height: currentContentSize.height)
+        .contentShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .ignoresSafeArea()
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
         .onTapGesture {
@@ -142,12 +166,15 @@ struct FloatingView: View {
             Spacer()
 
             // Collapse button
-            Button(action: { withAnimation { isExpanded = false } }) {
+            Button(action: toggleExpanded) {
                 Image(systemName: "chevron.up")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white.opacity(0.5))
                     .frame(width: 24, height: 24)
-                    .background(Color.white.opacity(0.1))
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color.white.opacity(0.1))
+                    )
             }
             .buttonStyle(.plain)
         }
@@ -227,7 +254,10 @@ struct FloatingView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
-                        .background(Color.white.opacity(0.05))
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.white.opacity(0.05))
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -262,7 +292,10 @@ struct FloatingView: View {
                         .foregroundColor(.white.opacity(0.7))
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
-                        .background(Color.white.opacity(0.1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.1))
+                        )
                 }
                 .buttonStyle(.plain)
             } else if !appState.partialTranscription.isEmpty && !appState.isProcessing && appState.settings.previewBeforeInsert {
@@ -273,7 +306,10 @@ struct FloatingView: View {
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
-                        .background(Color.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white)
+                        )
                 }
                 .buttonStyle(.plain)
 
@@ -284,7 +320,10 @@ struct FloatingView: View {
                         .foregroundColor(.white.opacity(0.7))
                         .frame(width: 80)
                         .frame(height: 32)
-                        .background(Color.white.opacity(0.1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.1))
+                        )
                 }
                 .buttonStyle(.plain)
             }
@@ -346,6 +385,14 @@ struct FloatingView: View {
     private var showActionButtons: Bool {
         appState.isRecording ||
         (!appState.partialTranscription.isEmpty && !appState.isProcessing && appState.settings.previewBeforeInsert)
+    }
+
+    private var currentCornerRadius: CGFloat {
+        isExpanded ? expandedCornerRadius : pillCornerRadius
+    }
+
+    private var currentContentSize: CGSize {
+        isExpanded ? expandedSize : pillSize
     }
 
     // MARK: - Actions

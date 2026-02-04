@@ -95,6 +95,7 @@ class FloatingWindowManager: ObservableObject {
 
         panel.contentView = hostingView
         panel.backgroundColor = NSColor.clear
+        panel.applyRoundedMask()
     }
 
     func reposition(to position: FloatingWindowPosition) {
@@ -106,7 +107,10 @@ class FloatingWindowManager: ObservableObject {
     }
 
     private func createPanel(with appState: AppState) {
-        let initialSize = NSSize(width: 280, height: 60)
+        let initialSize = NSSize(
+            width: FloatingView.pillSize.width,
+            height: FloatingView.pillSize.height
+        )
         let contentRect = NSRect(origin: .zero, size: initialSize)
 
         panel = FloatingPanel(contentRect: contentRect)
@@ -124,6 +128,7 @@ class FloatingWindowManager: ObservableObject {
         // Set after contentView is assigned for proper transparency
         panel?.contentView = hostingView
         panel?.backgroundColor = NSColor.clear
+        panel?.applyRoundedMask()
     }
 }
 
