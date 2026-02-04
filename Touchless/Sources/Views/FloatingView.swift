@@ -32,8 +32,8 @@ struct FloatingView: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.black.opacity(isExpanded ? 0.68 : 0.74),
-                                    Color.black.opacity(isExpanded ? 0.60 : 0.66)
+                                    Color.black.opacity(isExpanded ? 0.82 : 0.86),
+                                    Color.black.opacity(isExpanded ? 0.74 : 0.78)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -42,7 +42,7 @@ struct FloatingView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 0.6)
+                        .stroke(Color.white.opacity(0.06), lineWidth: 0.6)
                 )
 
             // Content
