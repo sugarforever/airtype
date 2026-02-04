@@ -60,9 +60,8 @@ class FloatingPanel: NSPanel {
 
     /// Position the panel in a corner of the screen
     func position(at corner: FloatingWindowPosition) {
-        guard let screen = NSScreen.main else { return }
+        guard let screenFrame = currentVisibleScreenFrame() else { return }
 
-        let screenFrame = screen.visibleFrame
         let padding: CGFloat = 20
 
         var origin: NSPoint
@@ -95,46 +94,44 @@ class FloatingPanel: NSPanel {
     }
 
     /// Animate size change for expand/collapse
-    func animateResize(to newSize: NSSize, position: FloatingWindowPosition) {
-        guard let screen = NSScreen.main else { return }
+    func animateResize(to newSize: NSSize, position _: FloatingWindowPosition) {
+        guard let screenFrame = currentVisibleScreenFrame() else { return }
 
-        let screenFrame = screen.visibleFrame
-        let padding: CGFloat = 20
+        let currentFrame = frame
+        let currentCenter = NSPoint(x: currentFrame.midX, y: currentFrame.midY)
 
-        var newOrigin: NSPoint
+        var newOrigin = NSPoint(
+            x: currentCenter.x - (newSize.width / 2),
+            y: currentCenter.y - (newSize.height / 2)
+        )
 
-        // Calculate new origin based on position to keep corner anchored
-        switch position {
-        case .topRight:
-            newOrigin = NSPoint(
-                x: screenFrame.maxX - newSize.width - padding,
-                y: screenFrame.maxY - newSize.height - padding
-            )
-        case .bottomRight:
-            newOrigin = NSPoint(
-                x: screenFrame.maxX - newSize.width - padding,
-                y: screenFrame.minY + padding
-            )
-        case .topLeft:
-            newOrigin = NSPoint(
-                x: screenFrame.minX + padding,
-                y: screenFrame.maxY - newSize.height - padding
-            )
-        case .bottomLeft:
-            newOrigin = NSPoint(
-                x: screenFrame.minX + padding,
-                y: screenFrame.minY + padding
-            )
-        }
+        // Clamp to visible area so expansion picks available directions near screen edges.
+        newOrigin.x = min(max(newOrigin.x, screenFrame.minX), screenFrame.maxX - newSize.width)
+        newOrigin.y = min(max(newOrigin.y, screenFrame.minY), screenFrame.maxY - newSize.height)
 
         let newFrame = NSRect(origin: newOrigin, size: newSize)
 
-        NSAnimationContext.runAnimationGroup { context in
+        NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animator().setFrame(newFrame, display: true)
+        }, completionHandler: { [weak self] in
+            self?.applyRoundedMask(for: newSize)
+        })
+    }
+
+    private func currentVisibleScreenFrame() -> NSRect? {
+        let center = NSPoint(x: frame.midX, y: frame.midY)
+
+        if let matchingScreen = NSScreen.screens.first(where: { $0.visibleFrame.contains(center) }) {
+            return matchingScreen.visibleFrame
         }
-        applyRoundedMask(for: newSize)
+
+        if let currentScreen = screen {
+            return currentScreen.visibleFrame
+        }
+
+        return NSScreen.main?.visibleFrame
     }
 
     // Allow the panel to become key for text selection, but not main
