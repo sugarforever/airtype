@@ -22,27 +22,29 @@ class EnhancementService {
             return trimmedText
         }
 
-        guard !settings.openaiApiKey.isEmpty else {
+        guard !settings.currentEnhancementApiKey.isEmpty || !settings.enhancementProvider.requiresApiKey else {
             throw EnhancementError.noAPIKey
         }
 
-        let baseURL = settings.openaiBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        let baseURL = settings.currentEnhancementBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
         let url = URL(string: "\(baseURL)/chat/completions")!
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(settings.openaiApiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(settings.currentEnhancementApiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 60  // 1 minute timeout
 
+        let enhancementModel = settings.currentEnhancementModel
+
         // GPT-5 models use "developer" role instead of "system"
-        let systemRole = settings.enhancementModel.hasPrefix("gpt-5") ? "developer" : "system"
+        let systemRole = enhancementModel.hasPrefix("gpt-5") ? "developer" : "system"
 
         // GPT-5-mini and nano don't support custom temperature
-        let supportsTemperature = !settings.enhancementModel.contains("mini") && !settings.enhancementModel.contains("nano")
+        let supportsTemperature = !enhancementModel.contains("mini") && !enhancementModel.contains("nano")
 
         let requestBody = ChatCompletionRequest(
-            model: settings.enhancementModel,
+            model: enhancementModel,
             messages: [
                 ChatMessage(role: systemRole, content: enhancementPrompt),
                 ChatMessage(role: "user", content: text)

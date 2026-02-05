@@ -254,7 +254,7 @@ class WhisperService {
 
     /// Transcribe audio file (non-streaming) with timeout and retry
     func transcribe(audioURL: URL) async throws -> String {
-        guard !settings.openaiApiKey.isEmpty else {
+        guard !settings.openaiTranscriptionApiKey.isEmpty else {
             throw WhisperError.noAPIKey
         }
 
@@ -268,27 +268,28 @@ class WhisperService {
             throw WhisperError.emptyRecording
         }
 
-        let baseURL = settings.openaiBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        let baseURL = "https://api.openai.com/v1"
         let url = URL(string: "\(baseURL)/audio/transcriptions")!
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(settings.openaiApiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(settings.openaiTranscriptionApiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 120  // 2 minute timeout for large files
 
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         let audioData = try Data(contentsOf: audioURL)
+        let transcriptionModel = settings.openaiTranscriptionModel
         let body = createMultipartBody(
             audioData: audioData,
             fileName: audioURL.lastPathComponent,
-            model: settings.openaiModel,
+            model: transcriptionModel,
             boundary: boundary
         )
         request.httpBody = body
 
-        debugLog("OpenAI: Sending request with model \(settings.openaiModel), file size: \(audioData.count) bytes")
+        debugLog("OpenAI: Sending request with model \(transcriptionModel), file size: \(audioData.count) bytes")
 
         // Use URLSession with timeout configuration
         let config = URLSessionConfiguration.default

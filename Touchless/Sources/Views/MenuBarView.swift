@@ -212,12 +212,7 @@ struct MenuBarView: View {
     // MARK: - Computed Properties
 
     private var currentModel: String {
-        switch appState.settings.transcriptionProvider {
-        case .openai:
-            return appState.settings.openaiModel
-        case .elevenlabs:
-            return appState.settings.elevenlabsModel
-        }
+        appState.settings.currentTranscriptionModel
     }
 
     private var statusIcon: String {
