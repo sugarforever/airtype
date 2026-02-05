@@ -35,14 +35,17 @@ class EnhancementService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 60  // 1 minute timeout
 
+        // GPT-5 models use "developer" role instead of "system"
+        let systemRole = settings.enhancementModel.hasPrefix("gpt-5") ? "developer" : "system"
+
         let requestBody = ChatCompletionRequest(
             model: settings.enhancementModel,
             messages: [
-                ChatMessage(role: "system", content: enhancementPrompt),
+                ChatMessage(role: systemRole, content: enhancementPrompt),
                 ChatMessage(role: "user", content: text)
             ],
             temperature: 0.1,  // Low temperature for conservative corrections
-            maxTokens: 2048
+            maxCompletionTokens: 2048
         )
 
         request.httpBody = try JSONEncoder().encode(requestBody)
@@ -68,15 +71,18 @@ class EnhancementService {
         }
 
         if httpResponse.statusCode != 200 {
+            // Log raw error response
+            if let rawError = String(data: data, encoding: .utf8) {
+                print("[Enhancement] Error response (\(httpResponse.statusCode)): \(rawError)")
+            }
+
             if let errorResponse = try? JSONDecoder().decode(OpenAIErrorResponse.self, from: data) {
                 let message = errorResponse.error.message
+                print("[Enhancement] API error message: \(message)")
 
                 // Detect specific error types
                 if message.lowercased().contains("rate limit") {
                     throw EnhancementError.apiError("Rate limit exceeded. Text will be used without enhancement.")
-                }
-                if message.lowercased().contains("model") {
-                    throw EnhancementError.apiError("Model '\(settings.enhancementModel)' not available. Please check Settings.")
                 }
 
                 throw EnhancementError.apiError(message)
@@ -143,11 +149,11 @@ struct ChatCompletionRequest: Codable {
     let model: String
     let messages: [ChatMessage]
     let temperature: Double
-    let maxTokens: Int
+    let maxCompletionTokens: Int
 
     enum CodingKeys: String, CodingKey {
         case model, messages, temperature
-        case maxTokens = "max_tokens"
+        case maxCompletionTokens = "max_completion_tokens"
     }
 }
 
