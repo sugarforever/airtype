@@ -39,7 +39,7 @@ struct TouchlessApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(appState: appState)
+            MenuBarView(appState: appState, floatingWindowManager: appState.floatingWindowManager)
         } label: {
             MenuBarIcon(isRecording: appState.isRecording, isProcessing: appState.isProcessing)
         }

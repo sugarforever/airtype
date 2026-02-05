@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var floatingWindowManager: FloatingWindowManager
     @State private var isPulsing = false
 
     var body: some View {
@@ -186,10 +187,10 @@ struct MenuBarView: View {
             // Menu items
             if appState.settings.showFloatingWindow {
                 MenuButton(
-                    title: appState.floatingWindowManager.isVisible ? "Hide Floating Window" : "Show Floating Window",
+                    title: floatingWindowManager.isVisible ? "Hide Floating Window" : "Show Floating Window",
                     shortcut: nil
                 ) {
-                    appState.floatingWindowManager.toggle(with: appState)
+                    floatingWindowManager.toggle(with: appState)
                 }
             }
 
