@@ -1,13 +1,15 @@
 import SwiftUI
+import AppKit
 
 /// Main floating UI view with pill and expanded modes
-/// Dark minimal design inspired by Raycast/Spotlight
+/// Liquid Glass design using native macOS glass effects
 struct FloatingView: View {
     static let pillSize = CGSize(width: 280, height: 60)
     static let expandedSize = CGSize(width: 380, height: 320)
 
     @ObservedObject var appState: AppState
     @ObservedObject var audioRecorder: AudioRecorder
+    @StateObject private var appearanceObserver = GlassAppearanceObserver()
     @State private var isExpanded = false
     @State private var isHovering = false
 
@@ -15,6 +17,12 @@ struct FloatingView: View {
         self.appState = appState
         self.audioRecorder = appState.audioRecorder
     }
+
+    // Fixed colors - white text on tinted glass
+    private var labelColor: Color { .white }
+    private var secondaryLabelColor: Color { Color.white.opacity(0.7) }
+    private var tertiaryLabelColor: Color { Color.white.opacity(0.5) }
+    private var quaternaryLabelColor: Color { Color.white.opacity(0.15) }
 
     // Sizes
     private let pillSize = Self.pillSize
@@ -24,26 +32,14 @@ struct FloatingView: View {
 
     var body: some View {
         ZStack {
-            FloatingGlassBackgroundView(cornerRadius: currentCornerRadius)
+            FloatingGlassBackgroundView(cornerRadius: currentCornerRadius, appearanceObserver: appearanceObserver)
                 .frame(width: currentContentSize.width, height: currentContentSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.black.opacity(isExpanded ? 0.82 : 0.86),
-                                    Color.black.opacity(isExpanded ? 0.74 : 0.78)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 0.6)
-                )
+
+            // Dark tint for white text readability
+            RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous)
+                .fill(Color.black.opacity(0.4))
+                .frame(width: currentContentSize.width, height: currentContentSize.height)
 
             // Content
             Group {
@@ -92,11 +88,11 @@ struct FloatingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(labelColor)
 
                 Text(statusSubtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(secondaryLabelColor)
             }
 
             Spacer()
@@ -104,7 +100,7 @@ struct FloatingView: View {
             // Expand indicator
             Image(systemName: "chevron.down")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(.white.opacity(0.4))
+                .foregroundColor(secondaryLabelColor)
                 .rotationEffect(.degrees(isHovering ? 0 : -90))
                 .animation(.easeInOut(duration: 0.2), value: isHovering)
                 .padding(.trailing, 4)
@@ -123,7 +119,7 @@ struct FloatingView: View {
                 .padding(.bottom, 12)
 
             Divider()
-                .background(Color.white.opacity(0.1))
+                .background(secondaryLabelColor.opacity(0.3))
 
             // Content area
             if appState.isRecording {
@@ -156,11 +152,11 @@ struct FloatingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(labelColor)
 
                 Text(statusSubtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(secondaryLabelColor)
             }
 
             Spacer()
@@ -169,11 +165,11 @@ struct FloatingView: View {
             Button(action: toggleExpanded) {
                 Image(systemName: "chevron.up")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(secondaryLabelColor)
                     .frame(width: 24, height: 24)
                     .background(
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(Color.white.opacity(0.1))
+                            .fill(quaternaryLabelColor)
                     )
             }
             .buttonStyle(.plain)
@@ -193,12 +189,12 @@ struct FloatingView: View {
             // Duration
             Text(formatDuration(audioRecorder.recordingDuration))
                 .font(.system(size: 36, weight: .light, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(labelColor)
 
             // Hint
             Text("Release to transcribe")
                 .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(secondaryLabelColor)
         }
         .padding(.vertical, 20)
     }
@@ -208,11 +204,11 @@ struct FloatingView: View {
             // Progress bar
             VStack(spacing: 8) {
                 ProgressView(value: appState.processingProgress)
-                    .progressViewStyle(FloatingProgressStyle())
+                    .progressViewStyle(FloatingProgressStyle(trackColor: quaternaryLabelColor))
 
                 Text(appState.processingStage)
                     .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(secondaryLabelColor)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -222,7 +218,7 @@ struct FloatingView: View {
                 ScrollView {
                     Text(appState.partialTranscription)
                         .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(labelColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
                 }
@@ -242,7 +238,7 @@ struct FloatingView: View {
 
                     Text(error)
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(secondaryLabelColor)
                         .multilineTextAlignment(.center)
                 }
                 .padding(20)
@@ -251,12 +247,12 @@ struct FloatingView: View {
                 ScrollView {
                     Text(appState.partialTranscription)
                         .font(.system(size: 13))
-                        .foregroundColor(.white)
+                        .foregroundColor(labelColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.white.opacity(0.05))
+                                .fill(quaternaryLabelColor)
                         )
                 }
                 .padding(.horizontal, 16)
@@ -269,15 +265,15 @@ struct FloatingView: View {
         VStack(spacing: 12) {
             Image(systemName: "mic.fill")
                 .font(.system(size: 32))
-                .foregroundColor(.white.opacity(0.3))
+                .foregroundColor(secondaryLabelColor)
 
             Text("Hold \u{2325} Space to record")
                 .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(secondaryLabelColor)
 
             Text("or \u{2325}\u{21E7} Space to toggle")
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.3))
+                .foregroundColor(tertiaryLabelColor)
         }
         .padding(.vertical, 30)
     }
@@ -289,12 +285,12 @@ struct FloatingView: View {
                 Button(action: { appState.cancelRecording() }) {
                     Text("Cancel")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(secondaryLabelColor)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.1))
+                                .fill(quaternaryLabelColor)
                         )
                 }
                 .buttonStyle(.plain)
@@ -303,12 +299,12 @@ struct FloatingView: View {
                 Button(action: { applyText() }) {
                     Text("Apply")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white)
+                                .fill(Color.accentColor)
                         )
                 }
                 .buttonStyle(.plain)
@@ -317,12 +313,12 @@ struct FloatingView: View {
                 Button(action: { discardText() }) {
                     Text("Discard")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(secondaryLabelColor)
                         .frame(width: 80)
                         .frame(height: 32)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.1))
+                                .fill(quaternaryLabelColor)
                         )
                 }
                 .buttonStyle(.plain)
@@ -343,7 +339,7 @@ struct FloatingView: View {
         } else if appState.isProcessing {
             // Processing - show spinner
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .progressViewStyle(CircularProgressViewStyle(tint: secondaryLabelColor))
                 .scaleEffect(0.8)
         } else if appState.lastError != nil {
             // Error
@@ -354,7 +350,7 @@ struct FloatingView: View {
             // Idle
             Image(systemName: "mic.fill")
                 .font(.system(size: 18))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(secondaryLabelColor)
         }
     }
 
@@ -425,19 +421,21 @@ struct FloatingView: View {
 // MARK: - Custom Progress Style
 
 struct FloatingProgressStyle: ProgressViewStyle {
+    var trackColor: Color
+
     func makeBody(configuration: Configuration) -> some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Background track
                 Rectangle()
-                    .fill(Color.white.opacity(0.2))
+                    .fill(trackColor)
                     .frame(height: 4)
 
                 // Progress fill
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white, Color.white.opacity(0.8)],
+                            colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
