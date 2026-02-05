@@ -38,13 +38,16 @@ class EnhancementService {
         // GPT-5 models use "developer" role instead of "system"
         let systemRole = settings.enhancementModel.hasPrefix("gpt-5") ? "developer" : "system"
 
+        // GPT-5-mini and nano don't support custom temperature
+        let supportsTemperature = !settings.enhancementModel.contains("mini") && !settings.enhancementModel.contains("nano")
+
         let requestBody = ChatCompletionRequest(
             model: settings.enhancementModel,
             messages: [
                 ChatMessage(role: systemRole, content: enhancementPrompt),
                 ChatMessage(role: "user", content: text)
             ],
-            temperature: 0.1,  // Low temperature for conservative corrections
+            temperature: supportsTemperature ? 0.1 : nil,
             maxCompletionTokens: 2048
         )
 
@@ -148,7 +151,7 @@ class EnhancementService {
 struct ChatCompletionRequest: Codable {
     let model: String
     let messages: [ChatMessage]
-    let temperature: Double
+    let temperature: Double?
     let maxCompletionTokens: Int
 
     enum CodingKeys: String, CodingKey {
