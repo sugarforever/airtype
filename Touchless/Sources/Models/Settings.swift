@@ -1,11 +1,12 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Transcription Provider (OpenAI or ElevenLabs only)
+// MARK: - Transcription Provider
 
 enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case elevenlabs = "ElevenLabs"
     case openai = "OpenAI"
+    case mistral = "Mistral"
 
     var id: String { rawValue }
 }
@@ -106,6 +107,8 @@ class Settings: ObservableObject {
         static let openaiTranscriptionModel = "openai_transcription_model"
         static let elevenlabsApiKey = "elevenlabs_api_key"
         static let elevenlabsModel = "elevenlabs_model"
+        static let mistralTranscriptionApiKey = "mistral_transcription_api_key"
+        static let mistralTranscriptionModel = "mistral_transcription_model"
 
         // Enhancement
         static let enhancementEnabled = "enhancement_enabled"
@@ -169,6 +172,14 @@ class Settings: ObservableObject {
         didSet { defaults.set(elevenlabsModel, forKey: Keys.elevenlabsModel) }
     }
 
+    @Published var mistralTranscriptionApiKey: String {
+        didSet { defaults.set(mistralTranscriptionApiKey, forKey: Keys.mistralTranscriptionApiKey) }
+    }
+
+    @Published var mistralTranscriptionModel: String {
+        didSet { defaults.set(mistralTranscriptionModel, forKey: Keys.mistralTranscriptionModel) }
+    }
+
     // MARK: - Enhancement Settings
 
     @Published var enhancementEnabled: Bool {
@@ -221,6 +232,11 @@ class Settings: ObservableObject {
         "scribe_v1"
     ]
 
+    static let mistralTranscriptionModels = [
+        "voxtral-mini-2602",
+        "voxtral-mini-latest"
+    ]
+
     // MARK: - Computed Properties
 
     /// Current transcription API key based on selected provider
@@ -228,6 +244,7 @@ class Settings: ObservableObject {
         switch transcriptionProvider {
         case .openai: return openaiTranscriptionApiKey
         case .elevenlabs: return elevenlabsApiKey
+        case .mistral: return mistralTranscriptionApiKey
         }
     }
 
@@ -236,6 +253,7 @@ class Settings: ObservableObject {
         switch transcriptionProvider {
         case .openai: return openaiTranscriptionModel
         case .elevenlabs: return elevenlabsModel
+        case .mistral: return mistralTranscriptionModel
         }
     }
 
@@ -274,6 +292,8 @@ class Settings: ObservableObject {
             return !openaiTranscriptionApiKey.isEmpty
         case .elevenlabs:
             return !elevenlabsApiKey.isEmpty
+        case .mistral:
+            return !mistralTranscriptionApiKey.isEmpty
         }
     }
 
@@ -286,6 +306,10 @@ class Settings: ObservableObject {
         case .elevenlabs:
             if elevenlabsApiKey.isEmpty {
                 return "ElevenLabs API key required for transcription"
+            }
+        case .mistral:
+            if mistralTranscriptionApiKey.isEmpty {
+                return "Mistral API key required for transcription"
             }
         }
 
@@ -307,6 +331,8 @@ class Settings: ObservableObject {
         self.openaiTranscriptionModel = defaults.string(forKey: Keys.openaiTranscriptionModel) ?? "gpt-4o-transcribe"
         self.elevenlabsApiKey = defaults.string(forKey: Keys.elevenlabsApiKey) ?? ""
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
+        self.mistralTranscriptionApiKey = defaults.string(forKey: Keys.mistralTranscriptionApiKey) ?? ""
+        self.mistralTranscriptionModel = defaults.string(forKey: Keys.mistralTranscriptionModel) ?? "voxtral-mini-2602"
 
         // Enhancement settings
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true

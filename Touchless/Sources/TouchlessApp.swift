@@ -190,6 +190,7 @@ class AppState: ObservableObject {
     let audioRecorder = AudioRecorder()
     let whisperService = WhisperService()
     let elevenlabsService = ElevenLabsService()
+    let mistralTranscriptionService = MistralTranscriptionService()
     let enhancementService = EnhancementService()
     let textInserter = TextInserter()
     let hotkeyManager = HotkeyManager()
@@ -343,6 +344,8 @@ class AppState: ObservableObject {
                 }
             case .elevenlabs:
                 transcription = try await elevenlabsService.transcribe(audioURL: audioURL)
+            case .mistral:
+                transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL)
             }
 
             debugLog("Transcription result: \(transcription)")

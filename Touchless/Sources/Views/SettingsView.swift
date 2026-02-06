@@ -59,6 +59,8 @@ struct SettingsView: View {
                 // Provider-specific settings
                 if settings.transcriptionProvider == .elevenlabs {
                     elevenlabsSettings
+                } else if settings.transcriptionProvider == .mistral {
+                    mistralTranscriptionSettings
                 } else {
                     openaiTranscriptionSettings
                 }
@@ -99,6 +101,25 @@ struct SettingsView: View {
             SettingsRow(label: "Model") {
                 Picker("", selection: $settings.openaiTranscriptionModel) {
                     ForEach(Settings.openaiTranscriptionModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+                .labelsHidden()
+            }
+        }
+    }
+
+    private var mistralTranscriptionSettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsRow(label: "API Key") {
+                SecureField("...mistral key...", text: $settings.mistralTranscriptionApiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+            }
+
+            SettingsRow(label: "Model") {
+                Picker("", selection: $settings.mistralTranscriptionModel) {
+                    ForEach(Settings.mistralTranscriptionModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
                 }
@@ -410,4 +431,3 @@ struct ShortcutRow: View {
         }
     }
 }
-
