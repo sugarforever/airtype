@@ -78,12 +78,12 @@ class EnhancementService {
         if httpResponse.statusCode != 200 {
             // Log raw error response
             if let rawError = String(data: data, encoding: .utf8) {
-                print("[Enhancement] Error response (\(httpResponse.statusCode)): \(rawError)")
+                debugLog("Enhancement: Error response (\(httpResponse.statusCode)): \(rawError)")
             }
 
             if let errorResponse = try? JSONDecoder().decode(OpenAIErrorResponse.self, from: data) {
                 let message = errorResponse.error.message
-                print("[Enhancement] API error message: \(message)")
+                debugLog("Enhancement: API error message: \(message)")
 
                 // Detect specific error types
                 if message.lowercased().contains("rate limit") {

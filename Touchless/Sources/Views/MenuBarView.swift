@@ -21,14 +21,14 @@ struct MenuBarView: View {
 
                         Text("Recording")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
 
                         Spacer()
 
                         // Duration display
                         Text(appState.audioRecorder.formattedDuration)
                             .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     }
 
                     // Audio level meter
@@ -37,7 +37,7 @@ struct MenuBarView: View {
                     // Hint text
                     Text("Release to transcribe")
                         .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.8))
 
                     // Warning for long recordings
                     if appState.audioRecorder.isLongRecording {
@@ -47,7 +47,7 @@ struct MenuBarView: View {
                             Text("Long recording - may take longer to process")
                                 .font(.system(size: 10))
                         }
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundStyle(.white.opacity(0.7))
                     }
                 }
                 .padding(.horizontal, 12)
@@ -66,7 +66,7 @@ struct MenuBarView: View {
                             .frame(width: 32, height: 32)
                         Image(systemName: statusIcon)
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(statusColor)
+                            .foregroundStyle(statusColor)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -74,7 +74,7 @@ struct MenuBarView: View {
                             .font(.system(size: 13, weight: .semibold))
                         Text(statusText)
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -93,12 +93,12 @@ struct MenuBarView: View {
                             .frame(width: 16, height: 16)
                         Text(appState.processingStage)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                         // Percentage
                         Text("\(Int(appState.processingProgress * 100))%")
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     // Progress bar
@@ -119,16 +119,16 @@ struct MenuBarView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Preview:")
                                 .font(.system(size: 10))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(appState.partialTranscription)
                                 .font(.system(size: 11))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                                 .lineLimit(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(8)
                         .background(Color.secondary.opacity(0.08))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                     }
                 }
                 .padding(.horizontal, 12)
@@ -153,7 +153,7 @@ struct MenuBarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Shortcuts")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.7))
+                    .foregroundStyle(.secondary.opacity(0.7))
                     .textCase(.uppercase)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 2)
@@ -171,10 +171,10 @@ struct MenuBarView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 11))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     Text(error)
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 .padding(.horizontal, 12)
@@ -257,11 +257,11 @@ struct MenuBarView: View {
         HStack {
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
     }
 
@@ -272,7 +272,7 @@ struct MenuBarView: View {
             Spacer()
             Text(keys)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 3)
@@ -297,7 +297,7 @@ struct MenuButton: View {
                 if let shortcut = shortcut {
                     Text(shortcut)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 12)
@@ -325,17 +325,15 @@ struct AudioLevelMeter: View {
     private let peakColor = Color.yellow
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 2) {
-                ForEach(0..<barCount, id: \.self) { index in
-                    let threshold = Float(index) / Float(barCount)
-                    let isActive = level > threshold
-                    let isPeak = peakLevel > threshold && peakLevel <= threshold + (1.0 / Float(barCount))
+        HStack(spacing: 2) {
+            ForEach(0..<barCount, id: \.self) { index in
+                let threshold = Float(index) / Float(barCount)
+                let isActive = level > threshold
+                let isPeak = peakLevel > threshold && peakLevel <= threshold + (1.0 / Float(barCount))
 
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(isPeak ? peakColor : (isActive ? activeColor : inactiveColor))
-                        .animation(.easeOut(duration: 0.05), value: isActive)
-                }
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(isPeak ? peakColor : (isActive ? activeColor : inactiveColor))
+                    .animation(.easeOut(duration: 0.05), value: isActive)
             }
         }
         .frame(height: 6)

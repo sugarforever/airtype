@@ -359,19 +359,14 @@ class WhisperService {
             }
         }
 
-        // Log raw response for debugging
-        if let rawResponse = String(data: data, encoding: .utf8) {
-            print("[Whisper] Raw response: \(rawResponse)")
-        }
-
         let transcription: TranscriptionResponse
         do {
             transcription = try JSONDecoder().decode(TranscriptionResponse.self, from: data)
         } catch {
-            print("[Whisper] Failed to decode response: \(error)")
+            debugLog("OpenAI: Failed to decode response: \(error)")
             throw WhisperError.invalidResponse
         }
-        print("[Whisper] Decoded text: '\(transcription.text)'")
+        debugLog("OpenAI: Decoded text: '\(transcription.text)'")
 
         // Check for empty transcription
         let text = transcription.text.trimmingCharacters(in: .whitespacesAndNewlines)

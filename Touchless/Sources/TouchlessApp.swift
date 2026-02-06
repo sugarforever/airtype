@@ -147,7 +147,7 @@ struct MenuBarIcon: View {
             // Fallback for macOS 13
             Image(systemName: iconName)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(iconColor)
+                .foregroundStyle(iconColor)
         }
     }
 

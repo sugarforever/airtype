@@ -132,14 +132,14 @@ struct SettingsView: View {
         HStack(spacing: 6) {
             if settings.currentTranscriptionApiKey.isEmpty {
                 Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text("API key required")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 Text("Ready")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.system(size: 11))
@@ -157,7 +157,7 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .medium))
                         Text("Fix transcription errors, add punctuation, format text")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .toggleStyle(.switch)
@@ -225,14 +225,14 @@ struct SettingsView: View {
         HStack(spacing: 6) {
             if settings.enhancementProvider.requiresApiKey && settings.currentEnhancementApiKey.isEmpty {
                 Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text("\(settings.enhancementProvider.rawValue) API key required")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 Text("Using \(settings.enhancementProvider.rawValue)")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.system(size: 11))
@@ -249,7 +249,7 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .medium))
                         Text("Display status and progress in a floating panel")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .toggleStyle(.switch)
@@ -271,7 +271,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12, weight: .medium))
                             Text("Review transcription and click Apply to insert")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .toggleStyle(.switch)
@@ -309,10 +309,10 @@ struct SettingsView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "mic.fill")
                                 .font(.system(size: 12))
-                                .foregroundColor(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                             Text("Required for voice recording")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Open Settings") {
@@ -328,10 +328,10 @@ struct SettingsView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "accessibility")
                                 .font(.system(size: 12))
-                                .foregroundColor(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                             Text("Required for text insertion")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Open Settings") {
@@ -376,10 +376,10 @@ struct SettingsSection<Content: View>: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .textCase(.uppercase)
             }
 
@@ -388,7 +388,7 @@ struct SettingsSection<Content: View>: View {
                     .padding(14)
             }
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(10)
+            .clipShape(.rect(cornerRadius: 10))
         }
     }
 }
@@ -401,7 +401,7 @@ struct SettingsRow<Content: View>: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             content
         }
     }
@@ -419,7 +419,7 @@ struct ShortcutRow: View {
                     .font(.system(size: 12, weight: .medium))
                 Text(description)
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
             Text(shortcut)
@@ -427,7 +427,7 @@ struct ShortcutRow: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.secondary.opacity(0.1))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
         }
     }
 }

@@ -88,11 +88,11 @@ struct FloatingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(labelColor)
+                    .foregroundStyle(labelColor)
 
                 Text(statusSubtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(secondaryLabelColor)
+                    .foregroundStyle(secondaryLabelColor)
             }
 
             Spacer()
@@ -100,7 +100,7 @@ struct FloatingView: View {
             // Expand indicator
             Image(systemName: "chevron.down")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(secondaryLabelColor)
+                .foregroundStyle(secondaryLabelColor)
                 .rotationEffect(.degrees(isHovering ? 0 : -90))
                 .animation(.easeInOut(duration: 0.2), value: isHovering)
                 .padding(.trailing, 4)
@@ -152,11 +152,11 @@ struct FloatingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(labelColor)
+                    .foregroundStyle(labelColor)
 
                 Text(statusSubtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(secondaryLabelColor)
+                    .foregroundStyle(secondaryLabelColor)
             }
 
             Spacer()
@@ -165,7 +165,7 @@ struct FloatingView: View {
             Button(action: toggleExpanded) {
                 Image(systemName: "chevron.up")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(secondaryLabelColor)
+                    .foregroundStyle(secondaryLabelColor)
                     .frame(width: 24, height: 24)
                     .background(
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -189,12 +189,12 @@ struct FloatingView: View {
             // Duration
             Text(formatDuration(audioRecorder.recordingDuration))
                 .font(.system(size: 36, weight: .light, design: .monospaced))
-                .foregroundColor(labelColor)
+                .foregroundStyle(labelColor)
 
             // Hint
             Text("Release to transcribe")
                 .font(.system(size: 12))
-                .foregroundColor(secondaryLabelColor)
+                .foregroundStyle(secondaryLabelColor)
         }
         .padding(.vertical, 20)
     }
@@ -208,7 +208,7 @@ struct FloatingView: View {
 
                 Text(appState.processingStage)
                     .font(.system(size: 12))
-                    .foregroundColor(secondaryLabelColor)
+                    .foregroundStyle(secondaryLabelColor)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -218,7 +218,7 @@ struct FloatingView: View {
                 ScrollView {
                     Text(appState.partialTranscription)
                         .font(.system(size: 13))
-                        .foregroundColor(labelColor)
+                        .foregroundStyle(labelColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
                 }
@@ -234,11 +234,11 @@ struct FloatingView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
 
                     Text(error)
                         .font(.system(size: 12))
-                        .foregroundColor(secondaryLabelColor)
+                        .foregroundStyle(secondaryLabelColor)
                         .multilineTextAlignment(.center)
                 }
                 .padding(20)
@@ -247,7 +247,7 @@ struct FloatingView: View {
                 ScrollView {
                     Text(appState.partialTranscription)
                         .font(.system(size: 13))
-                        .foregroundColor(labelColor)
+                        .foregroundStyle(labelColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
                         .background(
@@ -265,15 +265,15 @@ struct FloatingView: View {
         VStack(spacing: 12) {
             Image(systemName: "mic.fill")
                 .font(.system(size: 32))
-                .foregroundColor(secondaryLabelColor)
+                .foregroundStyle(secondaryLabelColor)
 
             Text("Hold \u{2325} Space to record")
                 .font(.system(size: 13))
-                .foregroundColor(secondaryLabelColor)
+                .foregroundStyle(secondaryLabelColor)
 
             Text("or \u{2325}\u{21E7} Space to toggle")
                 .font(.system(size: 11))
-                .foregroundColor(tertiaryLabelColor)
+                .foregroundStyle(tertiaryLabelColor)
         }
         .padding(.vertical, 30)
     }
@@ -285,7 +285,7 @@ struct FloatingView: View {
                 Button(action: { appState.cancelRecording() }) {
                     Text("Cancel")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(secondaryLabelColor)
+                        .foregroundStyle(secondaryLabelColor)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(
@@ -299,7 +299,7 @@ struct FloatingView: View {
                 Button(action: { applyText() }) {
                     Text("Apply")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
                         .background(
@@ -313,7 +313,7 @@ struct FloatingView: View {
                 Button(action: { discardText() }) {
                     Text("Discard")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(secondaryLabelColor)
+                        .foregroundStyle(secondaryLabelColor)
                         .frame(width: 80)
                         .frame(height: 32)
                         .background(
@@ -345,12 +345,12 @@ struct FloatingView: View {
             // Error
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 20))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
         } else {
             // Idle
             Image(systemName: "mic.fill")
                 .font(.system(size: 18))
-                .foregroundColor(secondaryLabelColor)
+                .foregroundStyle(secondaryLabelColor)
         }
     }
 

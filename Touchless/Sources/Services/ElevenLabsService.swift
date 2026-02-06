@@ -26,11 +26,6 @@ class ElevenLabsService {
         let audioData = try Data(contentsOf: audioURL)
         debugLog("ElevenLabs: Audio data size: \(audioData.count) bytes")
 
-        // Save a copy for debugging
-        let debugAudioPath = "/tmp/touchless_debug_audio.m4a"
-        try? audioData.write(to: URL(fileURLWithPath: debugAudioPath))
-        debugLog("ElevenLabs: Saved debug audio to \(debugAudioPath)")
-
         let body = createMultipartBody(
             audioData: audioData,
             fileName: audioURL.lastPathComponent,

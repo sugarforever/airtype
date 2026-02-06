@@ -378,19 +378,6 @@ class Settings: ObservableObject {
 
     // MARK: - Persistence Helpers
 
-    private func loadEnhancementApiKeys() {
-        enhancementApiKeys[.openai] = defaults.string(forKey: Keys.enhancementApiKey_openai) ?? ""
-        enhancementApiKeys[.openrouter] = defaults.string(forKey: Keys.enhancementApiKey_openrouter) ?? ""
-        enhancementApiKeys[.togetherai] = defaults.string(forKey: Keys.enhancementApiKey_togetherai) ?? ""
-        enhancementApiKeys[.groq] = defaults.string(forKey: Keys.enhancementApiKey_groq) ?? ""
-        enhancementApiKeys[.deepseek] = defaults.string(forKey: Keys.enhancementApiKey_deepseek) ?? ""
-        enhancementApiKeys[.moonshot] = defaults.string(forKey: Keys.enhancementApiKey_moonshot) ?? ""
-        enhancementApiKeys[.zai] = defaults.string(forKey: Keys.enhancementApiKey_zai) ?? ""
-        enhancementApiKeys[.azure] = defaults.string(forKey: Keys.enhancementApiKey_azure) ?? ""
-        enhancementApiKeys[.cloudflare] = defaults.string(forKey: Keys.enhancementApiKey_cloudflare) ?? ""
-        enhancementApiKeys[.custom] = defaults.string(forKey: Keys.enhancementApiKey_custom) ?? ""
-    }
-
     private func saveEnhancementApiKeys() {
         defaults.set(enhancementApiKeys[.openai] ?? "", forKey: Keys.enhancementApiKey_openai)
         defaults.set(enhancementApiKeys[.openrouter] ?? "", forKey: Keys.enhancementApiKey_openrouter)
@@ -404,24 +391,11 @@ class Settings: ObservableObject {
         defaults.set(enhancementApiKeys[.custom] ?? "", forKey: Keys.enhancementApiKey_custom)
     }
 
-    private func loadEnhancementModels() {
-        for provider in EnhancementProvider.allCases {
-            let key = "enhancement_model_\(provider.rawValue.lowercased().replacingOccurrences(of: " ", with: "_"))"
-            enhancementModels[provider] = defaults.string(forKey: key) ?? provider.defaultModel
-        }
-    }
-
     private func saveEnhancementModels() {
         for (provider, model) in enhancementModels {
             let key = "enhancement_model_\(provider.rawValue.lowercased().replacingOccurrences(of: " ", with: "_"))"
             defaults.set(model, forKey: key)
         }
-    }
-
-    private func loadEnhancementBaseURLs() {
-        enhancementBaseURLs[.azure] = defaults.string(forKey: Keys.enhancementBaseURL_azure) ?? EnhancementProvider.azure.baseURL
-        enhancementBaseURLs[.cloudflare] = defaults.string(forKey: Keys.enhancementBaseURL_cloudflare) ?? EnhancementProvider.cloudflare.baseURL
-        enhancementBaseURLs[.custom] = defaults.string(forKey: Keys.enhancementBaseURL_custom) ?? ""
     }
 
     private func saveEnhancementBaseURLs() {

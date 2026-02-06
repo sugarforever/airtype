@@ -9,16 +9,16 @@ class SettingsWindowController {
     private var windowDelegate: NSWindowDelegate?
 
     func show() {
-        print("[DEBUG] SettingsWindowController.show() called")
+        debugLog("SettingsWindowController.show() called")
 
         if let existingWindow = window {
-            print("[DEBUG] Showing existing window")
+            debugLog("Showing existing settings window")
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        print("[DEBUG] Creating new settings window")
+        debugLog("Creating new settings window")
 
         let settingsView = SettingsView(settings: Settings.shared, onClose: { [weak self] in
             self?.window?.close()
@@ -54,7 +54,7 @@ class SettingsWindowController {
         newWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        print("[DEBUG] Settings window should now be visible")
+        debugLog("Settings window should now be visible")
     }
 
     func close() {
