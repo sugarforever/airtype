@@ -2,19 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "Touchless",
+    name: "Airtype",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "Touchless", targets: ["Touchless"])
+        .executable(name: "Airtype", targets: ["Airtype"])
     ],
     dependencies: [
         .package(url: "https://github.com/soffes/HotKey.git", from: "0.2.0")
     ],
     targets: [
         .executableTarget(
-            name: "Touchless",
+            name: "Airtype",
             dependencies: ["HotKey"],
             path: "Sources"
         )

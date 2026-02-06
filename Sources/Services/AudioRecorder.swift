@@ -66,7 +66,7 @@ class AudioRecorder: NSObject, ObservableObject {
         }
 
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "touchless_recording_\(Date().timeIntervalSince1970).m4a"
+        let fileName = "airtype_recording_\(Date().timeIntervalSince1970).m4a"
         let url = tempDir.appendingPathComponent(fileName)
 
         let settings: [String: Any] = [
@@ -234,7 +234,7 @@ enum RecordingError: LocalizedError {
     var recoverySuggestion: String? {
         switch self {
         case .noPermission:
-            return "Open System Settings and grant microphone access to Touchless."
+            return "Open System Settings and grant microphone access to Airtype."
         case .setupFailed:
             return "Try closing other apps that may be using the microphone."
         case .recordingTooShort:

@@ -1,7 +1,7 @@
 import SwiftUI
 import os.log
 
-private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("touchless_debug.log")
+private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
 
 func debugLog(_ message: String) {
     let timestamp = ISO8601DateFormatter().string(from: Date())
@@ -34,7 +34,7 @@ func streamOutput(_ text: String, newline: Bool = true) {
 }
 
 @main
-struct TouchlessApp: App {
+struct AirtypeApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {

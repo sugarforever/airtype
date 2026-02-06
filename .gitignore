@@ -1,3 +1,9 @@
+.build/
+.swiftpm/
+*.xcodeproj
+Packages/
+DerivedData/
+.DS_Store
 node_modules/
 package.json
 package-lock.json

@@ -1,16 +1,16 @@
 #!/bin/bash
-# Build script for Touchless.app
+# Build script for Airtype.app
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "Building Touchless..."
+echo "Building Airtype..."
 swift build -c release
 
 echo "Creating app bundle..."
-APP_NAME="Touchless"
+APP_NAME="Airtype"
 BUILD_DIR=".build/release"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS="$APP_BUNDLE/Contents"

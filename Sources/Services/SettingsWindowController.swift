@@ -34,7 +34,7 @@ class SettingsWindowController {
             defer: false
         )
 
-        newWindow.title = "Touchless Settings"
+        newWindow.title = "Airtype Settings"
         newWindow.contentView = hostingView
         newWindow.center()
         newWindow.isReleasedWhenClosed = false

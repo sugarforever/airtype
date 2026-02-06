@@ -70,7 +70,7 @@ struct MenuBarView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Touchless")
+                        Text("Airtype")
                             .font(.system(size: 13, weight: .semibold))
                         Text(statusText)
                             .font(.system(size: 11))
@@ -198,7 +198,7 @@ struct MenuBarView: View {
                 SettingsWindowController.shared.show()
             }
 
-            MenuButton(title: "Quit Touchless", shortcut: "⌘Q") {
+            MenuButton(title: "Quit Airtype", shortcut: "⌘Q") {
                 NSApplication.shared.terminate(nil)
             }
 

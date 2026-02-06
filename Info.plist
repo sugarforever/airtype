@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Touchless</string>
+    <string>Airtype</string>
     <key>CFBundleDisplayName</key>
-    <string>Touchless</string>
+    <string>Airtype</string>
     <key>CFBundleIdentifier</key>
-    <string>com.touchless.app</string>
+    <string>com.airtype.app</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleExecutable</key>
-    <string>Touchless</string>
+    <string>Airtype</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
@@ -21,8 +21,8 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Touchless needs microphone access to record your voice for transcription.</string>
+    <string>Airtype needs microphone access to record your voice for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Touchless needs accessibility access to insert text at your cursor position.</string>
+    <string>Airtype needs accessibility access to insert text at your cursor position.</string>
 </dict>
 </plist>
