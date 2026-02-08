@@ -191,10 +191,20 @@ struct FloatingView: View {
                 .font(.system(size: 36, weight: .light, design: .monospaced))
                 .foregroundStyle(labelColor)
 
-            // Hint
-            Text("Release to transcribe")
+            // Low audio warning or hint
+            if audioRecorder.recordingDuration >= 2.0 && audioRecorder.maxLevelDuringRecording < 0.05 {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                    Text("No audio detected — check your microphone")
+                }
                 .font(.system(size: 12))
-                .foregroundStyle(secondaryLabelColor)
+                .foregroundStyle(.orange)
+            } else {
+                Text("Release to transcribe")
+                    .font(.system(size: 12))
+                    .foregroundStyle(secondaryLabelColor)
+            }
         }
         .padding(.vertical, 20)
     }
@@ -358,7 +368,7 @@ struct FloatingView: View {
         if appState.isRecording {
             return "Recording"
         } else if appState.isProcessing {
-            return appState.processingStage.isEmpty ? "Processing..." : appState.processingStage
+            return appState.processingStage.isEmpty ? "Thinking..." : appState.processingStage
         } else if appState.lastError != nil {
             return "Error"
         } else {

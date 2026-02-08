@@ -300,6 +300,15 @@ class AppState: ObservableObject {
             return
         }
 
+        // Check for silence (valid file but no speech detected)
+        if audioRecorder.recordingWasSilent {
+            debugLog("Recording was silent (max level: \(audioRecorder.maxLevelDuringRecording)), skipping API call")
+            lastError = "No speech detected. Check that the correct microphone is selected in System Settings → Sound → Input."
+            audioRecorder.cleanupRecording(at: audioURL)
+            isRecording = false
+            return
+        }
+
         isRecording = false
         isProcessing = true
         processingProgress = 0.0
@@ -309,7 +318,7 @@ class AppState: ObservableObject {
         do {
             // Step 1: Transcribe using selected provider (with progress for OpenAI)
             debugLog("Starting transcription with \(settings.transcriptionProvider.rawValue)...")
-            processingStage = "Transcribing..."
+            processingStage = "Thinking..."
             streamOutput("\n--- Transcribing (\(settings.transcriptionProvider.rawValue))... ---")
             lastStreamedLength = 0
             let transcription: String
@@ -333,12 +342,9 @@ class AppState: ObservableObject {
                             }
                         }
 
-                        // Update stage with chunk info
+                        // Track chunk info internally for debugging
                         if progress.totalChunks > 1 {
                             self.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
-                            self.processingStage = "\(progress.stage.rawValue) \(self.transcriptionChunkInfo)"
-                        } else {
-                            self.processingStage = progress.stage.rawValue
                         }
                     }
                 }
@@ -361,7 +367,6 @@ class AppState: ObservableObject {
             let finalText: String
             if settings.enhancementEnabled {
                 debugLog("Starting enhancement...")
-                processingStage = "Correcting..."
                 streamOutput("\n--- Correcting errors... ---")
                 processingProgress = 0.75
                 finalText = try await enhancementService.enhance(text: transcription)
@@ -388,7 +393,6 @@ class AppState: ObservableObject {
             } else {
                 // Direct insert
                 debugLog("Inserting text...")
-                processingStage = "Inserting..."
                 streamOutput("\n--- Inserting at cursor ---")
                 processingProgress = 0.95
                 try await textInserter.insert(text: finalText)

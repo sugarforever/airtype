@@ -11,6 +11,7 @@ class AudioRecorder: NSObject, ObservableObject {
     // Audio level monitoring for visual feedback
     @Published var audioLevel: Float = 0.0  // 0.0 to 1.0 normalized
     @Published var peakLevel: Float = 0.0   // Peak level for visual indicator
+    @Published var maxLevelDuringRecording: Float = 0.0  // Tracks highest level seen during recording
 
     // Recording duration tracking
     @Published var recordingDuration: TimeInterval = 0.0
@@ -88,6 +89,7 @@ class AudioRecorder: NSObject, ObservableObject {
             recordingStartTime = Date()
             audioLevel = 0.0
             peakLevel = 0.0
+            maxLevelDuringRecording = 0.0
             estimatedFileSize = 0
 
             // Start level monitoring timer
@@ -137,6 +139,7 @@ class AudioRecorder: NSObject, ObservableObject {
         // -60dB = silence, 0dB = max
         audioLevel = normalizeDecibels(avgPower)
         peakLevel = normalizeDecibels(peakPower)
+        maxLevelDuringRecording = max(maxLevelDuringRecording, audioLevel)
 
         // Update estimated file size
         if let url = recordingURL,
@@ -160,6 +163,11 @@ class AudioRecorder: NSObject, ObservableObject {
 
         // Linear interpolation
         return (clampedDb - minDb) / (maxDb - minDb)
+    }
+
+    /// Check if recording was all silence (max level never exceeded threshold)
+    var recordingWasSilent: Bool {
+        maxLevelDuringRecording < 0.05
     }
 
     /// Check if recording is approaching file size limit
