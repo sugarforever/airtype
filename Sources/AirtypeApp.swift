@@ -208,7 +208,10 @@ class AppState: ObservableObject {
 
     init() {
         setupHotkeyCallbacks()
-        SettingsWindowController.shared.hotkeyManager = hotkeyManager
+        MainWindowController.shared.hotkeyManager = hotkeyManager
+        Task { @MainActor in
+            MainWindowController.shared.show()
+        }
     }
 
     private func setupHotkeyCallbacks() {
