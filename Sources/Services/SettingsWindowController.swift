@@ -7,6 +7,7 @@ class SettingsWindowController {
 
     private var window: NSWindow?
     private var windowDelegate: NSWindowDelegate?
+    var hotkeyManager: HotkeyManager?
 
     func show() {
         debugLog("SettingsWindowController.show() called")
@@ -20,7 +21,12 @@ class SettingsWindowController {
 
         debugLog("Creating new settings window")
 
-        let settingsView = SettingsView(settings: Settings.shared, onClose: { [weak self] in
+        guard let hotkeyManager = hotkeyManager else {
+            debugLog("ERROR: hotkeyManager not set on SettingsWindowController")
+            return
+        }
+
+        let settingsView = SettingsView(settings: Settings.shared, hotkeyManager: hotkeyManager, onClose: { [weak self] in
             self?.window?.close()
         })
 

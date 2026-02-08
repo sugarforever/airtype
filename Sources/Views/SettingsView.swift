@@ -1,7 +1,9 @@
+import HotKey
 import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: Settings
+    @ObservedObject var hotkeyManager: HotkeyManager
     var onClose: (() -> Void)?
 
     var body: some View {
@@ -285,15 +287,33 @@ struct SettingsView: View {
     private var shortcutsSection: some View {
         SettingsSection(title: "Keyboard Shortcuts", icon: "keyboard") {
             VStack(spacing: 8) {
-                ShortcutRow(
+                ShortcutRecorderRow(
                     name: "Push-to-talk",
-                    shortcut: "\u{2325} Space",
-                    description: "Hold to record, release to transcribe"
+                    description: "Hold to record, release to transcribe",
+                    currentKeyCode: settings.pushToTalkKeyCode,
+                    currentModifiers: settings.pushToTalkModifiers,
+                    defaultKeyCode: Settings.defaultPushToTalkKeyCode,
+                    defaultModifiers: Settings.defaultPushToTalkModifiers,
+                    hotkeyManager: hotkeyManager,
+                    onSave: { keyCode, modifiers in
+                        settings.pushToTalkKeyCode = keyCode
+                        settings.pushToTalkModifiers = modifiers
+                        hotkeyManager.rebindHotkeys()
+                    }
                 )
-                ShortcutRow(
+                ShortcutRecorderRow(
                     name: "Toggle mode",
-                    shortcut: "\u{2325}\u{21E7} Space",
-                    description: "Press to start/stop recording"
+                    description: "Press to start/stop recording",
+                    currentKeyCode: settings.toggleModeKeyCode,
+                    currentModifiers: settings.toggleModeModifiers,
+                    defaultKeyCode: Settings.defaultToggleModeKeyCode,
+                    defaultModifiers: Settings.defaultToggleModeModifiers,
+                    hotkeyManager: hotkeyManager,
+                    onSave: { keyCode, modifiers in
+                        settings.toggleModeKeyCode = keyCode
+                        settings.toggleModeModifiers = modifiers
+                        hotkeyManager.rebindHotkeys()
+                    }
                 )
             }
         }
@@ -407,10 +427,26 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
-struct ShortcutRow: View {
+struct ShortcutRecorderRow: View {
     let name: String
-    let shortcut: String
     let description: String
+    let currentKeyCode: UInt32
+    let currentModifiers: UInt32
+    let defaultKeyCode: UInt32
+    let defaultModifiers: UInt32
+    let hotkeyManager: HotkeyManager
+    let onSave: (UInt32, UInt32) -> Void
+
+    @State private var isRecording = false
+    @State private var eventMonitor: Any?
+
+    private var displayString: String {
+        Settings.shortcutDisplayString(keyCode: currentKeyCode, modifiers: currentModifiers)
+    }
+
+    private var isDefault: Bool {
+        currentKeyCode == defaultKeyCode && currentModifiers == defaultModifiers
+    }
 
     var body: some View {
         HStack {
@@ -422,12 +458,69 @@ struct ShortcutRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(shortcut)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(.rect(cornerRadius: 4))
+            if !isDefault {
+                Button("Reset") {
+                    onSave(defaultKeyCode, defaultModifiers)
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+            }
+            Button(action: { startRecording() }) {
+                Text(isRecording ? "Press shortcut..." : displayString)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(isRecording ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.1))
+                    .clipShape(.rect(cornerRadius: 4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(isRecording ? Color.accentColor : Color.clear, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
         }
+    }
+
+    private func startRecording() {
+        guard !isRecording else { return }
+        isRecording = true
+        hotkeyManager.disable()
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            let keyCode = UInt32(event.keyCode)
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+            // Escape cancels
+            if keyCode == 53 && modifiers.isEmpty {
+                stopRecording()
+                return nil
+            }
+
+            // Require at least one modifier key
+            let carbonMods = modifiers.carbonFlags
+            if carbonMods == 0 {
+                return nil
+            }
+
+            // Ignore standalone modifier key presses
+            let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+            if modifierKeyCodes.contains(event.keyCode) {
+                return nil
+            }
+
+            onSave(keyCode, carbonMods)
+            stopRecording()
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        isRecording = false
+        hotkeyManager.enable()
     }
 }

@@ -208,6 +208,7 @@ class AppState: ObservableObject {
 
     init() {
         setupHotkeyCallbacks()
+        SettingsWindowController.shared.hotkeyManager = hotkeyManager
     }
 
     private func setupHotkeyCallbacks() {

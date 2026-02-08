@@ -1,4 +1,6 @@
+import Carbon.HIToolbox
 import Foundation
+import HotKey
 import SwiftUI
 
 // MARK: - Transcription Provider
@@ -144,6 +146,12 @@ class Settings: ObservableObject {
         static let enhancementBaseURL_cloudflare = "enhancement_base_url_cloudflare"
         static let enhancementBaseURL_custom = "enhancement_base_url_custom"
 
+        // Keyboard shortcuts
+        static let pushToTalkKeyCode = "push_to_talk_key_code"
+        static let pushToTalkModifiers = "push_to_talk_modifiers"
+        static let toggleModeKeyCode = "toggle_mode_key_code"
+        static let toggleModeModifiers = "toggle_mode_modifiers"
+
         // Floating window
         static let showFloatingWindow = "show_floating_window"
         static let floatingWindowPosition = "floating_window_position"
@@ -217,6 +225,40 @@ class Settings: ObservableObject {
 
     @Published var previewBeforeInsert: Bool {
         didSet { defaults.set(previewBeforeInsert, forKey: Keys.previewBeforeInsert) }
+    }
+
+    // MARK: - Keyboard Shortcut Settings
+
+    static let defaultPushToTalkKeyCode = UInt32(kVK_Space)
+    static let defaultPushToTalkModifiers = NSEvent.ModifierFlags.option.carbonFlags
+    static let defaultToggleModeKeyCode = UInt32(kVK_Space)
+    static let defaultToggleModeModifiers = NSEvent.ModifierFlags([.option, .shift]).carbonFlags
+
+    @Published var pushToTalkKeyCode: UInt32 {
+        didSet { defaults.set(Int(pushToTalkKeyCode), forKey: Keys.pushToTalkKeyCode) }
+    }
+
+    @Published var pushToTalkModifiers: UInt32 {
+        didSet { defaults.set(Int(pushToTalkModifiers), forKey: Keys.pushToTalkModifiers) }
+    }
+
+    @Published var toggleModeKeyCode: UInt32 {
+        didSet { defaults.set(Int(toggleModeKeyCode), forKey: Keys.toggleModeKeyCode) }
+    }
+
+    @Published var toggleModeModifiers: UInt32 {
+        didSet { defaults.set(Int(toggleModeModifiers), forKey: Keys.toggleModeModifiers) }
+    }
+
+    /// Format a key combo as a human-readable string (e.g. "⌥ Space")
+    static func shortcutDisplayString(keyCode: UInt32, modifiers: UInt32) -> String {
+        let flags = NSEvent.ModifierFlags(carbonFlags: modifiers)
+        let modString = flags.description
+        let keyString = Key(carbonKeyCode: keyCode)?.description ?? "?"
+        if modString.isEmpty {
+            return keyString
+        }
+        return "\(modString)\(keyString)"
     }
 
     // MARK: - Available Models
@@ -368,6 +410,28 @@ class Settings: ObservableObject {
         baseURLs[.cloudflare] = defaults.string(forKey: Keys.enhancementBaseURL_cloudflare) ?? EnhancementProvider.cloudflare.baseURL
         baseURLs[.custom] = defaults.string(forKey: Keys.enhancementBaseURL_custom) ?? ""
         self.enhancementBaseURLs = baseURLs
+
+        // Keyboard shortcut settings
+        if let val = defaults.object(forKey: Keys.pushToTalkKeyCode) as? Int {
+            self.pushToTalkKeyCode = UInt32(val)
+        } else {
+            self.pushToTalkKeyCode = Settings.defaultPushToTalkKeyCode
+        }
+        if let val = defaults.object(forKey: Keys.pushToTalkModifiers) as? Int {
+            self.pushToTalkModifiers = UInt32(val)
+        } else {
+            self.pushToTalkModifiers = Settings.defaultPushToTalkModifiers
+        }
+        if let val = defaults.object(forKey: Keys.toggleModeKeyCode) as? Int {
+            self.toggleModeKeyCode = UInt32(val)
+        } else {
+            self.toggleModeKeyCode = Settings.defaultToggleModeKeyCode
+        }
+        if let val = defaults.object(forKey: Keys.toggleModeModifiers) as? Int {
+            self.toggleModeModifiers = UInt32(val)
+        } else {
+            self.toggleModeModifiers = Settings.defaultToggleModeModifiers
+        }
 
         // Floating window settings
         self.showFloatingWindow = defaults.object(forKey: Keys.showFloatingWindow) as? Bool ?? true
