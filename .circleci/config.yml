@@ -25,14 +25,21 @@ jobs:
             security default-keychain -s build.keychain
             security unlock-keychain -p "" build.keychain
             security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            # Install Apple root and intermediate certificates for full chain
+            curl -sO https://www.apple.com/appleca/AppleIncRootCertificate.cer
+            curl -sO https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
+            curl -sO https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+            curl -sO https://www.apple.com/certificateauthority/DeveloperIDCA.cer
+            curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+            security import AppleIncRootCertificate.cer -k build.keychain -T /usr/bin/codesign
+            security import AppleRootCA-G2.cer -k build.keychain -T /usr/bin/codesign
+            security import AppleWWDRCAG3.cer -k build.keychain -T /usr/bin/codesign
+            security import DeveloperIDCA.cer -k build.keychain -T /usr/bin/codesign
+            security import DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
+            rm -f AppleIncRootCertificate.cer AppleRootCA-G2.cer AppleWWDRCAG3.cer DeveloperIDCA.cer DeveloperIDG2CA.cer certificate.p12
+            # Set partition list after all imports
             security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
             security list-keychains -d user -s build.keychain login.keychain
-            # Install Apple WWDR and Developer ID intermediate certificates
-            curl -sO https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
-            curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-            security import AppleWWDRCAG3.cer -k build.keychain -T /usr/bin/codesign
-            security import DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
-            rm -f AppleWWDRCAG3.cer DeveloperIDG2CA.cer certificate.p12
 
       # Verify signing identity
       - run:
