@@ -47,7 +47,7 @@ struct FloatingGlassBackgroundView: NSViewRepresentable {
     var appearanceObserver: GlassAppearanceObserver?
 
     func makeNSView(context: Context) -> NSView {
-        #if compiler(>=6.1)
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             let glassView = NSGlassEffectView()
             glassView.cornerRadius = cornerRadius
@@ -67,7 +67,7 @@ struct FloatingGlassBackgroundView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        #if compiler(>=6.1)
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *), let glassView = nsView as? NSGlassEffectView {
             glassView.cornerRadius = cornerRadius
             return
