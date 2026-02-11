@@ -23,6 +23,7 @@ struct MainView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var hotkeyManager: HotkeyManager
     @State private var hasAccessibility = AXIsProcessTrusted()
+    @StateObject private var updateChecker = UpdateChecker()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,6 +31,9 @@ struct MainView: View {
             Divider().overlay(Theme.border)
             ScrollView {
                 VStack(spacing: 16) {
+                    if updateChecker.updateAvailable {
+                        updateBanner
+                    }
                     if !hasAccessibility {
                         accessibilityBanner
                     }
@@ -48,6 +52,7 @@ struct MainView: View {
         .frame(width: 520, height: 700)
         .background(Theme.bg)
         .tint(Theme.brand)
+        .onAppear { updateChecker.check() }
     }
 
     // MARK: - Header
@@ -118,6 +123,28 @@ struct MainView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             hasAccessibility = AXIsProcessTrusted()
         }
+    }
+
+    // MARK: - Update Banner
+
+    private var updateBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.brand)
+            Text("Airtype \(updateChecker.latestVersion) available")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Button("Download") {
+                NSWorkspace.shared.open(UpdateChecker.downloadURL)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+        .padding(12)
+        .background(Theme.brand.opacity(0.1))
+        .clipShape(.rect(cornerRadius: 8))
     }
 
     // MARK: - Voice Input
