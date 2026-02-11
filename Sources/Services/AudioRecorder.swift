@@ -40,7 +40,7 @@ class AudioRecorder: NSObject, ObservableObject {
         case .authorized:
             hasPermission = true
         case .notDetermined:
-            requestPermission()
+            hasPermission = false
         case .denied, .restricted:
             hasPermission = false
             errorMessage = "Microphone access denied. Please enable in System Settings > Privacy & Security > Microphone"

@@ -53,8 +53,7 @@ class MainWindowController {
 
         self.window = newWindow
 
-        // For menu bar apps, we need to activate the app first
-        NSApp.setActivationPolicy(.accessory)
+        // Show in Dock while window is open so user can switch back to it
         newWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -109,7 +108,6 @@ class MainWindowController {
 
         self.wizardWindow = newWindow
 
-        NSApp.setActivationPolicy(.accessory)
         newWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

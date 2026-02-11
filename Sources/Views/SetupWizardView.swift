@@ -265,7 +265,10 @@ struct SetupWizardView: View {
                     } else {
                         Button("Grant Access") {
                             AVCaptureDevice.requestAccess(for: .audio) { granted in
-                                DispatchQueue.main.async { hasMicPermission = granted }
+                                DispatchQueue.main.async {
+                                    hasMicPermission = granted
+                                    NSApp.activate(ignoringOtherApps: true)
+                                }
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -290,6 +293,10 @@ struct SetupWizardView: View {
                             .foregroundStyle(Theme.brand)
                     } else {
                         Button("Grant Access") {
+                            // Register app in accessibility list
+                            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+                            _ = AXIsProcessTrustedWithOptions(options)
+                            // Also open Settings in case the prompt is suppressed
                             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                                 NSWorkspace.shared.open(url)
                             }
