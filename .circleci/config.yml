@@ -93,14 +93,23 @@ jobs:
               --wait
             xcrun stapler staple Airtype.app
 
-      # Create DMG
+      # Create DMG with drag-to-install UI
+      - run:
+          name: Install create-dmg
+          command: brew install create-dmg
       - run:
           name: Create DMG
           command: |
-            hdiutil create -volname "Airtype" \
-              -srcfolder "$EXPORT_PATH/Airtype.app" \
-              -ov -format UDZO \
-              "build/Airtype-${CIRCLE_TAG:-dev}.dmg"
+            create-dmg \
+              --volname "Airtype" \
+              --window-pos 200 120 \
+              --window-size 660 400 \
+              --icon-size 80 \
+              --icon "Airtype.app" 180 190 \
+              --app-drop-link 480 190 \
+              --hide-extension "Airtype.app" \
+              "build/Airtype-${CIRCLE_TAG:-dev}.dmg" \
+              "$EXPORT_PATH/Airtype.app"
 
       # Store artifact (copy to fixed name for CircleCI artifact storage)
       - run:
