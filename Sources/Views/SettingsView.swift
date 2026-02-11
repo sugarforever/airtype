@@ -510,7 +510,7 @@ struct ShortcutRecorderRow: View {
         }
     }
 
-    private func startRecording() {
+    @MainActor private func startRecording() {
         guard !isRecording else { return }
         isRecording = true
         hotkeyManager.disable()
@@ -543,7 +543,7 @@ struct ShortcutRecorderRow: View {
         }
     }
 
-    private func stopRecording() {
+    @MainActor private func stopRecording() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil

@@ -106,14 +106,16 @@ class AudioRecorder: NSObject, ObservableObject {
     private func startLevelMonitoring() {
         // Use a timer to poll audio levels
         levelTimer = Timer.scheduledTimer(withTimeInterval: levelUpdateInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.updateLevels()
             }
         }
 
         // Duration timer (updates every second)
         durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.updateDuration()
             }
         }

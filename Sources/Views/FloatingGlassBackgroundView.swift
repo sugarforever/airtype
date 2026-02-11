@@ -47,6 +47,7 @@ struct FloatingGlassBackgroundView: NSViewRepresentable {
     var appearanceObserver: GlassAppearanceObserver?
 
     func makeNSView(context: Context) -> NSView {
+        #if compiler(>=6.1)
         if #available(macOS 26.0, *) {
             let glassView = NSGlassEffectView()
             glassView.cornerRadius = cornerRadius
@@ -54,22 +55,24 @@ struct FloatingGlassBackgroundView: NSViewRepresentable {
             appearanceObserver?.observe(glassView)
             return glassView
         }
+        #endif
 
         let visualEffect = NSVisualEffectView()
         visualEffect.material = .hudWindow
         visualEffect.blendingMode = .behindWindow
         visualEffect.state = .active
         visualEffect.isEmphasized = false
-        // Don't force appearance - let it adapt naturally
         appearanceObserver?.observe(visualEffect)
         return visualEffect
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        #if compiler(>=6.1)
         if #available(macOS 26.0, *), let glassView = nsView as? NSGlassEffectView {
             glassView.cornerRadius = cornerRadius
             return
         }
+        #endif
 
         guard let visualEffect = nsView as? NSVisualEffectView else { return }
         visualEffect.material = .hudWindow
