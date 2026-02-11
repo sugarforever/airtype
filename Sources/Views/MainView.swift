@@ -470,12 +470,16 @@ struct MainView: View {
             Button {
                 NSWorkspace.shared.open(url)
             } label: {
-                Image(systemName: "key.fill")
-                    .font(.system(size: 10))
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 10))
+                    Text("Get API Key")
+                        .font(.system(size: 11))
+                }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderless)
+            .foregroundStyle(Theme.brand)
             .controlSize(.small)
-            .help("Get API Key")
         }
     }
 
