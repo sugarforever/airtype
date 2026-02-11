@@ -20,6 +20,8 @@
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Airtype needs microphone access to record your voice for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>

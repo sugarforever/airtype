@@ -140,7 +140,7 @@ struct MenuBarView: View {
 
             // Current configuration
             VStack(alignment: .leading, spacing: 6) {
-                configRow(label: "Provider", value: appState.settings.transcriptionProvider.rawValue)
+                configRow(label: "Service", value: appState.settings.transcriptionProvider.rawValue)
                 configRow(label: "Model", value: currentModel)
             }
             .padding(.horizontal, 12)

@@ -11,6 +11,14 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case mistral = "Mistral"
 
     var id: String { rawValue }
+
+    var apiKeyURL: URL? {
+        switch self {
+        case .elevenlabs: return URL(string: "https://elevenlabs.io/app/settings/api-keys")
+        case .openai: return URL(string: "https://platform.openai.com/api-keys")
+        case .mistral: return URL(string: "https://console.mistral.ai/api-keys")
+        }
+    }
 }
 
 // MARK: - Enhancement Provider (Multiple OpenAI-compatible providers)
@@ -67,6 +75,21 @@ enum EnhancementProvider: String, CaseIterable, Identifiable {
         case .cloudflare: return "@cf/meta/llama-3-8b-instruct"
         case .lmstudio: return "local-model"
         case .custom: return ""
+        }
+    }
+
+    var apiKeyURL: URL? {
+        switch self {
+        case .openai: return URL(string: "https://platform.openai.com/api-keys")
+        case .openrouter: return URL(string: "https://openrouter.ai/keys")
+        case .togetherai: return URL(string: "https://api.together.ai/settings/api-keys")
+        case .groq: return URL(string: "https://console.groq.com/keys")
+        case .deepseek: return URL(string: "https://platform.deepseek.com/api_keys")
+        case .moonshot: return URL(string: "https://platform.moonshot.cn/console/api-keys")
+        case .zai: return URL(string: "https://open.bigmodel.cn/usercenter/apikeys")
+        case .azure: return URL(string: "https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/OpenAI")
+        case .cloudflare: return URL(string: "https://dash.cloudflare.com/profile/api-tokens")
+        case .lmstudio, .custom: return nil
         }
     }
 
@@ -343,20 +366,20 @@ class Settings: ObservableObject {
         switch transcriptionProvider {
         case .openai:
             if openaiTranscriptionApiKey.isEmpty {
-                return "OpenAI API key required for transcription"
+                return "OpenAI API key required for voice input"
             }
         case .elevenlabs:
             if elevenlabsApiKey.isEmpty {
-                return "ElevenLabs API key required for transcription"
+                return "ElevenLabs API key required for voice input"
             }
         case .mistral:
             if mistralTranscriptionApiKey.isEmpty {
-                return "Mistral API key required for transcription"
+                return "Mistral API key required for voice input"
             }
         }
 
         if enhancementEnabled && enhancementProvider.requiresApiKey && currentEnhancementApiKey.isEmpty {
-            return "\(enhancementProvider.rawValue) API key required for enhancement"
+            return "\(enhancementProvider.rawValue) API key required for enhancement model"
         }
 
         return nil

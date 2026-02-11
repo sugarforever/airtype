@@ -1,0 +1,137 @@
+version: 2.1
+
+orbs:
+  macos: circleci/macos@2
+
+jobs:
+  build-and-release:
+    macos:
+      xcode: "15.4.0"
+    resource_class: macos.m1.medium.gen1
+    environment:
+      SCHEME: Airtype
+      PROJECT: Airtype.xcodeproj
+      ARCHIVE_PATH: build/Airtype.xcarchive
+      EXPORT_PATH: build/export
+    steps:
+      - checkout
+
+      # Install certificate and provisioning profile
+      - run:
+          name: Install signing certificate
+          command: |
+            echo "$CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
+            security create-keychain -p "" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "" build.keychain
+            security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+            rm certificate.p12
+
+      # Resolve SPM dependencies
+      - run:
+          name: Resolve packages
+          command: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+
+      # Build archive
+      - run:
+          name: Archive
+          command: |
+            xcodebuild archive \
+              -project "$PROJECT" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              CODE_SIGN_STYLE=Manual \
+              DEVELOPMENT_TEAM="$TEAM_ID" \
+              CODE_SIGN_IDENTITY="Developer ID Application: $SIGNING_IDENTITY" \
+              OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
+
+      # Export
+      - run:
+          name: Export app
+          command: |
+            cat > build/ExportOptions.plist << 'PLIST'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>method</key>
+                <string>developer-id</string>
+                <key>teamID</key>
+                <string>${TEAM_ID}</string>
+                <key>signingStyle</key>
+                <string>manual</string>
+                <key>signingCertificate</key>
+                <string>Developer ID Application</string>
+            </dict>
+            </plist>
+            PLIST
+            sed -i '' "s/\${TEAM_ID}/$TEAM_ID/" build/ExportOptions.plist
+            xcodebuild -exportArchive \
+              -archivePath "$ARCHIVE_PATH" \
+              -exportPath "$EXPORT_PATH" \
+              -exportOptionsPlist build/ExportOptions.plist
+
+      # Notarize
+      - run:
+          name: Notarize app
+          command: |
+            cd "$EXPORT_PATH"
+            ditto -c -k --keepParent Airtype.app Airtype.zip
+            xcrun notarytool submit Airtype.zip \
+              --apple-id "$APPLE_ID" \
+              --password "$APP_SPECIFIC_PASSWORD" \
+              --team-id "$TEAM_ID" \
+              --wait
+            xcrun stapler staple Airtype.app
+
+      # Create DMG
+      - run:
+          name: Create DMG
+          command: |
+            hdiutil create -volname "Airtype" \
+              -srcfolder "$EXPORT_PATH/Airtype.app" \
+              -ov -format UDZO \
+              "build/Airtype-${CIRCLE_TAG:-dev}.dmg"
+
+      # Store artifact
+      - store_artifacts:
+          path: build/Airtype-${CIRCLE_TAG:-dev}.dmg
+
+      # Upload to GitHub Release and R2 (only on tags)
+      - when:
+          condition: << pipeline.git.tag >>
+          steps:
+            - run:
+                name: Upload to GitHub Release
+                command: |
+                  DMG="build/Airtype-${CIRCLE_TAG}.dmg"
+                  gh release create "$CIRCLE_TAG" "$DMG" \
+                    --title "Airtype $CIRCLE_TAG" \
+                    --generate-notes
+                environment:
+                  GH_TOKEN: << pipeline.parameters.github_token >>
+            - run:
+                name: Upload to Cloudflare R2
+                command: |
+                  pip3 install awscli
+                  DMG="build/Airtype-${CIRCLE_TAG}.dmg"
+                  # Upload versioned file
+                  aws s3 cp "$DMG" \
+                    "s3://${R2_BUCKET}/releases/Airtype-${CIRCLE_TAG}.dmg" \
+                    --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+                  # Update latest pointer
+                  aws s3 cp "$DMG" \
+                    "s3://${R2_BUCKET}/releases/Airtype-latest.dmg" \
+                    --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+workflows:
+  build:
+    jobs:
+      - build-and-release:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

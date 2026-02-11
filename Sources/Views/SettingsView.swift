@@ -45,10 +45,10 @@ struct SettingsView: View {
     // MARK: - Transcription Section
 
     private var transcriptionSection: some View {
-        SettingsSection(title: "Transcription", icon: "mic.fill") {
+        SettingsSection(title: "Voice Input", icon: "mic.fill") {
             VStack(alignment: .leading, spacing: 16) {
                 // Provider picker
-                SettingsRow(label: "Provider") {
+                SettingsRow(label: "Service") {
                     Picker("", selection: $settings.transcriptionProvider) {
                         ForEach(TranscriptionProvider.allCases) { provider in
                             Text(provider.rawValue).tag(provider)
@@ -76,9 +76,12 @@ struct SettingsView: View {
     private var elevenlabsSettings: some View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsRow(label: "API Key") {
-                SecureField("xi-...", text: $settings.elevenlabsApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                HStack(spacing: 6) {
+                    SecureField("xi-...", text: $settings.elevenlabsApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
 
             SettingsRow(label: "Model") {
@@ -95,9 +98,12 @@ struct SettingsView: View {
     private var openaiTranscriptionSettings: some View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsRow(label: "API Key") {
-                SecureField("sk-...", text: $settings.openaiTranscriptionApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                HStack(spacing: 6) {
+                    SecureField("sk-...", text: $settings.openaiTranscriptionApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
 
             SettingsRow(label: "Model") {
@@ -114,9 +120,12 @@ struct SettingsView: View {
     private var mistralTranscriptionSettings: some View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsRow(label: "API Key") {
-                SecureField("...mistral key...", text: $settings.mistralTranscriptionApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                HStack(spacing: 6) {
+                    SecureField("...mistral key...", text: $settings.mistralTranscriptionApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
 
             SettingsRow(label: "Model") {
@@ -150,14 +159,14 @@ struct SettingsView: View {
     // MARK: - Enhancement Section
 
     private var enhancementSection: some View {
-        SettingsSection(title: "AI Enhancement", icon: "wand.and.stars") {
+        SettingsSection(title: "Enhancement Model", icon: "wand.and.stars") {
             VStack(alignment: .leading, spacing: 16) {
                 // Enable toggle
                 Toggle(isOn: $settings.enhancementEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable error correction")
+                        Text("Enable enhancement")
                             .font(.system(size: 12, weight: .medium))
-                        Text("Fix transcription errors, add punctuation, format text")
+                        Text("Improve accuracy, add punctuation, and format text")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
@@ -187,12 +196,15 @@ struct SettingsView: View {
             // API Key (if required)
             if settings.enhancementProvider.requiresApiKey {
                 SettingsRow(label: "API Key") {
-                    SecureField(settings.enhancementProvider.apiKeyPlaceholder, text: Binding(
-                        get: { settings.currentEnhancementApiKey },
-                        set: { settings.currentEnhancementApiKey = $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+                    HStack(spacing: 6) {
+                        SecureField(settings.enhancementProvider.apiKeyPlaceholder, text: Binding(
+                            get: { settings.currentEnhancementApiKey },
+                            set: { settings.currentEnhancementApiKey = $0 }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                        apiKeyLink(url: settings.enhancementProvider.apiKeyURL)
+                    }
                 }
             }
 
@@ -365,6 +377,21 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private func apiKeyLink(url: URL?) -> some View {
+        if let url {
+            Button {
+                NSWorkspace.shared.open(url)
+            } label: {
+                Image(systemName: "key.fill")
+                    .font(.system(size: 10))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Get API Key")
+        }
+    }
+
     private func openMicrophoneSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
             NSWorkspace.shared.open(url)
@@ -405,6 +432,7 @@ struct SettingsSection<Content: View>: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 content
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
             }
             .background(Color(NSColor.controlBackgroundColor))

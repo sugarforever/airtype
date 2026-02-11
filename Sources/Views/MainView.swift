@@ -79,9 +79,9 @@ struct MainView: View {
     // MARK: - Transcription Section
 
     private var transcriptionSection: some View {
-        SettingsSection(title: "Transcription", icon: "mic.fill") {
+        SettingsSection(title: "Voice Input", icon: "mic.fill") {
             VStack(alignment: .leading, spacing: 16) {
-                SettingsRow(label: "Provider") {
+                SettingsRow(label: "Service") {
                     Picker("", selection: $settings.transcriptionProvider) {
                         ForEach(TranscriptionProvider.allCases) { provider in
                             Text(provider.rawValue).tag(provider)
@@ -181,13 +181,13 @@ struct MainView: View {
     // MARK: - Enhancement Section
 
     private var enhancementSection: some View {
-        SettingsSection(title: "AI Enhancement", icon: "wand.and.stars") {
+        SettingsSection(title: "Enhancement Model", icon: "wand.and.stars") {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle(isOn: $settings.enhancementEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable error correction")
+                        Text("Enable enhancement")
                             .font(.system(size: 12, weight: .medium))
-                        Text("Fix transcription errors, add punctuation, format text")
+                        Text("Improve accuracy, add punctuation, and format text")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
