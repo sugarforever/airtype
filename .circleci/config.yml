@@ -51,23 +51,8 @@ jobs:
       - run:
           name: Export app
           command: |
-            cat > build/ExportOptions.plist << 'PLIST'
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>method</key>
-                <string>developer-id</string>
-                <key>teamID</key>
-                <string>${TEAM_ID}</string>
-                <key>signingStyle</key>
-                <string>manual</string>
-                <key>signingCertificate</key>
-                <string>Developer ID Application</string>
-            </dict>
-            </plist>
-            PLIST
-            sed -i '' "s/\${TEAM_ID}/$TEAM_ID/" build/ExportOptions.plist
+            mkdir -p build
+            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n<key>method</key>\n<string>developer-id</string>\n<key>teamID</key>\n<string>%s</string>\n<key>signingStyle</key>\n<string>manual</string>\n<key>signingCertificate</key>\n<string>Developer ID Application</string>\n</dict>\n</plist>\n' "$TEAM_ID" > build/ExportOptions.plist
             xcodebuild -exportArchive \
               -archivePath "$ARCHIVE_PATH" \
               -exportPath "$EXPORT_PATH" \
@@ -101,7 +86,7 @@ jobs:
 
       # Upload to GitHub Release and R2 (only on tags)
       - when:
-          condition: << pipeline.git.tag >>
+          condition: \<< pipeline.git.tag >>
           steps:
             - run:
                 name: Upload to GitHub Release
@@ -111,7 +96,7 @@ jobs:
                     --title "Airtype $CIRCLE_TAG" \
                     --generate-notes
                 environment:
-                  GH_TOKEN: << pipeline.parameters.github_token >>
+                  GH_TOKEN: $GH_TOKEN
             - run:
                 name: Upload to Cloudflare R2
                 command: |
