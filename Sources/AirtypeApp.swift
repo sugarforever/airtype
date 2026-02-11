@@ -33,8 +33,18 @@ func streamOutput(_ text: String, newline: Bool = true) {
     fflush(stdout)
 }
 
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            MainWindowController.shared.show()
+        }
+        return true
+    }
+}
+
 @main
 struct AirtypeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
 
     var body: some Scene {
