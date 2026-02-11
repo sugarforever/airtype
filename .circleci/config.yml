@@ -27,7 +27,12 @@ jobs:
             security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
             security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
             security list-keychains -d user -s build.keychain login.keychain
-            rm certificate.p12
+            # Install Apple WWDR and Developer ID intermediate certificates
+            curl -sO https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+            curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+            security import AppleWWDRCAG3.cer -k build.keychain -T /usr/bin/codesign
+            security import DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
+            rm -f AppleWWDRCAG3.cer DeveloperIDG2CA.cer certificate.p12
 
       # Verify signing identity
       - run:
