@@ -158,7 +158,6 @@ struct MainView: View {
                             Text(provider.rawValue).tag(provider)
                         }
                     }
-                    .pickerStyle(.segmented)
                     .labelsHidden()
                 }
 
