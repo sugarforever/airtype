@@ -28,6 +28,14 @@ jobs:
             security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
             rm certificate.p12
 
+      # Set version from git tag
+      - run:
+          name: Set version from tag
+          command: |
+            VERSION="${CIRCLE_TAG#v}"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Info.plist
+
       # Resolve SPM dependencies
       - run:
           name: Resolve packages
@@ -42,9 +50,8 @@ jobs:
               -scheme "$SCHEME" \
               -configuration Release \
               -archivePath "$ARCHIVE_PATH" \
-              CODE_SIGN_STYLE=Manual \
               DEVELOPMENT_TEAM="$TEAM_ID" \
-              CODE_SIGN_IDENTITY="Developer ID Application: $SIGNING_IDENTITY" \
+              CODE_SIGN_IDENTITY="Developer ID Application" \
               OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
       # Export
@@ -52,7 +59,7 @@ jobs:
           name: Export app
           command: |
             mkdir -p build
-            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n<key>method</key>\n<string>developer-id</string>\n<key>teamID</key>\n<string>%s</string>\n<key>signingStyle</key>\n<string>manual</string>\n<key>signingCertificate</key>\n<string>Developer ID Application</string>\n</dict>\n</plist>\n' "$TEAM_ID" > build/ExportOptions.plist
+            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n<key>method</key>\n<string>developer-id</string>\n<key>teamID</key>\n<string>%s</string>\n</dict>\n</plist>\n' "$TEAM_ID" > build/ExportOptions.plist
             xcodebuild -exportArchive \
               -archivePath "$ARCHIVE_PATH" \
               -exportPath "$EXPORT_PATH" \
