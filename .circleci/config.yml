@@ -126,6 +126,12 @@ jobs:
                   aws s3 cp "$DMG" \
                     "s3://${R2_BUCKET}/releases/Airtype-latest.dmg" \
                     --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+                  # Publish version metadata
+                  echo "{\"version\":\"${CIRCLE_TAG}\",\"date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > build/version.json
+                  aws s3 cp build/version.json \
+                    "s3://${R2_BUCKET}/releases/version.json" \
+                    --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+                    --content-type "application/json"
 
 workflows:
   build:
