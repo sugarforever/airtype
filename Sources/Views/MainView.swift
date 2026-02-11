@@ -1,3 +1,4 @@
+import ApplicationServices
 import HotKey
 import SwiftUI
 
@@ -10,7 +11,8 @@ enum Theme {
     static let textPrimary = Color(NSColor.labelColor)
     static let textSecondary = Color(NSColor.secondaryLabelColor)
     static let textTertiary = Color(NSColor.tertiaryLabelColor)
-    static let statusGreen = Color(red: 0.204, green: 0.780, blue: 0.349)   // #34C759
+    static let brand = Color(red: 52/255, green: 211/255, blue: 153/255)     // #34D399
+    static let statusGreen = brand
     static let statusOrange = Color(red: 1.0, green: 0.624, blue: 0.039)    // #FF9F0A
     static let statusRed = Color(red: 1.0, green: 0.271, blue: 0.227)       // #FF453A
 }
@@ -20,6 +22,7 @@ enum Theme {
 struct MainView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var hotkeyManager: HotkeyManager
+    @State private var hasAccessibility = AXIsProcessTrusted()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +30,9 @@ struct MainView: View {
             Divider().overlay(Theme.border)
             ScrollView {
                 VStack(spacing: 16) {
+                    if !hasAccessibility {
+                        accessibilityBanner
+                    }
                     if let error = settings.configurationError {
                         statusBanner(message: error)
                     }
@@ -41,6 +47,7 @@ struct MainView: View {
         }
         .frame(width: 520, height: 700)
         .background(Theme.bg)
+        .tint(Theme.brand)
     }
 
     // MARK: - Header
@@ -86,6 +93,31 @@ struct MainView: View {
         .padding(12)
         .background(Theme.statusOrange.opacity(0.1))
         .clipShape(.rect(cornerRadius: 8))
+    }
+
+    // MARK: - Accessibility Banner
+
+    private var accessibilityBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.statusOrange)
+            Text("Accessibility permission required for text insertion")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Button("Grant Access") {
+                openAccessibilitySettings()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+        .padding(12)
+        .background(Theme.statusOrange.opacity(0.1))
+        .clipShape(.rect(cornerRadius: 8))
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            hasAccessibility = AXIsProcessTrusted()
+        }
     }
 
     // MARK: - Voice Input
