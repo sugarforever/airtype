@@ -102,23 +102,17 @@ jobs:
               -ov -format UDZO \
               "build/Airtype-${CIRCLE_TAG:-dev}.dmg"
 
-      # Store artifact
+      # Store artifact (copy to fixed name for CircleCI artifact storage)
+      - run:
+          name: Prepare artifact
+          command: cp "build/Airtype-${CIRCLE_TAG:-dev}.dmg" build/Airtype.dmg
       - store_artifacts:
-          path: build/Airtype-${CIRCLE_TAG:-dev}.dmg
+          path: build/Airtype.dmg
 
-      # Upload to GitHub Release and R2 (only on tags)
+      # Upload to Cloudflare R2 (only on tags)
       - when:
           condition: \<< pipeline.git.tag >>
           steps:
-            - run:
-                name: Upload to GitHub Release
-                command: |
-                  DMG="build/Airtype-${CIRCLE_TAG}.dmg"
-                  gh release create "$CIRCLE_TAG" "$DMG" \
-                    --title "Airtype $CIRCLE_TAG" \
-                    --generate-notes
-                environment:
-                  GH_TOKEN: $GH_TOKEN
             - run:
                 name: Upload to Cloudflare R2
                 command: |
