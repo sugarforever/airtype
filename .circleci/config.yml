@@ -20,32 +20,30 @@ jobs:
       - run:
           name: Install signing certificate
           command: |
-            echo "$CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
-            security create-keychain -p "" build.keychain
-            security default-keychain -s build.keychain
-            security unlock-keychain -p "" build.keychain
-            security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            KEYCHAIN_PASSWORD="ci-build-$$"
+            KEYCHAIN_PATH="$HOME/Library/Keychains/build.keychain-db"
+            # Create keychain with non-empty password and long timeout
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            # Import signing certificate with -A flag (allow all apps)
+            echo "$CERTIFICATE_P12_BASE64" | base64 --decode > /tmp/certificate.p12
+            security import /tmp/certificate.p12 -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
             # Install Apple root and intermediate certificates for full chain
             curl -sO https://www.apple.com/appleca/AppleIncRootCertificate.cer
             curl -sO https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
-            curl -sO https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
             curl -sO https://www.apple.com/certificateauthority/DeveloperIDCA.cer
             curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-            security import AppleIncRootCertificate.cer -k build.keychain -T /usr/bin/codesign
-            security import AppleRootCA-G2.cer -k build.keychain -T /usr/bin/codesign
-            security import AppleWWDRCAG3.cer -k build.keychain -T /usr/bin/codesign
-            security import DeveloperIDCA.cer -k build.keychain -T /usr/bin/codesign
-            security import DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
-            rm -f AppleIncRootCertificate.cer AppleRootCA-G2.cer AppleWWDRCAG3.cer DeveloperIDCA.cer DeveloperIDG2CA.cer certificate.p12
-            # Set partition list after all imports
-            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-            security list-keychains -d user -s build.keychain login.keychain
-
-      # Verify signing identity
-      - run:
-          name: Verify signing identity
-          command: |
-            security find-identity -v -p codesigning build.keychain
+            security import AppleIncRootCertificate.cer -k "$KEYCHAIN_PATH"
+            security import AppleRootCA-G2.cer -k "$KEYCHAIN_PATH"
+            security import DeveloperIDCA.cer -k "$KEYCHAIN_PATH"
+            security import DeveloperIDG2CA.cer -k "$KEYCHAIN_PATH"
+            rm -f AppleIncRootCertificate.cer AppleRootCA-G2.cer DeveloperIDCA.cer DeveloperIDG2CA.cer /tmp/certificate.p12
+            # Set partition list and keychain search order
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security list-keychains -d user -s "$KEYCHAIN_PATH"
+            # Verify
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       # Set version from git tag
       - run:
@@ -69,7 +67,7 @@ jobs:
               -scheme "$SCHEME" \
               -configuration Release \
               -archivePath "$ARCHIVE_PATH" \
-              OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
+              OTHER_CODE_SIGN_FLAGS="--keychain $HOME/Library/Keychains/build.keychain-db"
 
       # Export
       - run:
