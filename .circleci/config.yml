@@ -50,8 +50,6 @@ jobs:
               -scheme "$SCHEME" \
               -configuration Release \
               -archivePath "$ARCHIVE_PATH" \
-              DEVELOPMENT_TEAM="$TEAM_ID" \
-              CODE_SIGN_IDENTITY="Developer ID Application" \
               OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
       # Export
