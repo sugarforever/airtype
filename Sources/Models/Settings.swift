@@ -179,6 +179,7 @@ class Settings: ObservableObject {
         static let showFloatingWindow = "show_floating_window"
         static let floatingWindowPosition = "floating_window_position"
         static let previewBeforeInsert = "preview_before_insert"
+        static let hasCompletedSetup = "has_completed_setup"
     }
 
     // MARK: - Transcription Settings
@@ -248,6 +249,10 @@ class Settings: ObservableObject {
 
     @Published var previewBeforeInsert: Bool {
         didSet { defaults.set(previewBeforeInsert, forKey: Keys.previewBeforeInsert) }
+    }
+
+    @Published var hasCompletedSetup: Bool {
+        didSet { defaults.set(hasCompletedSetup, forKey: Keys.hasCompletedSetup) }
     }
 
     // MARK: - Keyboard Shortcut Settings
@@ -461,6 +466,7 @@ class Settings: ObservableObject {
         let positionRaw = defaults.string(forKey: Keys.floatingWindowPosition) ?? FloatingWindowPosition.bottomRight.rawValue
         self.floatingWindowPosition = FloatingWindowPosition(rawValue: positionRaw) ?? .bottomRight
         self.previewBeforeInsert = defaults.object(forKey: Keys.previewBeforeInsert) as? Bool ?? false
+        self.hasCompletedSetup = defaults.object(forKey: Keys.hasCompletedSetup) as? Bool ?? false
     }
 
     // MARK: - Persistence Helpers

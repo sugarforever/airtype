@@ -65,6 +65,60 @@ class MainWindowController {
         window?.close()
         window = nil
     }
+
+    private var wizardWindow: NSWindow?
+    private var wizardWindowDelegate: NSWindowDelegate?
+
+    func showWizard() {
+        debugLog("MainWindowController.showWizard() called")
+
+        if let existing = wizardWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let wizardView = SetupWizardView {
+            self.closeWizard()
+            Settings.shared.hasCompletedSetup = true
+            self.show()
+        }
+
+        let hostingView = NSHostingView(rootView: wizardView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 520, height: 520)
+
+        let newWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+
+        newWindow.title = "Airtype Setup"
+        newWindow.contentView = hostingView
+        newWindow.center()
+        newWindow.isReleasedWhenClosed = false
+        newWindow.level = .normal
+
+        let delegate = MainWindowDelegate { [weak self] in
+            self?.wizardWindow = nil
+            self?.wizardWindowDelegate = nil
+        }
+        self.wizardWindowDelegate = delegate
+        newWindow.delegate = delegate
+
+        self.wizardWindow = newWindow
+
+        NSApp.setActivationPolicy(.accessory)
+        newWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func closeWizard() {
+        wizardWindow?.close()
+        wizardWindow = nil
+        wizardWindowDelegate = nil
+    }
 }
 
 private class MainWindowDelegate: NSObject, NSWindowDelegate {

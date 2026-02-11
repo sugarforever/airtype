@@ -27,6 +27,7 @@
 		A10011000000000000000011 /* TextInserter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20011000000000000000011 /* TextInserter.swift */; };
 		A10012000000000000000012 /* WhisperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20012000000000000000012 /* WhisperService.swift */; };
 		A10013000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20013000000000000000013 /* Assets.xcassets */; };
+		A10014000000000000000014 /* SetupWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20014000000000000000014 /* SetupWizardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +40,7 @@
 		A20007000000000000000007 /* FloatingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWindow.swift; sourceTree = "<group>"; };
 		A20008000000000000000008 /* FloatingGlassBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingGlassBackgroundView.swift; sourceTree = "<group>"; };
 		A20009000000000000000009 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		A20014000000000000000014 /* SetupWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupWizardView.swift; sourceTree = "<group>"; };
 		A2000A00000000000000000A /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		A2000B00000000000000000B /* ElevenLabsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevenLabsService.swift; sourceTree = "<group>"; };
 		A2000C00000000000000000C /* EnhancementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementService.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				A20007000000000000000007 /* FloatingWindow.swift */,
 				A20008000000000000000008 /* FloatingGlassBackgroundView.swift */,
 				A20009000000000000000009 /* WaveformView.swift */,
+				A20014000000000000000014 /* SetupWizardView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -218,6 +221,7 @@
 				A10007000000000000000007 /* FloatingWindow.swift in Sources */,
 				A10008000000000000000008 /* FloatingGlassBackgroundView.swift in Sources */,
 				A10009000000000000000009 /* WaveformView.swift in Sources */,
+				A10014000000000000000014 /* SetupWizardView.swift in Sources */,
 				A1000A00000000000000000A /* AudioRecorder.swift in Sources */,
 				A1000B00000000000000000B /* ElevenLabsService.swift in Sources */,
 				A1000C00000000000000000C /* EnhancementService.swift in Sources */,

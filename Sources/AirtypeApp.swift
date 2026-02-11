@@ -210,7 +210,11 @@ class AppState: ObservableObject {
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
         Task { @MainActor in
-            MainWindowController.shared.show()
+            if settings.hasCompletedSetup {
+                MainWindowController.shared.show()
+            } else {
+                MainWindowController.shared.showWizard()
+            }
         }
     }
 
