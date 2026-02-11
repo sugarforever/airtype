@@ -1,6 +1,22 @@
 import HotKey
 import SwiftUI
 
+// MARK: - Design Tokens
+
+enum Theme {
+    static let bg = Color(NSColor.windowBackgroundColor)
+    static let cardBg = Color(NSColor.controlBackgroundColor)
+    static let border = Color(NSColor.separatorColor)
+    static let textPrimary = Color(NSColor.labelColor)
+    static let textSecondary = Color(NSColor.secondaryLabelColor)
+    static let textTertiary = Color(NSColor.tertiaryLabelColor)
+    static let statusGreen = Color(red: 0.204, green: 0.780, blue: 0.349)   // #34C759
+    static let statusOrange = Color(red: 1.0, green: 0.624, blue: 0.039)    // #FF9F0A
+    static let statusRed = Color(red: 1.0, green: 0.271, blue: 0.227)       // #FF453A
+}
+
+// MARK: - Main View
+
 struct MainView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var hotkeyManager: HotkeyManager
@@ -8,54 +24,50 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 0) {
             dashboardHeader
-            Divider()
+            Divider().overlay(Theme.border)
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     if let error = settings.configurationError {
                         statusBanner(message: error)
                     }
-                    transcriptionSection
+                    voiceInputSection
                     enhancementSection
                     floatingWindowSection
                     shortcutsSection
                     permissionsSection
                 }
-                .padding(20)
+                .padding(24)
             }
         }
         .frame(width: 520, height: 700)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Theme.bg)
     }
 
-    // MARK: - Dashboard Header
+    // MARK: - Header
 
     private var dashboardHeader: some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(settings.isConfigured ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                    .frame(width: 40, height: 40)
-                Image(systemName: "mic.circle.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(settings.isConfigured ? .green : .orange)
-            }
+            Image(systemName: "mic.circle.fill")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(settings.isConfigured ? Theme.statusGreen : Theme.statusOrange)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Airtype")
                     .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(settings.isConfigured ? Color.green : Color.orange)
+                        .fill(settings.isConfigured ? Theme.statusGreen : Theme.statusOrange)
                         .frame(width: 6, height: 6)
                     Text(settings.isConfigured ? "Ready" : "Setup required")
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
 
             Spacer()
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.vertical, 14)
     }
 
@@ -65,23 +77,23 @@ struct MainView: View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 12))
-                .foregroundStyle(.orange)
+                .foregroundStyle(Theme.statusOrange)
             Text(message)
                 .font(.system(size: 12))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Theme.textPrimary)
             Spacer()
         }
         .padding(12)
-        .background(Color.orange.opacity(0.1))
+        .background(Theme.statusOrange.opacity(0.1))
         .clipShape(.rect(cornerRadius: 8))
     }
 
-    // MARK: - Transcription Section
+    // MARK: - Voice Input
 
-    private var transcriptionSection: some View {
+    private var voiceInputSection: some View {
         SettingsSection(title: "Voice Input", icon: "mic.fill") {
-            VStack(alignment: .leading, spacing: 16) {
-                SettingsRow(label: "Service") {
+            SettingsCard {
+                SettingsCardRow(label: "Service") {
                     Picker("", selection: $settings.transcriptionProvider) {
                         ForEach(TranscriptionProvider.allCases) { provider in
                             Text(provider.rawValue).tag(provider)
@@ -91,6 +103,8 @@ struct MainView: View {
                     .labelsHidden()
                 }
 
+                SettingsCardDivider()
+
                 if settings.transcriptionProvider == .elevenlabs {
                     elevenlabsSettings
                 } else if settings.transcriptionProvider == .mistral {
@@ -99,64 +113,78 @@ struct MainView: View {
                     openaiTranscriptionSettings
                 }
 
+                SettingsCardDivider()
+
                 transcriptionStatus
             }
         }
     }
 
     private var elevenlabsSettings: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsRow(label: "API Key") {
-                SecureField("xi-...", text: $settings.elevenlabsApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+        Group {
+            SettingsCardRow(label: "API Key") {
+                HStack(spacing: 6) {
+                    SecureField("xi-...", text: $settings.elevenlabsApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
-
-            SettingsRow(label: "Model") {
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model") {
                 Picker("", selection: $settings.elevenlabsModel) {
                     ForEach(Settings.elevenlabsModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
                 }
                 .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
             }
         }
     }
 
     private var openaiTranscriptionSettings: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsRow(label: "API Key") {
-                SecureField("sk-...", text: $settings.openaiTranscriptionApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+        Group {
+            SettingsCardRow(label: "API Key") {
+                HStack(spacing: 6) {
+                    SecureField("sk-...", text: $settings.openaiTranscriptionApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
-
-            SettingsRow(label: "Model") {
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model") {
                 Picker("", selection: $settings.openaiTranscriptionModel) {
                     ForEach(Settings.openaiTranscriptionModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
                 }
                 .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
             }
         }
     }
 
     private var mistralTranscriptionSettings: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsRow(label: "API Key") {
-                SecureField("...mistral key...", text: $settings.mistralTranscriptionApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
+        Group {
+            SettingsCardRow(label: "API Key") {
+                HStack(spacing: 6) {
+                    SecureField("...mistral key...", text: $settings.mistralTranscriptionApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
             }
-
-            SettingsRow(label: "Model") {
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model") {
                 Picker("", selection: $settings.mistralTranscriptionModel) {
                     ForEach(Settings.mistralTranscriptionModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
                 }
                 .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
             }
         }
     }
@@ -164,125 +192,133 @@ struct MainView: View {
     private var transcriptionStatus: some View {
         HStack(spacing: 6) {
             if settings.currentTranscriptionApiKey.isEmpty {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.statusOrange)
                 Text("API key required")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Theme.statusGreen)
                 Text("Ready")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .font(.system(size: 11))
     }
 
-    // MARK: - Enhancement Section
+    // MARK: - Enhancement
 
     private var enhancementSection: some View {
-        SettingsSection(title: "Enhancement Model", icon: "wand.and.stars") {
-            VStack(alignment: .leading, spacing: 16) {
+        SettingsSection(title: "Enhancement", icon: "wand.and.stars") {
+            SettingsCard {
                 Toggle(isOn: $settings.enhancementEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Enable enhancement")
                             .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
                         Text("Improve accuracy, add punctuation, and format text")
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
                 .toggleStyle(.switch)
-
-                if settings.enhancementEnabled {
-                    Divider()
-                    enhancementProviderSettings
-                }
             }
-        }
-    }
 
-    private var enhancementProviderSettings: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsRow(label: "Provider") {
-                Picker("", selection: $settings.enhancementProvider) {
-                    ForEach(EnhancementProvider.allCases) { provider in
-                        Text(provider.rawValue).tag(provider)
+            if settings.enhancementEnabled {
+                SettingsCard {
+                    SettingsCardRow(label: "Provider") {
+                        Picker("", selection: $settings.enhancementProvider) {
+                            ForEach(EnhancementProvider.allCases) { provider in
+                                Text(provider.rawValue).tag(provider)
+                            }
+                        }
+                        .labelsHidden()
                     }
+
+                    if settings.enhancementProvider.requiresApiKey {
+                        SettingsCardDivider()
+                        SettingsCardRow(label: "API Key") {
+                            HStack(spacing: 6) {
+                                SecureField(settings.enhancementProvider.apiKeyPlaceholder, text: Binding(
+                                    get: { settings.currentEnhancementApiKey },
+                                    set: { settings.currentEnhancementApiKey = $0 }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 12, design: .monospaced))
+                                apiKeyLink(url: settings.enhancementProvider.apiKeyURL)
+                            }
+                        }
+                    }
+
+                    if settings.enhancementProvider.requiresCustomURL {
+                        SettingsCardDivider()
+                        SettingsCardRow(label: "Base URL") {
+                            TextField(settings.enhancementProvider.baseURL, text: Binding(
+                                get: { settings.currentEnhancementBaseURL },
+                                set: { settings.currentEnhancementBaseURL = $0 }
+                            ))
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11, design: .monospaced))
+                        }
+                    }
+
+                    SettingsCardDivider()
+
+                    SettingsCardRow(label: "Model") {
+                        TextField(settings.enhancementProvider.defaultModel, text: Binding(
+                            get: { settings.currentEnhancementModel },
+                            set: { settings.currentEnhancementModel = $0 }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 11, design: .monospaced))
+                    }
+
+                    SettingsCardDivider()
+
+                    enhancementStatus
                 }
-                .labelsHidden()
             }
-
-            if settings.enhancementProvider.requiresApiKey {
-                SettingsRow(label: "API Key") {
-                    SecureField(settings.enhancementProvider.apiKeyPlaceholder, text: Binding(
-                        get: { settings.currentEnhancementApiKey },
-                        set: { settings.currentEnhancementApiKey = $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
-                }
-            }
-
-            if settings.enhancementProvider.requiresCustomURL {
-                SettingsRow(label: "Base URL") {
-                    TextField(settings.enhancementProvider.baseURL, text: Binding(
-                        get: { settings.currentEnhancementBaseURL },
-                        set: { settings.currentEnhancementBaseURL = $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
-                }
-            }
-
-            SettingsRow(label: "Model") {
-                TextField(settings.enhancementProvider.defaultModel, text: Binding(
-                    get: { settings.currentEnhancementModel },
-                    set: { settings.currentEnhancementModel = $0 }
-                ))
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11, design: .monospaced))
-            }
-
-            enhancementStatus
         }
     }
 
     private var enhancementStatus: some View {
         HStack(spacing: 6) {
             if settings.enhancementProvider.requiresApiKey && settings.currentEnhancementApiKey.isEmpty {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.statusOrange)
                 Text("\(settings.enhancementProvider.rawValue) API key required")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Theme.statusGreen)
                 Text("Using \(settings.enhancementProvider.rawValue)")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .font(.system(size: 11))
     }
 
-    // MARK: - Floating Window Section
+    // MARK: - Floating Window
 
     private var floatingWindowSection: some View {
         SettingsSection(title: "Floating Window", icon: "macwindow") {
-            VStack(alignment: .leading, spacing: 16) {
+            SettingsCard {
                 Toggle(isOn: $settings.showFloatingWindow) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Show floating window")
                             .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
                         Text("Display status and progress in a floating panel")
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
                 .toggleStyle(.switch)
+            }
 
-                if settings.showFloatingWindow {
-                    SettingsRow(label: "Position") {
+            if settings.showFloatingWindow {
+                SettingsCard {
+                    SettingsCardRow(label: "Position") {
                         Picker("", selection: $settings.floatingWindowPosition) {
                             ForEach(FloatingWindowPosition.allCases) { position in
                                 Text(position.rawValue).tag(position)
@@ -292,13 +328,16 @@ struct MainView: View {
                         .labelsHidden()
                     }
 
+                    SettingsCardDivider()
+
                     Toggle(isOn: $settings.previewBeforeInsert) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Preview before inserting")
                                 .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Theme.textPrimary)
                             Text("Review transcription and click Apply to insert")
                                 .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
                     .toggleStyle(.switch)
@@ -307,11 +346,11 @@ struct MainView: View {
         }
     }
 
-    // MARK: - Shortcuts Section
+    // MARK: - Shortcuts
 
     private var shortcutsSection: some View {
-        SettingsSection(title: "Keyboard Shortcuts", icon: "keyboard") {
-            VStack(spacing: 8) {
+        SettingsSection(title: "Shortcuts", icon: "keyboard") {
+            SettingsCard {
                 ShortcutRecorderRow(
                     name: "Push-to-talk",
                     description: "Hold to record, release to transcribe",
@@ -326,6 +365,9 @@ struct MainView: View {
                         hotkeyManager.rebindHotkeys()
                     }
                 )
+
+                SettingsCardDivider()
+
                 ShortcutRecorderRow(
                     name: "Toggle mode",
                     description: "Press to start/stop recording",
@@ -344,53 +386,66 @@ struct MainView: View {
         }
     }
 
-    // MARK: - Permissions Section
+    // MARK: - Permissions
 
     private var permissionsSection: some View {
         SettingsSection(title: "Permissions", icon: "lock.shield") {
-            VStack(alignment: .leading, spacing: 16) {
-                SettingsRow(label: "Microphone") {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.accentColor)
-                            Text("Required for voice recording")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button("Open Settings") {
-                            openMicrophoneSettings()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+            SettingsCard {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Microphone")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Required for voice recording")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textSecondary)
                     }
+                    Spacer()
+                    Button("Open Settings") {
+                        openMicrophoneSettings()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
 
-                SettingsRow(label: "Accessibility") {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: "accessibility")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.accentColor)
-                            Text("Required for text insertion")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button("Open Settings") {
-                            openAccessibilitySettings()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                SettingsCardDivider()
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Accessibility")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Required for text insertion")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textSecondary)
                     }
+                    Spacer()
+                    Button("Open Settings") {
+                        openAccessibilitySettings()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
         }
     }
 
     // MARK: - Helpers
+
+    @ViewBuilder
+    private func apiKeyLink(url: URL?) -> some View {
+        if let url {
+            Button {
+                NSWorkspace.shared.open(url)
+            } label: {
+                Image(systemName: "key.fill")
+                    .font(.system(size: 10))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Get API Key")
+        }
+    }
 
     private func openMicrophoneSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
@@ -402,5 +457,170 @@ struct MainView: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+    }
+}
+
+// MARK: - Components
+
+struct SettingsSection<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: Content
+
+    init(title: String, icon: String = "gear", @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+
+            content
+        }
+    }
+}
+
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .background(Theme.cardBg)
+        .clipShape(.rect(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Theme.border, lineWidth: 1)
+        )
+    }
+}
+
+struct SettingsCardRow<Content: View>: View {
+    let label: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+            content
+        }
+    }
+}
+
+struct SettingsCardDivider: View {
+    var body: some View {
+        Divider()
+            .overlay(Theme.border)
+    }
+}
+
+struct ShortcutRecorderRow: View {
+    let name: String
+    let description: String
+    let currentKeyCode: UInt32
+    let currentModifiers: UInt32
+    let defaultKeyCode: UInt32
+    let defaultModifiers: UInt32
+    let hotkeyManager: HotkeyManager
+    let onSave: (UInt32, UInt32) -> Void
+
+    @State private var isRecording = false
+    @State private var eventMonitor: Any?
+
+    private var displayString: String {
+        Settings.shortcutDisplayString(keyCode: currentKeyCode, modifiers: currentModifiers)
+    }
+
+    private var isDefault: Bool {
+        currentKeyCode == defaultKeyCode && currentModifiers == defaultModifiers
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(description)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            if !isDefault {
+                Button("Reset") {
+                    onSave(defaultKeyCode, defaultModifiers)
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textTertiary)
+            }
+            Button(action: { startRecording() }) {
+                Text(isRecording ? "Press shortcut..." : displayString)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(isRecording ? Color.accentColor.opacity(0.2) : Theme.bg)
+                    .clipShape(.rect(cornerRadius: 4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(isRecording ? Color.accentColor : Theme.border, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @MainActor private func startRecording() {
+        guard !isRecording else { return }
+        isRecording = true
+        hotkeyManager.disable()
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            let keyCode = UInt32(event.keyCode)
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+            if keyCode == 53 && modifiers.isEmpty {
+                stopRecording()
+                return nil
+            }
+
+            let carbonMods = modifiers.carbonFlags
+            if carbonMods == 0 {
+                return nil
+            }
+
+            let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+            if modifierKeyCodes.contains(event.keyCode) {
+                return nil
+            }
+
+            onSave(keyCode, carbonMods)
+            stopRecording()
+            return nil
+        }
+    }
+
+    @MainActor private func stopRecording() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        isRecording = false
+        hotkeyManager.enable()
     }
 }

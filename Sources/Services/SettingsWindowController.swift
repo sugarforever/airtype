@@ -1,82 +1,17 @@
 import AppKit
 import SwiftUI
 
-/// Manages the settings window as a separate NSWindow
+/// Settings window now redirects to the main dashboard window.
 class SettingsWindowController {
     static let shared = SettingsWindowController()
 
-    private var window: NSWindow?
-    private var windowDelegate: NSWindowDelegate?
     var hotkeyManager: HotkeyManager?
 
     func show() {
-        debugLog("SettingsWindowController.show() called")
-
-        if let existingWindow = window {
-            debugLog("Showing existing settings window")
-            existingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        debugLog("Creating new settings window")
-
-        guard let hotkeyManager = hotkeyManager else {
-            debugLog("ERROR: hotkeyManager not set on SettingsWindowController")
-            return
-        }
-
-        let settingsView = SettingsView(settings: Settings.shared, hotkeyManager: hotkeyManager, onClose: { [weak self] in
-            self?.window?.close()
-        })
-
-        let hostingView = NSHostingView(rootView: settingsView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 400, height: 550)
-
-        let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 550),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-
-        newWindow.title = "Airtype Settings"
-        newWindow.contentView = hostingView
-        newWindow.center()
-        newWindow.isReleasedWhenClosed = false
-        newWindow.level = .floating  // Make sure it appears above other windows
-
-        let delegate = WindowDelegate { [weak self] in
-            self?.window = nil
-            self?.windowDelegate = nil
-        }
-        self.windowDelegate = delegate
-        newWindow.delegate = delegate
-
-        self.window = newWindow
-
-        // For menu bar apps, we need to activate the app first
-        NSApp.setActivationPolicy(.accessory)
-        newWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-
-        debugLog("Settings window should now be visible")
+        MainWindowController.shared.show()
     }
 
     func close() {
-        window?.close()
-        window = nil
-    }
-}
-
-private class WindowDelegate: NSObject, NSWindowDelegate {
-    let onClose: () -> Void
-
-    init(onClose: @escaping () -> Void) {
-        self.onClose = onClose
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        onClose()
+        MainWindowController.shared.close()
     }
 }
