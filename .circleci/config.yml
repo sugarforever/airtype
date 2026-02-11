@@ -52,16 +52,12 @@ jobs:
               -archivePath "$ARCHIVE_PATH" \
               OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
-      # Export
+      # Export app from archive
       - run:
           name: Export app
           command: |
-            mkdir -p build
-            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n<key>method</key>\n<string>developer-id</string>\n<key>teamID</key>\n<string>%s</string>\n</dict>\n</plist>\n' "$TEAM_ID" > build/ExportOptions.plist
-            xcodebuild -exportArchive \
-              -archivePath "$ARCHIVE_PATH" \
-              -exportPath "$EXPORT_PATH" \
-              -exportOptionsPlist build/ExportOptions.plist
+            mkdir -p "$EXPORT_PATH"
+            cp -R "$ARCHIVE_PATH/Products/Applications/Airtype.app" "$EXPORT_PATH/Airtype.app"
 
       # Notarize
       - run:
