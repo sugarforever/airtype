@@ -192,6 +192,7 @@ class AppState: ObservableObject {
     @Published var transcriptionChunkInfo = ""       // e.g., "Chunk 2/5"
     @Published var partialTranscription = ""         // Accumulated text during chunked transcription
     @Published var lastError: String?
+    @Published var lastNotice: String?
     @Published var recordingStartTime: Date?
 
     // For streaming output tracking
@@ -292,6 +293,7 @@ class AppState: ObservableObject {
             isRecording = true
             recordingStartTime = Date()
             lastError = nil
+            lastNotice = nil
             partialTranscription = ""
 
             // Show floating window if enabled
@@ -414,6 +416,7 @@ class AppState: ObservableObject {
                 processingProgress = 1.0
                 isProcessing = false
                 lastError = nil
+                lastNotice = nil
             } else {
                 processingProgress = 0.95
                 // Only insert text not already inserted via streaming FINALs
@@ -427,6 +430,7 @@ class AppState: ObservableObject {
                 streamOutput("Done!\n")
 
                 lastError = nil
+                lastNotice = nil
                 isProcessing = false
                 processingStage = ""
                 processingProgress = 0.0
@@ -441,7 +445,11 @@ class AppState: ObservableObject {
             }
         } catch {
             debugLog("Streaming processing error: \(error)")
-            lastError = error.localizedDescription
+            if case WhisperError.emptyRecording = error {
+                lastNotice = error.localizedDescription
+            } else {
+                lastError = error.localizedDescription
+            }
             isProcessing = false
             processingStage = ""
             processingProgress = 0.0
@@ -482,7 +490,7 @@ class AppState: ObservableObject {
         // Check for empty/too short recording
         if fileSize < 1000 {  // Less than 1KB is likely empty
             debugLog("Recording too short, skipping")
-            lastError = "Recording too short. Please speak for longer."
+            lastNotice = "Recording too short. Please speak for longer."
             audioRecorder.cleanupRecording(at: audioURL)
             isRecording = false
             return
@@ -491,7 +499,7 @@ class AppState: ObservableObject {
         // Check for silence (valid file but no speech detected)
         if audioRecorder.recordingWasSilent {
             debugLog("Recording was silent (max level: \(audioRecorder.maxLevelDuringRecording)), skipping API call")
-            lastError = "No speech detected. Check that the correct microphone is selected in System Settings → Sound → Input."
+            lastNotice = "No speech detected. Check that the correct microphone is selected in System Settings → Sound → Input."
             audioRecorder.cleanupRecording(at: audioURL)
             isRecording = false
             return
@@ -580,6 +588,7 @@ class AppState: ObservableObject {
                 isProcessing = false
                 // Don't clear partialTranscription - user needs to see it
                 lastError = nil
+                lastNotice = nil
             } else {
                 // Direct insert
                 debugLog("Inserting text...")
@@ -591,6 +600,7 @@ class AppState: ObservableObject {
                 processingProgress = 1.0
 
                 lastError = nil
+                lastNotice = nil
 
                 // Cleanup
                 isProcessing = false
@@ -609,7 +619,16 @@ class AppState: ObservableObject {
             }
         } catch {
             debugLog("Error: \(error)")
-            lastError = error.localizedDescription
+            let isEmptyRecording: Bool
+            if case WhisperError.emptyRecording = error { isEmptyRecording = true }
+            else if case MistralTranscriptionError.emptyRecording = error { isEmptyRecording = true }
+            else { isEmptyRecording = false }
+
+            if isEmptyRecording {
+                lastNotice = error.localizedDescription
+            } else {
+                lastError = error.localizedDescription
+            }
             isProcessing = false
             processingStage = ""
             processingProgress = 0.0

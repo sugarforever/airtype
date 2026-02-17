@@ -147,7 +147,7 @@ struct FloatingView: View {
                 recordingExpandedView
             } else if appState.isProcessing {
                 processingExpandedView
-            } else if !appState.partialTranscription.isEmpty || appState.lastError != nil {
+            } else if !appState.partialTranscription.isEmpty || appState.lastError != nil || appState.lastNotice != nil {
                 resultExpandedView
             } else {
                 idleExpandedView
@@ -342,6 +342,19 @@ struct FloatingView: View {
                         .multilineTextAlignment(.center)
                 }
                 .padding(20)
+            } else if let notice = appState.lastNotice {
+                // Notice state (not an error, just info)
+                VStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 24))
+                        .foregroundStyle(secondaryLabelColor)
+
+                    Text(notice)
+                        .font(.system(size: 12))
+                        .foregroundStyle(tertiaryLabelColor)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(20)
             } else {
                 // Success - show transcription
                 ScrollView {
@@ -446,6 +459,11 @@ struct FloatingView: View {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 20))
                 .foregroundStyle(.orange)
+        } else if appState.lastNotice != nil {
+            // Notice
+            Image(systemName: "info.circle")
+                .font(.system(size: 20))
+                .foregroundStyle(secondaryLabelColor)
         } else {
             // Idle
             Image(systemName: "mic.fill")
@@ -461,6 +479,8 @@ struct FloatingView: View {
             return appState.processingStage.isEmpty ? "Thinking..." : appState.processingStage
         } else if appState.lastError != nil {
             return "Error"
+        } else if appState.lastNotice != nil {
+            return "Notice"
         } else {
             return "Ready"
         }
@@ -471,7 +491,7 @@ struct FloatingView: View {
             return "" // Handled by RecordingTimer view
         } else if appState.isProcessing {
             return "\(Int(appState.processingProgress * 100))%"
-        } else if appState.lastError != nil {
+        } else if appState.lastError != nil || appState.lastNotice != nil {
             return "Tap to see details"
         } else {
             return "Hold \u{2325} Space"
@@ -507,6 +527,7 @@ struct FloatingView: View {
     private func discardText() {
         appState.partialTranscription = ""
         appState.lastError = nil
+        appState.lastNotice = nil
     }
 
     // MARK: - Helpers
