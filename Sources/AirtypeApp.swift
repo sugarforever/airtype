@@ -192,9 +192,14 @@ class AppState: ObservableObject {
     @Published var transcriptionChunkInfo = ""       // e.g., "Chunk 2/5"
     @Published var partialTranscription = ""         // Accumulated text during chunked transcription
     @Published var lastError: String?
+    @Published var recordingStartTime: Date?
 
     // For streaming output tracking
     private var lastStreamedLength = 0
+    // Accumulated finalized utterances from streaming (Doubao resets text per utterance)
+    private var finalizedStreamText = ""
+    // How much of finalizedStreamText has already been inserted at cursor
+    private var insertedStreamLength = 0
 
     let settings = Settings.shared
     let audioRecorder = AudioRecorder()
@@ -205,6 +210,9 @@ class AppState: ObservableObject {
     let textInserter = TextInserter()
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
+    private var streamingCapture: StreamingAudioCapture?
+    private var streamingService: (any StreamingTranscriptionService)?
+    private var streamingEventTask: Task<Void, Never>?
 
     var menuBarIcon: String {
         if isRecording {
@@ -257,6 +265,10 @@ class AppState: ObservableObject {
 
     // MARK: - Recording Flow
 
+    private var shouldUseStreaming: Bool {
+        settings.transcriptionProvider.supportsStreaming
+    }
+
     func startRecording() async {
         debugLog("startRecording called")
         guard !isRecording && !isProcessing else {
@@ -270,10 +282,17 @@ class AppState: ObservableObject {
         }
 
         do {
-            let url = try audioRecorder.startRecording()
-            debugLog("Recording started, saving to: \(url.path)")
+            if shouldUseStreaming {
+                try await startStreamingRecording()
+            } else {
+                let url = try audioRecorder.startRecording()
+                debugLog("Recording started, saving to: \(url.path)")
+            }
+
             isRecording = true
+            recordingStartTime = Date()
             lastError = nil
+            partialTranscription = ""
 
             // Show floating window if enabled
             if settings.showFloatingWindow {
@@ -285,10 +304,161 @@ class AppState: ObservableObject {
         }
     }
 
+    private func startStreamingRecording() async throws {
+        let service = DoubaoStreamingService(
+            appId: settings.doubaoAppId,
+            accessKey: settings.doubaoAccessKey,
+            resourceId: settings.doubaoResourceId,
+            language: settings.doubaoLanguage
+        )
+        self.streamingService = service
+        try await service.connect()
+        debugLog("Streaming WebSocket connected")
+
+        finalizedStreamText = ""
+        insertedStreamLength = 0
+
+        // Listen for events
+        streamingEventTask = Task { [weak self] in
+            for await event in service.events {
+                guard let self = self else { break }
+                await MainActor.run {
+                    switch event {
+                    case .partial(let text):
+                        let fullText = self.finalizedStreamText + text
+                        self.partialTranscription = fullText
+                        self.processingStage = "Listening..."
+                    case .final_(let text):
+                        // Accumulate exactly what the API finalized — subsequent partials
+                        // are relative to this boundary. Don't touch partialTranscription
+                        // since it may already contain more text from the latest partial.
+                        self.finalizedStreamText += text
+                        // Insert finalized text at cursor immediately (non-preview mode)
+                        if !self.settings.previewBeforeInsert {
+                            let newText = String(self.finalizedStreamText.dropFirst(self.insertedStreamLength))
+                            if !newText.isEmpty {
+                                self.insertedStreamLength = self.finalizedStreamText.count
+                                Task {
+                                    try? await self.textInserter.insert(text: newText)
+                                }
+                            }
+                        }
+                    case .error(let error):
+                        debugLog("Streaming error: \(error)")
+                        self.lastError = error.localizedDescription
+                    }
+                }
+            }
+        }
+
+        // Start audio capture and feed to WebSocket
+        let capture = StreamingAudioCapture()
+        self.streamingCapture = capture
+        try capture.start { [weak service] data in
+            service?.sendAudio(data)
+        }
+        debugLog("Streaming audio capture started")
+    }
+
+    private func stopStreamingAndProcess() async {
+        streamingCapture?.stop()
+        streamingCapture = nil
+
+        isRecording = false
+        isProcessing = true
+        processingStage = "Finalizing..."
+
+        do {
+            try await streamingService?.endAudio()
+            debugLog("Sent end-of-audio signal")
+
+            // Wait briefly for final result
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+
+            streamingEventTask?.cancel()
+            streamingEventTask = nil
+
+            // Use the most complete text: partialTranscription has the latest
+            // partial view, finalizedStreamText has all locked-in utterances.
+            let transcription = partialTranscription.count >= finalizedStreamText.count
+                ? partialTranscription : finalizedStreamText
+            streamingService?.disconnect()
+            streamingService = nil
+
+            debugLog("Streaming transcription result: \(transcription)")
+            streamOutput("\n--- Raw transcription (streaming) ---")
+            streamOutput(transcription)
+
+            if transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                throw WhisperError.emptyRecording
+            }
+
+            // Enhancement
+            let finalText: String
+            if settings.enhancementEnabled {
+                debugLog("Starting enhancement...")
+                streamOutput("\n--- Correcting errors... ---")
+                processingProgress = 0.75
+                finalText = try await enhancementService.enhance(text: transcription)
+                debugLog("Enhanced result: \(finalText)")
+                streamOutput("\n--- Corrected text ---")
+                streamOutput(finalText)
+            } else {
+                finalText = transcription
+            }
+
+            // Insert
+            if settings.previewBeforeInsert {
+                processingStage = "Ready to apply"
+                partialTranscription = finalText
+                processingProgress = 1.0
+                isProcessing = false
+                lastError = nil
+            } else {
+                processingProgress = 0.95
+                // Only insert text not already inserted via streaming FINALs
+                let remainingText = String(finalText.dropFirst(insertedStreamLength))
+                if !remainingText.isEmpty {
+                    try await textInserter.insert(text: remainingText)
+                    debugLog("Inserted remaining text: \(remainingText)")
+                } else {
+                    debugLog("All text already inserted via streaming")
+                }
+                streamOutput("Done!\n")
+
+                lastError = nil
+                isProcessing = false
+                processingStage = ""
+                processingProgress = 0.0
+                partialTranscription = ""
+
+                if settings.showFloatingWindow {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        floatingWindowManager.hide()
+                    }
+                }
+            }
+        } catch {
+            debugLog("Streaming processing error: \(error)")
+            lastError = error.localizedDescription
+            isProcessing = false
+            processingStage = ""
+            processingProgress = 0.0
+            streamingService?.disconnect()
+            streamingService = nil
+        }
+    }
+
     func stopAndProcess() async {
         debugLog("stopAndProcess called, isRecording: \(isRecording)")
         guard isRecording else {
             debugLog("Not recording, skipping")
+            return
+        }
+
+        if shouldUseStreaming {
+            await stopStreamingAndProcess()
             return
         }
 
@@ -370,6 +540,8 @@ class AppState: ObservableObject {
                 transcription = try await elevenlabsService.transcribe(audioURL: audioURL)
             case .mistral:
                 transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL)
+            case .doubao:
+                throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
             }
 
             debugLog("Transcription result: \(transcription)")
@@ -450,7 +622,17 @@ class AppState: ObservableObject {
     }
 
     func cancelRecording() {
-        audioRecorder.cancelRecording()
+        if shouldUseStreaming {
+            streamingCapture?.stop()
+            streamingCapture = nil
+            streamingEventTask?.cancel()
+            streamingEventTask = nil
+            streamingService?.disconnect()
+            streamingService = nil
+        } else {
+            audioRecorder.cancelRecording()
+        }
         isRecording = false
+        partialTranscription = ""
     }
 }

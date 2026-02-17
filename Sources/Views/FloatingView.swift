@@ -62,6 +62,12 @@ struct FloatingView: View {
         .onHover { hovering in
             isHovering = hovering
         }
+        .onChange(of: appState.partialTranscription) { newValue in
+            // Auto-expand when streaming text starts arriving during recording
+            if appState.isRecording && !newValue.isEmpty && !isExpanded && appState.settings.previewBeforeInsert {
+                toggleExpanded()
+            }
+        }
     }
 
     private func toggleExpanded() {
@@ -90,9 +96,17 @@ struct FloatingView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(labelColor)
 
-                Text(statusSubtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(secondaryLabelColor)
+                if appState.isRecording {
+                    RecordingTimer(
+                        startTime: appState.recordingStartTime,
+                        font: .system(size: 11),
+                        color: secondaryLabelColor
+                    )
+                } else {
+                    Text(statusSubtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(secondaryLabelColor)
+                }
             }
 
             Spacer()
@@ -110,16 +124,23 @@ struct FloatingView: View {
 
     // MARK: - Expanded Mode
 
+    private var showExpandedHeader: Bool {
+        // Hide header when streaming preview is active during recording
+        !(appState.isRecording && showStreamingText)
+    }
+
     private var expandedContent: some View {
         VStack(spacing: 0) {
-            // Header
-            expandedHeader
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+            // Header (hidden when streaming preview is active)
+            if showExpandedHeader {
+                expandedHeader
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
 
-            Divider()
-                .background(secondaryLabelColor.opacity(0.3))
+                Divider()
+                    .background(secondaryLabelColor.opacity(0.3))
+            }
 
             // Content area
             if appState.isRecording {
@@ -132,7 +153,9 @@ struct FloatingView: View {
                 idleExpandedView
             }
 
-            Spacer()
+            if !(appState.isRecording && showStreamingText) {
+                Spacer()
+            }
 
             // Footer with actions
             if showActionButtons {
@@ -154,9 +177,17 @@ struct FloatingView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(labelColor)
 
-                Text(statusSubtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(secondaryLabelColor)
+                if appState.isRecording {
+                    RecordingTimer(
+                        startTime: appState.recordingStartTime,
+                        font: .system(size: 11),
+                        color: secondaryLabelColor
+                    )
+                } else {
+                    Text(statusSubtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(secondaryLabelColor)
+                }
             }
 
             Spacer()
@@ -176,37 +207,96 @@ struct FloatingView: View {
         }
     }
 
+    private var showStreamingText: Bool {
+        appState.isRecording && !appState.partialTranscription.isEmpty
+    }
+
     private var recordingExpandedView: some View {
-        VStack(spacing: 20) {
-            // Large waveform
-            LiveWaveformView(
-                audioLevel: audioRecorder.audioLevel,
-                isActive: appState.isRecording
-            )
-            .frame(height: 60)
-            .padding(.horizontal, 20)
+        VStack(spacing: 0) {
+            if showStreamingText {
+                // Minimal status bar: pulsing dot + timer
+                HStack(spacing: 6) {
+                    PulsingDot()
 
-            // Duration
-            Text(formatDuration(audioRecorder.recordingDuration))
-                .font(.system(size: 36, weight: .light, design: .monospaced))
-                .foregroundStyle(labelColor)
+                    Text("REC")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(tertiaryLabelColor)
 
-            // Low audio warning or hint
-            if audioRecorder.recordingDuration >= 2.0 && audioRecorder.maxLevelDuringRecording < 0.05 {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 10))
-                    Text("No audio detected — check your microphone")
+                    RecordingTimer(startTime: appState.recordingStartTime, color: tertiaryLabelColor)
+
+                    Spacer()
+
+                    // Collapse button
+                    Button(action: toggleExpanded) {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(secondaryLabelColor)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(quaternaryLabelColor)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .font(.system(size: 12))
-                .foregroundStyle(.orange)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                // Streaming text
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        Text(appState.partialTranscription)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(labelColor)
+                            .lineSpacing(4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .id("streamingText")
+                    }
+                    .onChange(of: appState.partialTranscription) { _ in
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            proxy.scrollTo("streamingText", anchor: .bottom)
+                        }
+                    }
+                }
             } else {
-                Text("Release to transcribe")
+                // No streaming text yet: waveform + duration centered
+                Spacer()
+
+                LiveWaveformView(
+                    audioLevel: audioRecorder.audioLevel,
+                    isActive: appState.isRecording
+                )
+                .frame(height: 60)
+                .padding(.horizontal, 20)
+
+                RecordingTimer(
+                    startTime: appState.recordingStartTime,
+                    font: .system(size: 36, weight: .light, design: .monospaced),
+                    color: labelColor
+                )
+                .padding(.top, 8)
+
+                if audioRecorder.recordingDuration >= 2.0 && audioRecorder.maxLevelDuringRecording < 0.05 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                        Text("No audio detected — check your microphone")
+                    }
                     .font(.system(size: 12))
-                    .foregroundStyle(secondaryLabelColor)
+                    .foregroundStyle(.orange)
+                    .padding(.top, 8)
+                } else {
+                    Text("Release to transcribe")
+                        .font(.system(size: 12))
+                        .foregroundStyle(secondaryLabelColor)
+                        .padding(.top, 8)
+                }
+
+                Spacer()
             }
         }
-        .padding(.vertical, 20)
     }
 
     private var processingExpandedView: some View {
@@ -378,7 +468,7 @@ struct FloatingView: View {
 
     private var statusSubtitle: String {
         if appState.isRecording {
-            return formatDuration(audioRecorder.recordingDuration)
+            return "" // Handled by RecordingTimer view
         } else if appState.isProcessing {
             return "\(Int(appState.processingProgress * 100))%"
         } else if appState.lastError != nil {
@@ -425,6 +515,40 @@ struct FloatingView: View {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - Recording Timer (TimelineView-driven, never blocks)
+
+struct RecordingTimer: View {
+    let startTime: Date?
+    var font: Font = .system(size: 12, weight: .medium, design: .monospaced)
+    var color: Color = .white.opacity(0.5)
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let duration = startTime.map { context.date.timeIntervalSince($0) } ?? 0
+            let minutes = Int(duration) / 60
+            let seconds = Int(duration) % 60
+            Text(String(format: "%d:%02d", minutes, seconds))
+                .font(font)
+                .foregroundStyle(color)
+        }
+    }
+}
+
+// MARK: - Pulsing Recording Dot
+
+struct PulsingDot: View {
+    @State private var isPulsing = false
+
+    var body: some View {
+        Circle()
+            .fill(Color.red)
+            .frame(width: 8, height: 8)
+            .opacity(isPulsing ? 0.4 : 1.0)
+            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPulsing)
+            .onAppear { isPulsing = true }
     }
 }
 

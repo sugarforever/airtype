@@ -9,6 +9,7 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case elevenlabs = "ElevenLabs"
     case openai = "OpenAI"
     case mistral = "Mistral"
+    case doubao = "Doubao"
 
     var id: String { rawValue }
 
@@ -17,6 +18,14 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
         case .elevenlabs: return URL(string: "https://elevenlabs.io/app/settings/api-keys")
         case .openai: return URL(string: "https://platform.openai.com/api-keys")
         case .mistral: return URL(string: "https://console.mistral.ai/api-keys")
+        case .doubao: return URL(string: "https://console.volcengine.com/speech/app")
+        }
+    }
+
+    var supportsStreaming: Bool {
+        switch self {
+        case .doubao: return true
+        case .elevenlabs, .openai, .mistral: return false
         }
     }
 }
@@ -134,6 +143,10 @@ class Settings: ObservableObject {
         static let elevenlabsModel = "elevenlabs_model"
         static let mistralTranscriptionApiKey = "mistral_transcription_api_key"
         static let mistralTranscriptionModel = "mistral_transcription_model"
+        static let doubaoAppId = "doubao_app_id"
+        static let doubaoAccessKey = "doubao_access_key"
+        static let doubaoResourceId = "doubao_resource_id"
+        static let doubaoLanguage = "doubao_language"
 
         // Enhancement
         static let enhancementEnabled = "enhancement_enabled"
@@ -210,6 +223,22 @@ class Settings: ObservableObject {
 
     @Published var mistralTranscriptionModel: String {
         didSet { defaults.set(mistralTranscriptionModel, forKey: Keys.mistralTranscriptionModel) }
+    }
+
+    @Published var doubaoAppId: String {
+        didSet { defaults.set(doubaoAppId, forKey: Keys.doubaoAppId) }
+    }
+
+    @Published var doubaoAccessKey: String {
+        didSet { defaults.set(doubaoAccessKey, forKey: Keys.doubaoAccessKey) }
+    }
+
+    @Published var doubaoResourceId: String {
+        didSet { defaults.set(doubaoResourceId, forKey: Keys.doubaoResourceId) }
+    }
+
+    @Published var doubaoLanguage: String {
+        didSet { defaults.set(doubaoLanguage, forKey: Keys.doubaoLanguage) }
     }
 
     // MARK: - Enhancement Settings
@@ -307,6 +336,15 @@ class Settings: ObservableObject {
         "voxtral-mini-latest"
     ]
 
+    static let doubaoResourceIds = [
+        "volc.seedasr.sauc.duration",
+        "volc.seedasr.sauc.concurrent",
+    ]
+
+    static let doubaoLanguages = [
+        "zh-CN", "en-US", "ja-JP", "ko-KR", "es-ES", "fr-FR", "ru-RU"
+    ]
+
     // MARK: - Computed Properties
 
     /// Current transcription API key based on selected provider
@@ -315,6 +353,7 @@ class Settings: ObservableObject {
         case .openai: return openaiTranscriptionApiKey
         case .elevenlabs: return elevenlabsApiKey
         case .mistral: return mistralTranscriptionApiKey
+        case .doubao: return doubaoAccessKey
         }
     }
 
@@ -324,6 +363,7 @@ class Settings: ObservableObject {
         case .openai: return openaiTranscriptionModel
         case .elevenlabs: return elevenlabsModel
         case .mistral: return mistralTranscriptionModel
+        case .doubao: return "bigmodel"
         }
     }
 
@@ -364,6 +404,8 @@ class Settings: ObservableObject {
             return !elevenlabsApiKey.isEmpty
         case .mistral:
             return !mistralTranscriptionApiKey.isEmpty
+        case .doubao:
+            return !doubaoAppId.isEmpty && !doubaoAccessKey.isEmpty && !doubaoResourceId.isEmpty
         }
     }
 
@@ -380,6 +422,10 @@ class Settings: ObservableObject {
         case .mistral:
             if mistralTranscriptionApiKey.isEmpty {
                 return "Mistral API key required for voice input"
+            }
+        case .doubao:
+            if doubaoAppId.isEmpty || doubaoAccessKey.isEmpty || doubaoResourceId.isEmpty {
+                return "Doubao App ID, Access Key, and Resource ID required"
             }
         }
 
@@ -403,6 +449,10 @@ class Settings: ObservableObject {
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
         self.mistralTranscriptionApiKey = defaults.string(forKey: Keys.mistralTranscriptionApiKey) ?? ""
         self.mistralTranscriptionModel = defaults.string(forKey: Keys.mistralTranscriptionModel) ?? "voxtral-mini-2602"
+        self.doubaoAppId = defaults.string(forKey: Keys.doubaoAppId) ?? ""
+        self.doubaoAccessKey = defaults.string(forKey: Keys.doubaoAccessKey) ?? ""
+        self.doubaoResourceId = defaults.string(forKey: Keys.doubaoResourceId) ?? "volc.seedasr.sauc.duration"
+        self.doubaoLanguage = defaults.string(forKey: Keys.doubaoLanguage) ?? "zh-CN"
 
         // Enhancement settings
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true

@@ -167,6 +167,8 @@ struct MainView: View {
                     elevenlabsSettings
                 } else if settings.transcriptionProvider == .mistral {
                     mistralTranscriptionSettings
+                } else if settings.transcriptionProvider == .doubao {
+                    doubaoSettings
                 } else {
                     openaiTranscriptionSettings
                 }
@@ -243,6 +245,44 @@ struct MainView: View {
                 }
                 .labelsHidden()
                 .font(.system(size: 12, design: .monospaced))
+            }
+        }
+    }
+
+    private var doubaoSettings: some View {
+        Group {
+            SettingsCardRow(label: "App ID") {
+                HStack(spacing: 6) {
+                    TextField("123456789", text: $settings.doubaoAppId)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Access Token") {
+                SecureField("your-access-token", text: $settings.doubaoAccessKey)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Resource ID") {
+                Picker("", selection: $settings.doubaoResourceId) {
+                    ForEach(Settings.doubaoResourceIds, id: \.self) { rid in
+                        Text(rid).tag(rid)
+                    }
+                }
+                .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Language") {
+                Picker("", selection: $settings.doubaoLanguage) {
+                    ForEach(Settings.doubaoLanguages, id: \.self) { lang in
+                        Text(lang).tag(lang)
+                    }
+                }
+                .labelsHidden()
             }
         }
     }

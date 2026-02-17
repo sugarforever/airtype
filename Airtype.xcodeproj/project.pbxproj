@@ -29,6 +29,9 @@
 		A10012000000000000000012 /* WhisperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20012000000000000000012 /* WhisperService.swift */; };
 		A10013000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20013000000000000000013 /* Assets.xcassets */; };
 		A10014000000000000000014 /* SetupWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20014000000000000000014 /* SetupWizardView.swift */; };
+		A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016000000000000000016 /* StreamingTranscriptionProtocol.swift */; };
+		A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017000000000000000017 /* StreamingAudioCapture.swift */; };
+		A10018000000000000000018 /* DoubaoStreamingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018000000000000000018 /* DoubaoStreamingService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +59,9 @@
 		A30000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A30000000000000000000003 /* Airtype.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Airtype.entitlements; sourceTree = "<group>"; };
 		A20013000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20016000000000000000016 /* StreamingTranscriptionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingTranscriptionProtocol.swift; sourceTree = "<group>"; };
+		A20017000000000000000017 /* StreamingAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingAudioCapture.swift; sourceTree = "<group>"; };
+		A20018000000000000000018 /* DoubaoStreamingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubaoStreamingService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,8 +134,19 @@
 				A20010000000000000000010 /* SettingsWindowController.swift */,
 				A20011000000000000000011 /* TextInserter.swift */,
 				A20012000000000000000012 /* WhisperService.swift */,
+				A50000000000000000000007 /* StreamingTranscription */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000007 /* StreamingTranscription */ = {
+			isa = PBXGroup;
+			children = (
+				A20016000000000000000016 /* StreamingTranscriptionProtocol.swift */,
+				A20017000000000000000017 /* StreamingAudioCapture.swift */,
+				A20018000000000000000018 /* DoubaoStreamingService.swift */,
+			);
+			path = StreamingTranscription;
 			sourceTree = "<group>";
 		};
 		A50000000000000000000006 /* Products */ = {
@@ -235,6 +252,9 @@
 				A10010000000000000000010 /* SettingsWindowController.swift in Sources */,
 				A10011000000000000000011 /* TextInserter.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
+				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
+				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
+				A10018000000000000000018 /* DoubaoStreamingService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
