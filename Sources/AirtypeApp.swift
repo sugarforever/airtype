@@ -214,6 +214,8 @@ class AppState: ObservableObject {
     private var streamingCapture: StreamingAudioCapture?
     private var streamingService: (any StreamingTranscriptionService)?
     private var streamingEventTask: Task<Void, Never>?
+    private var preconnectedStreamingService: DoubaoStreamingService?
+    private var preconnectTask: Task<Void, Never>?
 
     var menuBarIcon: String {
         if isRecording {
@@ -264,6 +266,50 @@ class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Streaming Pre-connect
+
+    /// Pre-establish a Doubao WebSocket connection so recording starts instantly
+    func preconnectStreamingIfNeeded() {
+        // Only pre-connect when Doubao is selected and configured
+        guard shouldUseStreaming, settings.isConfigured else {
+            disconnectPreconnected()
+            return
+        }
+        // Already have a ready connection
+        if preconnectedStreamingService != nil { return }
+
+        preconnectTask?.cancel()
+        preconnectTask = Task { [weak self] in
+            guard let self = self else { return }
+            let service = DoubaoStreamingService(
+                appId: self.settings.doubaoAppId,
+                accessKey: self.settings.doubaoAccessKey,
+                resourceId: self.settings.doubaoResourceId,
+                language: self.settings.doubaoLanguage
+            )
+            do {
+                try await service.connect()
+                guard !Task.isCancelled else {
+                    service.disconnect()
+                    return
+                }
+                await MainActor.run {
+                    self.preconnectedStreamingService = service
+                    debugLog("Streaming pre-connected")
+                }
+            } catch {
+                debugLog("Streaming pre-connect failed: \(error)")
+            }
+        }
+    }
+
+    private func disconnectPreconnected() {
+        preconnectTask?.cancel()
+        preconnectTask = nil
+        preconnectedStreamingService?.disconnect()
+        preconnectedStreamingService = nil
+    }
+
     // MARK: - Recording Flow
 
     private var shouldUseStreaming: Bool {
@@ -307,15 +353,22 @@ class AppState: ObservableObject {
     }
 
     private func startStreamingRecording() async throws {
-        let service = DoubaoStreamingService(
-            appId: settings.doubaoAppId,
-            accessKey: settings.doubaoAccessKey,
-            resourceId: settings.doubaoResourceId,
-            language: settings.doubaoLanguage
-        )
+        let service: DoubaoStreamingService
+        if let preconnected = preconnectedStreamingService {
+            service = preconnected
+            preconnectedStreamingService = nil
+            debugLog("Using pre-connected streaming service")
+        } else {
+            service = DoubaoStreamingService(
+                appId: settings.doubaoAppId,
+                accessKey: settings.doubaoAccessKey,
+                resourceId: settings.doubaoResourceId,
+                language: settings.doubaoLanguage
+            )
+            try await service.connect()
+            debugLog("Streaming WebSocket connected (fresh)")
+        }
         self.streamingService = service
-        try await service.connect()
-        debugLog("Streaming WebSocket connected")
 
         finalizedStreamText = ""
         insertedStreamLength = 0
@@ -335,14 +388,13 @@ class AppState: ObservableObject {
                         // are relative to this boundary. Don't touch partialTranscription
                         // since it may already contain more text from the latest partial.
                         self.finalizedStreamText += text
-                        // Insert finalized text at cursor immediately (non-preview mode)
-                        if !self.settings.previewBeforeInsert {
+                        // Insert finalized text at cursor immediately (non-preview, no enhancement)
+                        if !self.settings.previewBeforeInsert && !self.settings.enhancementEnabled {
                             let newText = String(self.finalizedStreamText.dropFirst(self.insertedStreamLength))
                             if !newText.isEmpty {
                                 self.insertedStreamLength = self.finalizedStreamText.count
-                                Task {
-                                    try? await self.textInserter.insert(text: newText)
-                                }
+                                let inserter = self.textInserter
+                                Task { try? await inserter.insert(text: newText) }
                             }
                         }
                     case .error(let error):
@@ -419,11 +471,15 @@ class AppState: ObservableObject {
                 lastNotice = nil
             } else {
                 processingProgress = 0.95
-                // Only insert text not already inserted via streaming FINALs
-                let remainingText = String(finalText.dropFirst(insertedStreamLength))
-                if !remainingText.isEmpty {
-                    try await textInserter.insert(text: remainingText)
-                    debugLog("Inserted remaining text: \(remainingText)")
+                // When enhancement is on, nothing was inserted during streaming,
+                // so insert the full enhanced text. Otherwise, only insert what
+                // wasn't already inserted via streaming FINALs.
+                let textToInsert = settings.enhancementEnabled
+                    ? finalText
+                    : String(finalText.dropFirst(insertedStreamLength))
+                if !textToInsert.isEmpty {
+                    try await textInserter.insert(text: textToInsert)
+                    debugLog("Inserted text (\(textToInsert.count) chars)")
                 } else {
                     debugLog("All text already inserted via streaming")
                 }
@@ -437,10 +493,8 @@ class AppState: ObservableObject {
                 partialTranscription = ""
 
                 if settings.showFloatingWindow {
-                    Task {
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        floatingWindowManager.hide()
-                    }
+                    let manager = floatingWindowManager
+                    Task { try? await Task.sleep(nanoseconds: 500_000_000); manager.hide() }
                 }
             }
         } catch {
@@ -456,6 +510,9 @@ class AppState: ObservableObject {
             streamingService?.disconnect()
             streamingService = nil
         }
+
+        // Pre-connect for next recording
+        preconnectStreamingIfNeeded()
     }
 
     func stopAndProcess() async {
