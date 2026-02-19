@@ -3,12 +3,15 @@ import Combine
 import os.log
 
 private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
+private let logQueue = DispatchQueue(label: "com.airtype.debuglog")
 
 func debugLog(_ message: String) {
     let timestamp = ISO8601DateFormatter().string(from: Date())
     let line = "[\(timestamp)] \(message)\n"
+    fputs(line, stderr)
 
-    if let data = line.data(using: .utf8) {
+    guard let data = line.data(using: .utf8) else { return }
+    logQueue.async {
         if FileManager.default.fileExists(atPath: logFile.path) {
             if let handle = try? FileHandle(forWritingTo: logFile) {
                 handle.seekToEndOfFile()
@@ -19,9 +22,6 @@ func debugLog(_ message: String) {
             try? data.write(to: logFile)
         }
     }
-
-    // Also print to stderr
-    fputs(line, stderr)
 }
 
 /// Print transcription output to stdout (for terminal streaming)
@@ -300,7 +300,7 @@ class AppState: ObservableObject {
             do {
                 try await service.connect()
                 guard !Task.isCancelled else {
-                    service.disconnect()
+                    await service.disconnect()
                     return
                 }
                 await MainActor.run {
@@ -316,8 +316,10 @@ class AppState: ObservableObject {
     private func disconnectPreconnected() {
         preconnectTask?.cancel()
         preconnectTask = nil
-        preconnectedStreamingService?.disconnect()
-        preconnectedStreamingService = nil
+        if let service = preconnectedStreamingService {
+            preconnectedStreamingService = nil
+            Task { await service.disconnect() }
+        }
     }
 
     // MARK: - Recording Flow
@@ -364,11 +366,16 @@ class AppState: ObservableObject {
 
     private func startStreamingRecording() async throws {
         let service: DoubaoStreamingService
-        if let preconnected = preconnectedStreamingService {
+        if let preconnected = preconnectedStreamingService, await !preconnected.isStale() {
             service = preconnected
             preconnectedStreamingService = nil
             debugLog("Using pre-connected streaming service")
         } else {
+            // Discard stale pre-connected service if any
+            if let stale = preconnectedStreamingService {
+                preconnectedStreamingService = nil
+                Task { await stale.disconnect() }
+            }
             service = DoubaoStreamingService(
                 appId: settings.doubaoAppId,
                 accessKey: settings.doubaoAccessKey,
@@ -378,39 +385,35 @@ class AppState: ObservableObject {
             try await service.connect()
             debugLog("Streaming WebSocket connected (fresh)")
         }
+        // Send init message now — starts the server's audio timeout
+        try await service.startSession()
         self.streamingService = service
 
         finalizedStreamText = ""
         insertedStreamLength = 0
 
-        // Listen for events
-        streamingEventTask = Task { [weak self] in
+        // Listen for events (task runs on @MainActor to avoid per-event hops)
+        streamingEventTask = Task { @MainActor [weak self] in
             for await event in service.events {
                 guard let self = self else { break }
-                await MainActor.run {
-                    switch event {
-                    case .partial(let text):
-                        let fullText = self.finalizedStreamText + text
-                        self.partialTranscription = fullText
-                        self.processingStage = "Listening..."
-                    case .final_(let text):
-                        // Accumulate exactly what the API finalized — subsequent partials
-                        // are relative to this boundary. Don't touch partialTranscription
-                        // since it may already contain more text from the latest partial.
-                        self.finalizedStreamText += text
-                        // Insert finalized text at cursor immediately (non-preview, no enhancement)
-                        if !self.settings.previewBeforeInsert && !self.settings.enhancementEnabled {
-                            let newText = String(self.finalizedStreamText.dropFirst(self.insertedStreamLength))
-                            if !newText.isEmpty {
-                                self.insertedStreamLength = self.finalizedStreamText.count
-                                let inserter = self.textInserter
-                                Task { try? await inserter.insert(text: newText) }
-                            }
+                switch event {
+                case .partial(let text):
+                    let fullText = self.finalizedStreamText + text
+                    self.partialTranscription = fullText
+                    self.processingStage = "Listening..."
+                case .final_(let text):
+                    self.finalizedStreamText += text
+                    if !self.settings.previewBeforeInsert && !self.settings.enhancementEnabled {
+                        let newText = String(self.finalizedStreamText.dropFirst(self.insertedStreamLength))
+                        if !newText.isEmpty {
+                            self.insertedStreamLength = self.finalizedStreamText.count
+                            let inserter = self.textInserter
+                            Task { try? await inserter.insert(text: newText) }
                         }
-                    case .error(let error):
-                        debugLog("Streaming error: \(error)")
-                        self.lastError = error.localizedDescription
                     }
+                case .error(let error):
+                    debugLog("Streaming error: \(error)")
+                    self.lastError = error.localizedDescription
                 }
             }
         }
@@ -419,7 +422,7 @@ class AppState: ObservableObject {
         let capture = StreamingAudioCapture()
         self.streamingCapture = capture
         try capture.start { [weak service] data in
-            service?.sendAudio(data)
+            Task { await service?.sendAudio(data) }
         }
         debugLog("Streaming audio capture started")
     }
@@ -447,7 +450,7 @@ class AppState: ObservableObject {
             // partial view, finalizedStreamText has all locked-in utterances.
             let transcription = partialTranscription.count >= finalizedStreamText.count
                 ? partialTranscription : finalizedStreamText
-            streamingService?.disconnect()
+            await streamingService?.disconnect()
             streamingService = nil
 
             debugLog("Streaming transcription result: \(transcription)")
@@ -518,7 +521,9 @@ class AppState: ObservableObject {
             isProcessing = false
             processingStage = ""
             processingProgress = 0.0
-            streamingService?.disconnect()
+            streamingEventTask?.cancel()
+            streamingEventTask = nil
+            await streamingService?.disconnect()
             streamingService = nil
         }
 
@@ -718,8 +723,10 @@ class AppState: ObservableObject {
             streamingCapture = nil
             streamingEventTask?.cancel()
             streamingEventTask = nil
-            streamingService?.disconnect()
-            streamingService = nil
+            if let service = streamingService {
+                streamingService = nil
+                Task { await service.disconnect() }
+            }
         } else {
             audioRecorder.cancelRecording()
         }
