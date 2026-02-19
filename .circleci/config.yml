@@ -131,12 +131,23 @@ jobs:
                   aws s3 cp "$DMG" \
                     "s3://${R2_BUCKET}/releases/Airtype-latest.dmg" \
                     --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-                  # Publish version metadata
-                  echo "{\"version\":\"${CIRCLE_TAG}\",\"date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > build/version.json
+                  # Extract release notes for current version from CHANGELOG.md
+                  RELEASE_NOTES=$(sed -n "/^## \[${CIRCLE_TAG}\]/,/^## \[/{/^## \[${CIRCLE_TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
+                  # Publish version metadata with release notes
+                  jq -n \
+                    --arg version "$CIRCLE_TAG" \
+                    --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                    --arg notes "$RELEASE_NOTES" \
+                    '{version: $version, date: $date, releaseNotes: $notes}' > build/version.json
                   aws s3 cp build/version.json \
                     "s3://${R2_BUCKET}/releases/version.json" \
                     --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
                     --content-type "application/json"
+                  # Upload full changelog
+                  aws s3 cp CHANGELOG.md \
+                    "s3://${R2_BUCKET}/releases/CHANGELOG.md" \
+                    --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+                    --content-type "text/markdown"
 
 workflows:
   build:
