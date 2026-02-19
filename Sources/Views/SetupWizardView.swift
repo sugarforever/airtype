@@ -126,6 +126,7 @@ struct SetupWizardView: View {
         case .openai: return $settings.openaiTranscriptionApiKey
         case .elevenlabs: return $settings.elevenlabsApiKey
         case .mistral: return $settings.mistralTranscriptionApiKey
+        case .doubao: return $settings.doubaoAccessKey
         }
     }
 
@@ -147,6 +148,12 @@ struct SetupWizardView: View {
         case .mistral:
             Picker("", selection: $settings.mistralTranscriptionModel) {
                 ForEach(Settings.mistralTranscriptionModels, id: \.self) { Text($0).tag($0) }
+            }
+            .labelsHidden()
+            .font(.system(size: 12, design: .monospaced))
+        case .doubao:
+            Picker("", selection: $settings.doubaoLanguage) {
+                ForEach(Settings.doubaoLanguages, id: \.self) { Text($0).tag($0) }
             }
             .labelsHidden()
             .font(.system(size: 12, design: .monospaced))
