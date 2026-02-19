@@ -5,12 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.11.0] - 2026-02-19
+
 ### Added
-- Streaming transcription with real-time text display
+- Streaming transcription with Doubao and real-time text display
 - Floating panel preview for streaming transcription
+- Changelog and release notes published to R2
 
 ### Changed
 - Show empty/short recordings as notices instead of errors
+- WebSocket management: actor isolation, pre-connect without server timeout, ping keepalive, thread-safe logging
 
 ## [v0.10.0] - 2026-02-11
 
