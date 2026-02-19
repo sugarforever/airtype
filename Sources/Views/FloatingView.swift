@@ -541,7 +541,7 @@ struct RecordingTimer: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            let duration = startTime.map { context.date.timeIntervalSince($0) } ?? 0
+            let duration = max(0, startTime.map { context.date.timeIntervalSince($0) } ?? 0)
             let minutes = Int(duration) / 60
             let seconds = Int(duration) % 60
             Text(String(format: "%d:%02d", minutes, seconds))

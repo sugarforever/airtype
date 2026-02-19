@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import os.log
 
 private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
@@ -227,6 +228,8 @@ class AppState: ObservableObject {
         }
     }
 
+    private var providerObserver: AnyCancellable?
+
     init() {
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
@@ -235,6 +238,13 @@ class AppState: ObservableObject {
                 MainWindowController.shared.show()
             } else {
                 MainWindowController.shared.showWizard()
+            }
+        }
+        // Pre-connect streaming when Doubao is selected; tear down otherwise
+        preconnectStreamingIfNeeded()
+        providerObserver = settings.$transcriptionProvider.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.preconnectStreamingIfNeeded()
             }
         }
     }
@@ -419,6 +429,7 @@ class AppState: ObservableObject {
         streamingCapture = nil
 
         isRecording = false
+        recordingStartTime = nil
         isProcessing = true
         processingStage = "Finalizing..."
 
@@ -531,6 +542,7 @@ class AppState: ObservableObject {
             debugLog("No audio URL returned")
             lastError = "No recording to process"
             isRecording = false
+            recordingStartTime = nil
             return
         }
 
@@ -550,6 +562,7 @@ class AppState: ObservableObject {
             lastNotice = "Recording too short. Please speak for longer."
             audioRecorder.cleanupRecording(at: audioURL)
             isRecording = false
+            recordingStartTime = nil
             return
         }
 
@@ -559,10 +572,12 @@ class AppState: ObservableObject {
             lastNotice = "No speech detected. Check that the correct microphone is selected in System Settings → Sound → Input."
             audioRecorder.cleanupRecording(at: audioURL)
             isRecording = false
+            recordingStartTime = nil
             return
         }
 
         isRecording = false
+        recordingStartTime = nil
         isProcessing = true
         processingProgress = 0.0
         partialTranscription = ""
@@ -709,6 +724,7 @@ class AppState: ObservableObject {
             audioRecorder.cancelRecording()
         }
         isRecording = false
+        recordingStartTime = nil
         partialTranscription = ""
     }
 }
