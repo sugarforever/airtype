@@ -3,13 +3,18 @@ export default {
     const url = new URL(request.url);
     const key = url.pathname.slice(1); // strip leading /
 
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders() });
+    }
+
     if (!key) {
-      return new Response("Not found", { status: 404 });
+      return new Response("Not found", { status: 404, headers: corsHeaders() });
     }
 
     const object = await env.BUCKET.get(key);
     if (!object) {
-      return new Response("Not found", { status: 404 });
+      return new Response("Not found", { status: 404, headers: corsHeaders() });
     }
 
     // Log download event
@@ -32,6 +37,17 @@ export default {
       headers.set("content-disposition", `attachment; filename="${key.split("/").pop()}"`);
     }
 
+    // CORS
+    headers.set("access-control-allow-origin", "*");
+
     return new Response(object.body, { headers });
   },
 };
+
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-max-age": "86400",
+  };
+}
