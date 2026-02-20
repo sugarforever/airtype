@@ -200,8 +200,6 @@ class AppState: ObservableObject {
     private var lastStreamedLength = 0
     // Accumulated finalized utterances from streaming (Doubao resets text per utterance)
     private var finalizedStreamText = ""
-    // How much of finalizedStreamText has already been inserted at cursor
-    private var insertedStreamLength = 0
 
     let settings = Settings.shared
     let audioRecorder = AudioRecorder()
@@ -390,7 +388,6 @@ class AppState: ObservableObject {
         self.streamingService = service
 
         finalizedStreamText = ""
-        insertedStreamLength = 0
 
         // Listen for events (task runs on @MainActor to avoid per-event hops)
         streamingEventTask = Task { @MainActor [weak self] in
@@ -403,14 +400,6 @@ class AppState: ObservableObject {
                     self.processingStage = "Listening..."
                 case .final_(let text):
                     self.finalizedStreamText += text
-                    if !self.settings.previewBeforeInsert && !self.settings.enhancementEnabled {
-                        let newText = String(self.finalizedStreamText.dropFirst(self.insertedStreamLength))
-                        if !newText.isEmpty {
-                            self.insertedStreamLength = self.finalizedStreamText.count
-                            let inserter = self.textInserter
-                            Task { try? await inserter.insert(text: newText) }
-                        }
-                    }
                 case .error(let error):
                     debugLog("Streaming error: \(error)")
                     self.lastError = error.localizedDescription
@@ -485,17 +474,9 @@ class AppState: ObservableObject {
                 lastNotice = nil
             } else {
                 processingProgress = 0.95
-                // When enhancement is on, nothing was inserted during streaming,
-                // so insert the full enhanced text. Otherwise, only insert what
-                // wasn't already inserted via streaming FINALs.
-                let textToInsert = settings.enhancementEnabled
-                    ? finalText
-                    : String(finalText.dropFirst(insertedStreamLength))
-                if !textToInsert.isEmpty {
-                    try await textInserter.insert(text: textToInsert)
-                    debugLog("Inserted text (\(textToInsert.count) chars)")
-                } else {
-                    debugLog("All text already inserted via streaming")
+                if !finalText.isEmpty {
+                    try await textInserter.insert(text: finalText)
+                    debugLog("Inserted text (\(finalText.count) chars)")
                 }
                 streamOutput("Done!\n")
 

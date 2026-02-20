@@ -430,10 +430,10 @@ struct MainView: View {
 
                     Toggle(isOn: $settings.previewBeforeInsert) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Preview before inserting")
+                            Text("Confirm before inserting")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Theme.textPrimary)
-                            Text("Review transcription and click Apply to insert")
+                            Text("Review transcription before inserting at cursor")
                                 .font(.system(size: 11))
                                 .foregroundStyle(Theme.textSecondary)
                         }
