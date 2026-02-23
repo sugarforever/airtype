@@ -26,6 +26,8 @@ class EnhancementService {
             throw EnhancementError.noAPIKey
         }
 
+        try Task.checkCancellation()
+
         let baseURL = settings.currentEnhancementBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
         let url = URL(string: "\(baseURL)/chat/completions")!
 

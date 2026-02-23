@@ -215,6 +215,7 @@ class AppState: ObservableObject {
     private var streamingEventTask: Task<Void, Never>?
     private var preconnectedStreamingService: DoubaoStreamingService?
     private var preconnectTask: Task<Void, Never>?
+    private var processingTask: Task<Void, Never>?
 
     var menuBarIcon: String {
         if isRecording {
@@ -251,24 +252,37 @@ class AppState: ObservableObject {
         // Push-to-talk: start recording on key down
         hotkeyManager.onPushToTalkStart = { [weak self] in
             Task { @MainActor in
-                await self?.startRecording()
+                guard let self = self else { return }
+                if self.isProcessing {
+                    self.cancelProcessing()
+                } else {
+                    await self.startRecording()
+                }
             }
         }
 
         // Push-to-talk: stop and process on key up
         hotkeyManager.onPushToTalkEnd = { [weak self] in
             Task { @MainActor in
-                await self?.stopAndProcess()
+                guard let self = self else { return }
+                self.processingTask = Task { @MainActor in
+                    await self.stopAndProcess()
+                }
             }
         }
 
         // Toggle mode: toggle recording state
         hotkeyManager.onToggle = { [weak self] in
             Task { @MainActor in
-                if self?.isRecording == true {
-                    await self?.stopAndProcess()
+                guard let self = self else { return }
+                if self.isProcessing {
+                    self.cancelProcessing()
+                } else if self.isRecording {
+                    self.processingTask = Task { @MainActor in
+                        await self.stopAndProcess()
+                    }
                 } else {
-                    await self?.startRecording()
+                    await self.startRecording()
                 }
             }
         }
@@ -464,7 +478,8 @@ class AppState: ObservableObject {
                 finalText = transcription
             }
 
-            // Insert
+            // Insert (bail out if cancelled while enhancing)
+            try Task.checkCancellation()
             if settings.previewBeforeInsert {
                 processingStage = "Ready to apply"
                 partialTranscription = finalText
@@ -492,6 +507,9 @@ class AppState: ObservableObject {
                     Task { try? await Task.sleep(nanoseconds: 500_000_000); manager.hide() }
                 }
             }
+        } catch is CancellationError {
+            debugLog("Streaming processing cancelled")
+            return
         } catch {
             debugLog("Streaming processing error: \(error)")
             if case WhisperError.emptyRecording = error {
@@ -636,6 +654,7 @@ class AppState: ObservableObject {
             }
 
             // Step 3: Insert at cursor (or preview if enabled)
+            try Task.checkCancellation()
             if settings.previewBeforeInsert {
                 // Store for preview - user will manually apply
                 debugLog("Preview mode - waiting for user to apply")
@@ -675,6 +694,9 @@ class AppState: ObservableObject {
                     }
                 }
             }
+        } catch is CancellationError {
+            debugLog("Processing cancelled")
+            return
         } catch {
             debugLog("Error: \(error)")
             let isEmptyRecording: Bool
@@ -714,5 +736,32 @@ class AppState: ObservableObject {
         isRecording = false
         recordingStartTime = nil
         partialTranscription = ""
+    }
+
+    func cancelProcessing() {
+        debugLog("Cancelling processing/enhancement")
+        processingTask?.cancel()
+        processingTask = nil
+        // Tear down any lingering streaming state
+        streamingCapture?.stop()
+        streamingCapture = nil
+        streamingEventTask?.cancel()
+        streamingEventTask = nil
+        if let service = streamingService {
+            streamingService = nil
+            Task { await service.disconnect() }
+        }
+        isProcessing = false
+        processingStage = ""
+        processingProgress = 0.0
+        partialTranscription = ""
+        lastError = nil
+        lastNotice = "Processing cancelled"
+        if settings.showFloatingWindow {
+            let manager = floatingWindowManager
+            Task { try? await Task.sleep(nanoseconds: 500_000_000); manager.hide() }
+        }
+        // Re-establish streaming pre-connection if needed
+        preconnectStreamingIfNeeded()
     }
 }
