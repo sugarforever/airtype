@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.11.1] - 2026-02-23
+
+### Added
+- Editable preview text in floating window confirm mode
+- Auto-expand floating panel when recording starts in preview mode
+
+### Fixed
+- Apply button now correctly inserts text into the previously focused app
+
 ## [v0.11.0] - 2026-02-19
 
 ### Added
