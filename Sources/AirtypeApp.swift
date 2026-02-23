@@ -117,6 +117,27 @@ class FloatingWindowManager: ObservableObject {
         panel?.animateResize(to: size, position: Settings.shared.floatingWindowPosition)
     }
 
+    /// The app that was frontmost before the panel became key (for paste targeting).
+    private var previousApp: NSRunningApplication?
+
+    func makeKeyable(_ keyable: Bool) {
+        if keyable {
+            // Remember the frontmost app before we steal focus
+            let front = NSWorkspace.shared.frontmostApplication
+            if front?.bundleIdentifier != Bundle.main.bundleIdentifier {
+                previousApp = front
+            }
+        }
+        panel?.becomesKeyOnlyIfNeeded = !keyable
+    }
+
+    func resignKeyAndActivatePreviousApp() {
+        panel?.resignKey()
+        panel?.becomesKeyOnlyIfNeeded = true
+        previousApp?.activate()
+        previousApp = nil
+    }
+
     private func createPanel(with appState: AppState) {
         let initialSize = NSSize(
             width: FloatingView.pillSize.width,

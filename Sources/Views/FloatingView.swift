@@ -62,10 +62,22 @@ struct FloatingView: View {
         .onHover { hovering in
             isHovering = hovering
         }
+        .onChange(of: appState.isRecording) { isRecording in
+            // Auto-expand when recording starts in preview mode
+            if isRecording && !isExpanded && appState.settings.previewBeforeInsert {
+                toggleExpanded()
+            }
+        }
         .onChange(of: appState.partialTranscription) { newValue in
             // Auto-expand when streaming text starts arriving during recording
             if appState.isRecording && !newValue.isEmpty && !isExpanded && appState.settings.previewBeforeInsert {
                 toggleExpanded()
+            }
+        }
+        .onChange(of: appState.isProcessing) { isProcessing in
+            // Make panel keyable when processing completes with a result to edit
+            if !isProcessing && !appState.partialTranscription.isEmpty && appState.settings.previewBeforeInsert {
+                appState.floatingWindowManager.makeKeyable(true)
             }
         }
     }
@@ -357,19 +369,17 @@ struct FloatingView: View {
                 .padding(20)
             } else {
                 // Success - show transcription
-                ScrollView {
-                    Text(appState.partialTranscription)
-                        .font(.system(size: 13))
-                        .foregroundStyle(labelColor)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(quaternaryLabelColor)
-                        )
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                TextEditor(text: $appState.partialTranscription)
+                    .font(.system(size: 13))
+                    .foregroundStyle(labelColor)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(quaternaryLabelColor)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
             }
         }
     }
@@ -514,10 +524,14 @@ struct FloatingView: View {
     // MARK: - Actions
 
     private func applyText() {
+        let text = appState.partialTranscription
+        appState.partialTranscription = ""
+        appState.floatingWindowManager.resignKeyAndActivatePreviousApp()
         Task {
+            // Give the previous app time to activate
+            try await Task.sleep(nanoseconds: 150_000_000)
             do {
-                try await appState.textInserter.insert(text: appState.partialTranscription)
-                appState.partialTranscription = ""
+                try await appState.textInserter.insert(text: text)
             } catch {
                 appState.lastError = error.localizedDescription
             }
