@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-## [v0.11.1] - 2026-02-23
+## [v0.11.2] - 2026-02-23
 
 ### Added
 - Editable preview text in floating window confirm mode
