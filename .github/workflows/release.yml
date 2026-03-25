@@ -1,0 +1,178 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  SCHEME: Airtype
+  PROJECT: Airtype.xcodeproj
+  ARCHIVE_PATH: build/Airtype.xcarchive
+  EXPORT_PATH: build/export
+
+jobs:
+  build-and-release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Install signing certificate
+        env:
+          CERTIFICATE_P12_BASE64: ${{ secrets.CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD="ci-build-$$"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/certificate.p12"
+
+          # Apple root and intermediate certificates
+          curl -sO https://www.apple.com/appleca/AppleIncRootCertificate.cer
+          curl -sO https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
+          curl -sO https://www.apple.com/certificateauthority/DeveloperIDCA.cer
+          curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import AppleIncRootCertificate.cer -k "$KEYCHAIN_PATH"
+          security import AppleRootCA-G2.cer -k "$KEYCHAIN_PATH"
+          security import DeveloperIDCA.cer -k "$KEYCHAIN_PATH"
+          security import DeveloperIDG2CA.cer -k "$KEYCHAIN_PATH"
+          rm -f *.cer
+
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Info.plist
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $RUNNER_TEMP/build.keychain-db"
+
+      - name: Export app
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          mkdir -p build
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>${TEAM_ID}</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist build/ExportOptions.plist
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          cd "$EXPORT_PATH"
+          ditto -c -k --keepParent Airtype.app Airtype.zip
+          xcrun notarytool submit Airtype.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+          xcrun stapler staple Airtype.app
+
+      - name: Create DMG
+        run: |
+          DMG_DIR="build/dmg-staging"
+          mkdir -p "$DMG_DIR"
+          cp -R "$EXPORT_PATH/Airtype.app" "$DMG_DIR/"
+          ln -s /Applications "$DMG_DIR/Applications"
+          hdiutil create -volname "Airtype" \
+            -srcfolder "$DMG_DIR" \
+            -ov -format UDZO \
+            "build/Airtype-${GITHUB_REF_NAME}.dmg"
+          rm -rf "$DMG_DIR"
+
+      - name: Upload to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          DMG="build/Airtype-${GITHUB_REF_NAME}.dmg"
+          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          # Versioned DMG
+          aws s3 cp "$DMG" "s3://${R2_BUCKET}/releases/Airtype-${GITHUB_REF_NAME}.dmg" \
+            --endpoint-url "$ENDPOINT"
+          # Latest pointer
+          aws s3 cp "$DMG" "s3://${R2_BUCKET}/releases/Airtype-latest.dmg" \
+            --endpoint-url "$ENDPOINT"
+
+          # Release notes from CHANGELOG
+          TAG="${GITHUB_REF_NAME}"
+          RELEASE_NOTES=$(sed -n "/^## \[${TAG}\]/,/^## \[/{/^## \[${TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md \
+            | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
+
+          # Version metadata
+          jq -n \
+            --arg version "$TAG" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg notes "$RELEASE_NOTES" \
+            '{version: $version, date: $date, releaseNotes: $notes}' > build/version.json
+          aws s3 cp build/version.json "s3://${R2_BUCKET}/releases/version.json" \
+            --endpoint-url "$ENDPOINT" --content-type "application/json"
+
+          # Full changelog
+          aws s3 cp CHANGELOG.md "s3://${R2_BUCKET}/releases/CHANGELOG.md" \
+            --endpoint-url "$ENDPOINT" --content-type "text/markdown"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          DMG="build/Airtype-${TAG}.dmg"
+
+          # Extract release notes
+          RELEASE_NOTES=$(sed -n "/^## \[${TAG}\]/,/^## \[/{/^## \[${TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md \
+            | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
+
+          gh release create "$TAG" "$DMG" \
+            --title "Airtype $TAG" \
+            --notes "$RELEASE_NOTES"
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
