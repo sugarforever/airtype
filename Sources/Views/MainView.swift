@@ -137,7 +137,9 @@ struct MainView: View {
                 .foregroundStyle(Theme.textPrimary)
             Spacer()
             Button("Download") {
-                NSWorkspace.shared.open(UpdateChecker.downloadURL)
+                if let url = updateChecker.downloadURL {
+                    NSWorkspace.shared.open(url)
+                }
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)

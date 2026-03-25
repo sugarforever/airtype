@@ -123,41 +123,6 @@ jobs:
             "build/Airtype-${GITHUB_REF_NAME}.dmg"
           rm -rf "$DMG_DIR"
 
-      - name: Upload to Cloudflare R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          DMG="build/Airtype-${GITHUB_REF_NAME}.dmg"
-          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-
-          # Versioned DMG
-          aws s3 cp "$DMG" "s3://${R2_BUCKET}/releases/Airtype-${GITHUB_REF_NAME}.dmg" \
-            --endpoint-url "$ENDPOINT"
-          # Latest pointer
-          aws s3 cp "$DMG" "s3://${R2_BUCKET}/releases/Airtype-latest.dmg" \
-            --endpoint-url "$ENDPOINT"
-
-          # Release notes from CHANGELOG
-          TAG="${GITHUB_REF_NAME}"
-          RELEASE_NOTES=$(sed -n "/^## \[${TAG}\]/,/^## \[/{/^## \[${TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md \
-            | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
-
-          # Version metadata
-          jq -n \
-            --arg version "$TAG" \
-            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg notes "$RELEASE_NOTES" \
-            '{version: $version, date: $date, releaseNotes: $notes}' > build/version.json
-          aws s3 cp build/version.json "s3://${R2_BUCKET}/releases/version.json" \
-            --endpoint-url "$ENDPOINT" --content-type "application/json"
-
-          # Full changelog
-          aws s3 cp CHANGELOG.md "s3://${R2_BUCKET}/releases/CHANGELOG.md" \
-            --endpoint-url "$ENDPOINT" --content-type "text/markdown"
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -165,7 +130,7 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           DMG="build/Airtype-${TAG}.dmg"
 
-          # Extract release notes
+          # Extract release notes from CHANGELOG.md
           RELEASE_NOTES=$(sed -n "/^## \[${TAG}\]/,/^## \[/{/^## \[${TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md \
             | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
 

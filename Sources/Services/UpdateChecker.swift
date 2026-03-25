@@ -4,9 +4,9 @@ import Foundation
 final class UpdateChecker: ObservableObject {
     @Published var updateAvailable = false
     @Published var latestVersion = ""
+    @Published var downloadURL: URL?
 
-    private let versionURL = URL(string: "https://pub-9bc27f7ea4884bf89d219798d23f6dd2.r2.dev/releases/version.json")!
-    static let downloadURL = URL(string: "https://pub-9bc27f7ea4884bf89d219798d23f6dd2.r2.dev/releases/Airtype-latest.dmg")!
+    private let releaseURL = URL(string: "https://api.github.com/repos/sugarforever/airtype/releases/latest")!
 
     private var timer: Timer?
 
@@ -26,13 +26,17 @@ final class UpdateChecker: ObservableObject {
     func check() {
         Task {
             do {
-                let (data, _) = try await URLSession.shared.data(from: versionURL)
-                let response = try JSONDecoder().decode(VersionResponse.self, from: data)
-                let remote = response.version.trimmingCharacters(in: .whitespaces)
+                var request = URLRequest(url: releaseURL)
+                request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+                let (data, _) = try await URLSession.shared.data(for: request)
+                let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+                let remote = release.tag_name
                 guard let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { return }
                 updateAvailable = isNewer(remote: remote, thanCurrent: current)
                 if updateAvailable {
                     latestVersion = remote
+                    downloadURL = release.assets.first { $0.name.hasSuffix(".dmg") }
+                        .map { URL(string: $0.browser_download_url) } ?? nil
                 }
             } catch {
                 // Silently fail — don't block the user
@@ -57,7 +61,13 @@ final class UpdateChecker: ObservableObject {
         return stripped.split(separator: ".").compactMap { Int($0) }
     }
 
-    private struct VersionResponse: Decodable {
-        let version: String
+    private struct GitHubRelease: Decodable {
+        let tag_name: String
+        let assets: [Asset]
+
+        struct Asset: Decodable {
+            let name: String
+            let browser_download_url: String
+        }
     }
 }
