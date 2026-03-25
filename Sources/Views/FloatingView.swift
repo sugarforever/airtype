@@ -532,7 +532,9 @@ struct FloatingView: View {
             try await Task.sleep(nanoseconds: 150_000_000)
             do {
                 try await appState.textInserter.insert(text: text)
+                TranscriptionHistory.shared.save(text: text, inserted: true)
             } catch {
+                TranscriptionHistory.shared.save(text: text, inserted: false)
                 appState.lastError = error.localizedDescription
             }
         }

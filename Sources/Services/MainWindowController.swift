@@ -65,6 +65,47 @@ class MainWindowController {
         window = nil
     }
 
+    private var historyWindow: NSWindow?
+    private var historyWindowDelegate: NSWindowDelegate?
+
+    func showHistory() {
+        if let existing = historyWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let historyView = TranscriptionHistoryView()
+        let hostingView = NSHostingView(rootView: historyView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 560, height: 520)
+
+        let newWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        newWindow.title = "Recent Transcriptions"
+        newWindow.contentView = hostingView
+        newWindow.setContentSize(NSSize(width: 560, height: 520))
+        newWindow.center()
+        newWindow.isReleasedWhenClosed = false
+        newWindow.level = .normal
+        newWindow.minSize = NSSize(width: 480, height: 400)
+
+        let delegate = MainWindowDelegate { [weak self] in
+            self?.historyWindow = nil
+            self?.historyWindowDelegate = nil
+        }
+        self.historyWindowDelegate = delegate
+        newWindow.delegate = delegate
+        self.historyWindow = newWindow
+
+        newWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     private var wizardWindow: NSWindow?
     private var wizardWindowDelegate: NSWindowDelegate?
 

@@ -209,6 +209,10 @@ struct MenuBarView: View {
                 }
             }
 
+            MenuButton(title: "Recent Transcriptions", shortcut: nil) {
+                MainWindowController.shared.showHistory()
+            }
+
             MenuButton(title: "Settings...", shortcut: "⌘,") {
                 MainWindowController.shared.show()
             }

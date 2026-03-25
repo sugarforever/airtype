@@ -512,6 +512,7 @@ class AppState: ObservableObject {
                 processingProgress = 0.95
                 if !finalText.isEmpty {
                     try await textInserter.insert(text: finalText)
+                    TranscriptionHistory.shared.save(text: finalText, inserted: true)
                     debugLog("Inserted text (\(finalText.count) chars)")
                 }
                 streamOutput("Done!\n")
@@ -693,6 +694,7 @@ class AppState: ObservableObject {
                 streamOutput("\n--- Inserting at cursor ---")
                 processingProgress = 0.95
                 try await textInserter.insert(text: finalText)
+                TranscriptionHistory.shared.save(text: finalText, inserted: true)
                 debugLog("Text inserted successfully")
                 streamOutput("Done!\n")
                 processingProgress = 1.0

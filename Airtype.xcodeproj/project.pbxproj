@@ -32,6 +32,8 @@
 		A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016000000000000000016 /* StreamingTranscriptionProtocol.swift */; };
 		A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017000000000000000017 /* StreamingAudioCapture.swift */; };
 		A10018000000000000000018 /* DoubaoStreamingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018000000000000000018 /* DoubaoStreamingService.swift */; };
+		A10019000000000000000019 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019000000000000000019 /* TranscriptionHistory.swift */; };
+		A1001A00000000000000001A /* TranscriptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001A00000000000000001A /* TranscriptionHistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +56,8 @@
 		A2000F00000000000000000F /* MistralTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MistralTranscriptionService.swift; sourceTree = "<group>"; };
 		A20010000000000000000010 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		A20011000000000000000011 /* TextInserter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInserter.swift; sourceTree = "<group>"; };
+		A20019000000000000000019 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
+		A2001A00000000000000001A /* TranscriptionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistoryView.swift; sourceTree = "<group>"; };
 		A20012000000000000000012 /* WhisperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperService.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* Airtype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airtype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -117,6 +121,7 @@
 				A20008000000000000000008 /* FloatingGlassBackgroundView.swift */,
 				A20009000000000000000009 /* WaveformView.swift */,
 				A20014000000000000000014 /* SetupWizardView.swift */,
+				A2001A00000000000000001A /* TranscriptionHistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -133,6 +138,7 @@
 				A2000F00000000000000000F /* MistralTranscriptionService.swift */,
 				A20010000000000000000010 /* SettingsWindowController.swift */,
 				A20011000000000000000011 /* TextInserter.swift */,
+				A20019000000000000000019 /* TranscriptionHistory.swift */,
 				A20012000000000000000012 /* WhisperService.swift */,
 				A50000000000000000000007 /* StreamingTranscription */,
 			);
@@ -242,6 +248,7 @@
 				A10008000000000000000008 /* FloatingGlassBackgroundView.swift in Sources */,
 				A10009000000000000000009 /* WaveformView.swift in Sources */,
 				A10014000000000000000014 /* SetupWizardView.swift in Sources */,
+				A1001A00000000000000001A /* TranscriptionHistoryView.swift in Sources */,
 				A1000A00000000000000000A /* AudioRecorder.swift in Sources */,
 				A10015000000000000000015 /* UpdateChecker.swift in Sources */,
 				A1000B00000000000000000B /* ElevenLabsService.swift in Sources */,
@@ -251,6 +258,7 @@
 				A1000F00000000000000000F /* MistralTranscriptionService.swift in Sources */,
 				A10010000000000000000010 /* SettingsWindowController.swift in Sources */,
 				A10011000000000000000011 /* TextInserter.swift in Sources */,
+				A10019000000000000000019 /* TranscriptionHistory.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
