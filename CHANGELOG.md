@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.12.0] - 2026-03-27
+
+### Added
+- Transcription history: persists recent transcriptions locally so text is never lost
+- "Recent Transcriptions" window accessible from menu bar with copy-to-clipboard support
+- GitHub Actions release workflow (replaces CircleCI)
+- GitHub Releases for distribution (replaces R2)
+
+### Changed
+- Update checker now reads from GitHub Releases API
+
 ## [v0.11.2] - 2026-02-23
 
 ### Added
