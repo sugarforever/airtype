@@ -45,10 +45,10 @@ jobs:
           curl -sO https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
           curl -sO https://www.apple.com/certificateauthority/DeveloperIDCA.cer
           curl -sO https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          security import AppleIncRootCertificate.cer -k "$KEYCHAIN_PATH"
-          security import AppleRootCA-G2.cer -k "$KEYCHAIN_PATH"
-          security import DeveloperIDCA.cer -k "$KEYCHAIN_PATH"
-          security import DeveloperIDG2CA.cer -k "$KEYCHAIN_PATH"
+          security import AppleIncRootCertificate.cer -k "$KEYCHAIN_PATH" 2>/dev/null || true
+          security import AppleRootCA-G2.cer -k "$KEYCHAIN_PATH" 2>/dev/null || true
+          security import DeveloperIDCA.cer -k "$KEYCHAIN_PATH" 2>/dev/null || true
+          security import DeveloperIDG2CA.cer -k "$KEYCHAIN_PATH" 2>/dev/null || true
           rm -f *.cer
 
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
