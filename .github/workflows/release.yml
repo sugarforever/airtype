@@ -130,13 +130,21 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           DMG="build/Airtype-${TAG}.dmg"
 
-          # Extract release notes from CHANGELOG.md
-          RELEASE_NOTES=$(sed -n "/^## \[${TAG}\]/,/^## \[/{/^## \[${TAG}\]/d;/^## \[/d;p;}" CHANGELOG.md \
-            | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/d;N;ba')
+          # Extract this version's section from CHANGELOG.md.
+          awk -v tag="$TAG" '
+            $0 ~ "^## \\[" tag "\\]" { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::No release notes found in CHANGELOG.md for $TAG"
+            exit 1
+          fi
 
           gh release create "$TAG" "$DMG" \
             --title "Airtype $TAG" \
-            --notes "$RELEASE_NOTES"
+            --notes-file release-notes.md
 
       - name: Cleanup keychain
         if: always()
