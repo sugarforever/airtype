@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		42A2B0E72F3AC06100283808 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000001 /* HotKey */; };
+		42A2B0E82F3AC06100283808 /* MLXAudioCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* MLXAudioCore */; };
+		42A2B0E92F3AC06100283808 /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000003 /* MLXAudioSTT */; };
 		A10001000000000000000001 /* AirtypeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20001000000000000000001 /* AirtypeApp.swift */; };
 		A10002000000000000000002 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20002000000000000000002 /* Settings.swift */; };
 		A10003000000000000000003 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20003000000000000000003 /* MainView.swift */; };
@@ -34,6 +36,11 @@
 		A10018000000000000000018 /* DoubaoStreamingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018000000000000000018 /* DoubaoStreamingService.swift */; };
 		A10019000000000000000019 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019000000000000000019 /* TranscriptionHistory.swift */; };
 		A1001A00000000000000001A /* TranscriptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001A00000000000000001A /* TranscriptionHistoryView.swift */; };
+		A1001B00000000000000001B /* MLXTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001B00000000000000001B /* MLXTranscriptionService.swift */; };
+		A1001C00000000000000001C /* LocalModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001C00000000000000001C /* LocalModelManager.swift */; };
+		A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001D00000000000000001D /* LocalASRAdapter.swift */; };
+		A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001E00000000000000001E /* QwenASRAdapter.swift */; };
+		A10020000000000000000020 /* MLXAudioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20020000000000000000020 /* MLXAudioRunner.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +65,11 @@
 		A20011000000000000000011 /* TextInserter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInserter.swift; sourceTree = "<group>"; };
 		A20019000000000000000019 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
 		A2001A00000000000000001A /* TranscriptionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistoryView.swift; sourceTree = "<group>"; };
+		A2001B00000000000000001B /* MLXTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTranscriptionService.swift; sourceTree = "<group>"; };
+		A2001C00000000000000001C /* LocalModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelManager.swift; sourceTree = "<group>"; };
+		A2001D00000000000000001D /* LocalASRAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalASRAdapter.swift; sourceTree = "<group>"; };
+		A2001E00000000000000001E /* QwenASRAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenASRAdapter.swift; sourceTree = "<group>"; };
+		A20020000000000000000020 /* MLXAudioRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXAudioRunner.swift; sourceTree = "<group>"; };
 		A20012000000000000000012 /* WhisperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperService.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* Airtype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airtype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -74,6 +86,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				42A2B0E72F3AC06100283808 /* HotKey in Frameworks */,
+				42A2B0E82F3AC06100283808 /* MLXAudioCore in Frameworks */,
+				42A2B0E92F3AC06100283808 /* MLXAudioSTT in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +153,11 @@
 				A20010000000000000000010 /* SettingsWindowController.swift */,
 				A20011000000000000000011 /* TextInserter.swift */,
 				A20019000000000000000019 /* TranscriptionHistory.swift */,
+				A2001B00000000000000001B /* MLXTranscriptionService.swift */,
+				A2001C00000000000000001C /* LocalModelManager.swift */,
+				A2001D00000000000000001D /* LocalASRAdapter.swift */,
+				A2001E00000000000000001E /* QwenASRAdapter.swift */,
+				A20020000000000000000020 /* MLXAudioRunner.swift */,
 				A20012000000000000000012 /* WhisperService.swift */,
 				A50000000000000000000007 /* StreamingTranscription */,
 			);
@@ -181,6 +200,8 @@
 			name = Airtype;
 			packageProductDependencies = (
 				A90000000000000000000001 /* HotKey */,
+				A90000000000000000000002 /* MLXAudioCore */,
+				A90000000000000000000003 /* MLXAudioSTT */,
 			);
 			productName = Airtype;
 			productReference = A30000000000000000000001 /* Airtype.app */;
@@ -212,6 +233,7 @@
 			mainGroup = A50000000000000000000001;
 			packageReferences = (
 				AA0000000000000000000001 /* XCRemoteSwiftPackageReference "HotKey" */,
+				AA0000000000000000000002 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
 			);
 			productRefGroup = A50000000000000000000006 /* Products */;
 			projectDirPath = "";
@@ -259,6 +281,11 @@
 				A10010000000000000000010 /* SettingsWindowController.swift in Sources */,
 				A10011000000000000000011 /* TextInserter.swift in Sources */,
 				A10019000000000000000019 /* TranscriptionHistory.swift in Sources */,
+				A1001B00000000000000001B /* MLXTranscriptionService.swift in Sources */,
+				A1001C00000000000000001C /* LocalModelManager.swift in Sources */,
+				A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */,
+				A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */,
+				A10020000000000000000020 /* MLXAudioRunner.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
@@ -295,7 +322,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -325,7 +352,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -416,6 +443,14 @@
 				minimumVersion = 0.2.0;
 			};
 		};
+		AA0000000000000000000002 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Blaizzy/mlx-audio-swift.git";
+			requirement = {
+				kind = revision;
+				revision = be7b8f60e9ea77b7fa80db81c3ae864dc4e8938c;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -423,6 +458,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000001 /* XCRemoteSwiftPackageReference "HotKey" */;
 			productName = HotKey;
+		};
+		A90000000000000000000002 /* MLXAudioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000002 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
+			productName = MLXAudioCore;
+		};
+		A90000000000000000000003 /* MLXAudioSTT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000002 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
+			productName = MLXAudioSTT;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

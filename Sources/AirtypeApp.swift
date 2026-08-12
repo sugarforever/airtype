@@ -227,6 +227,7 @@ class AppState: ObservableObject {
     let whisperService = WhisperService()
     let elevenlabsService = ElevenLabsService()
     let mistralTranscriptionService = MistralTranscriptionService()
+    let mlxTranscriptionService = MLXTranscriptionService()
     let enhancementService = EnhancementService()
     let textInserter = TextInserter()
     let hotkeyManager = HotkeyManager()
@@ -648,6 +649,14 @@ class AppState: ObservableObject {
                 transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL)
             case .doubao:
                 throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
+            case .localMLX:
+                transcription = try await mlxTranscriptionService.transcribe(
+                    audioURL: audioURL,
+                    model: settings.localMLXModel,
+                    language: settings.localMLXLanguage,
+                    computeMode: settings.localMLXComputeMode,
+                    installedModelIDs: Set(settings.localMLXInstalledModels)
+                )
             }
 
             debugLog("Transcription result: \(transcription)")
@@ -725,6 +734,7 @@ class AppState: ObservableObject {
             let isEmptyRecording: Bool
             if case WhisperError.emptyRecording = error { isEmptyRecording = true }
             else if case MistralTranscriptionError.emptyRecording = error { isEmptyRecording = true }
+            else if case LocalMLXTranscriptionError.emptyRecording = error { isEmptyRecording = true }
             else { isEmptyRecording = false }
 
             if isEmptyRecording {

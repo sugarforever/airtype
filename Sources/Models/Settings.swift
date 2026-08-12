@@ -10,6 +10,7 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case openai = "OpenAI"
     case mistral = "Mistral"
     case doubao = "Doubao"
+    case localMLX = "MLX Local"
 
     var id: String { rawValue }
 
@@ -19,15 +20,68 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
         case .openai: return URL(string: "https://platform.openai.com/api-keys")
         case .mistral: return URL(string: "https://console.mistral.ai/api-keys")
         case .doubao: return URL(string: "https://console.volcengine.com/speech/app")
+        case .localMLX: return nil
+        }
+    }
+
+    var requiresApiKey: Bool {
+        switch self {
+        case .localMLX: return false
+        case .elevenlabs, .openai, .mistral, .doubao: return true
         }
     }
 
     var supportsStreaming: Bool {
         switch self {
         case .doubao: return true
-        case .elevenlabs, .openai, .mistral: return false
+        case .elevenlabs, .openai, .mistral, .localMLX: return false
         }
     }
+}
+
+enum LocalMLXModel: String, CaseIterable, Identifiable {
+    case qwen3ASR06B4bit = "Qwen3-ASR-0.6B-4bit"
+    case qwen3ASR17B = "Qwen3-ASR-1.7B"
+
+    var id: String { rawValue }
+
+    var directoryName: String {
+        rawValue.replacingOccurrences(of: "/", with: "-")
+    }
+
+    var repoID: String {
+        switch self {
+        case .qwen3ASR06B4bit:
+            return "mlx-community/Qwen3-ASR-0.6B-4bit"
+        case .qwen3ASR17B:
+            return "mlx-community/Qwen3-ASR-1.7B-4bit"
+        }
+    }
+
+    var defaultDownloadURL: String {
+        switch self {
+        case .qwen3ASR06B4bit:
+            return "https://huggingface.co/mlx-community/Qwen3-ASR-0.6B-4bit/resolve/main/model.safetensors"
+        case .qwen3ASR17B:
+            return "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-4bit/resolve/main/model.safetensors"
+        }
+    }
+}
+
+enum LocalMLXLanguage: String, CaseIterable, Identifiable {
+    case auto = "Auto"
+    case english = "English"
+    case chinese = "Chinese"
+
+    var id: String { rawValue }
+}
+
+enum LocalMLXComputeMode: String, CaseIterable, Identifiable {
+    case balanced = "Balanced"
+    case accuracy = "Accuracy"
+    case speed = "Speed"
+
+    var id: String { rawValue }
 }
 
 // MARK: - Enhancement Provider (Multiple OpenAI-compatible providers)
@@ -130,6 +184,72 @@ enum FloatingWindowPosition: String, CaseIterable, Identifiable {
 class Settings: ObservableObject {
     static let shared = Settings()
 
+    static var localModelRootURL: URL {
+        if let existing = preferredLocalModelRootURLCandidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+            return existing
+        }
+        return preferredLocalModelRootURLCandidates[0]
+    }
+
+    static func localModelDirectoryURL(for model: LocalMLXModel) -> URL {
+        if let existing = localModelDirectoryURLCandidates(for: model).first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+            return existing
+        }
+        return localModelRootURL.appendingPathComponent(model.repoID.replacingOccurrences(of: "/", with: "_"), isDirectory: true)
+    }
+
+    static func localModelWeightsURL(for model: LocalMLXModel) -> URL {
+        localModelDirectoryURL(for: model).appendingPathComponent("weights.bin", isDirectory: false)
+    }
+
+    static func localModelInstalledOnDisk(for model: LocalMLXModel) -> Bool {
+        for directory in localModelDirectoryURLCandidates(for: model) {
+            guard let enumerator = FileManager.default.enumerator(
+                at: directory,
+                includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey]
+            ) else {
+                continue
+            }
+
+            for case let fileURL as URL in enumerator {
+                guard fileURL.pathExtension == "safetensors" else { continue }
+                let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+                if size > 0 {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    static private var preferredLocalModelRootURLCandidates: [URL] {
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let dotCache = home.appendingPathComponent(".cache/huggingface/hub/mlx-audio", isDirectory: true)
+        let libraryCaches = FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent("huggingface/hub/mlx-audio", isDirectory: true)
+
+        if let libraryCaches {
+            return [dotCache, libraryCaches]
+        }
+        return [dotCache]
+    }
+
+    static private func localModelDirectoryURLCandidates(for model: LocalMLXModel) -> [URL] {
+        let repoFolderName = model.repoID.replacingOccurrences(of: "/", with: "_")
+        let primaryCandidates = preferredLocalModelRootURLCandidates.map {
+            $0.appendingPathComponent(repoFolderName, isDirectory: true)
+        }
+
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let legacy = appSupport
+            .appendingPathComponent("Airtype/MLXModels", isDirectory: true)
+            .appendingPathComponent(model.directoryName, isDirectory: true)
+
+        return primaryCandidates + [legacy]
+    }
+
     private let defaults = UserDefaults.standard
 
     // MARK: - Storage Keys
@@ -147,6 +267,12 @@ class Settings: ObservableObject {
         static let doubaoAccessKey = "doubao_access_key"
         static let doubaoResourceId = "doubao_resource_id"
         static let doubaoLanguage = "doubao_language"
+        static let localMLXModel = "local_mlx_model"
+        static let localMLXLanguage = "local_mlx_language"
+        static let localMLXComputeMode = "local_mlx_compute_mode"
+        static let localMLXInstalledModels = "local_mlx_installed_models"
+        static let localMLXDownloadURLs = "local_mlx_download_urls"
+        static let localMLXChecksums = "local_mlx_checksums"
 
         // Enhancement
         static let enhancementEnabled = "enhancement_enabled"
@@ -239,6 +365,30 @@ class Settings: ObservableObject {
 
     @Published var doubaoLanguage: String {
         didSet { defaults.set(doubaoLanguage, forKey: Keys.doubaoLanguage) }
+    }
+
+    @Published var localMLXModel: LocalMLXModel {
+        didSet { defaults.set(localMLXModel.rawValue, forKey: Keys.localMLXModel) }
+    }
+
+    @Published var localMLXLanguage: LocalMLXLanguage {
+        didSet { defaults.set(localMLXLanguage.rawValue, forKey: Keys.localMLXLanguage) }
+    }
+
+    @Published var localMLXComputeMode: LocalMLXComputeMode {
+        didSet { defaults.set(localMLXComputeMode.rawValue, forKey: Keys.localMLXComputeMode) }
+    }
+
+    @Published var localMLXInstalledModels: [String] {
+        didSet { defaults.set(localMLXInstalledModels, forKey: Keys.localMLXInstalledModels) }
+    }
+
+    @Published var localMLXDownloadURLs: [String: String] {
+        didSet { defaults.set(localMLXDownloadURLs, forKey: Keys.localMLXDownloadURLs) }
+    }
+
+    @Published var localMLXChecksums: [String: String] {
+        didSet { defaults.set(localMLXChecksums, forKey: Keys.localMLXChecksums) }
     }
 
     // MARK: - Enhancement Settings
@@ -354,6 +504,7 @@ class Settings: ObservableObject {
         case .elevenlabs: return elevenlabsApiKey
         case .mistral: return mistralTranscriptionApiKey
         case .doubao: return doubaoAccessKey
+        case .localMLX: return ""
         }
     }
 
@@ -364,6 +515,67 @@ class Settings: ObservableObject {
         case .elevenlabs: return elevenlabsModel
         case .mistral: return mistralTranscriptionModel
         case .doubao: return "bigmodel"
+        case .localMLX: return localMLXModel.rawValue
+        }
+    }
+
+    var selectedLocalModelInstalled: Bool {
+        localMLXInstalledModels.contains(localMLXModel.rawValue) && Settings.localModelInstalledOnDisk(for: localMLXModel)
+    }
+
+    var selectedLocalModelFileSizeBytes: Int64 {
+        let directoryURL = Settings.localModelDirectoryURL(for: localMLXModel)
+        guard let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey]) else {
+            return 0
+        }
+
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+            if values?.isRegularFile == true {
+                total += Int64(values?.fileSize ?? 0)
+            }
+        }
+        return total
+    }
+
+    var currentLocalModelDownloadURL: String {
+        get { localMLXDownloadURLs[localMLXModel.rawValue] ?? localMLXModel.defaultDownloadURL }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == localMLXModel.defaultDownloadURL {
+                localMLXDownloadURLs.removeValue(forKey: localMLXModel.rawValue)
+            } else {
+                localMLXDownloadURLs[localMLXModel.rawValue] = trimmed
+            }
+        }
+    }
+
+    var currentLocalModelDownloadURLOverride: String {
+        get { localMLXDownloadURLs[localMLXModel.rawValue] ?? "" }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                localMLXDownloadURLs.removeValue(forKey: localMLXModel.rawValue)
+            } else {
+                localMLXDownloadURLs[localMLXModel.rawValue] = trimmed
+            }
+        }
+    }
+
+    var hasCustomLocalModelDownloadURL: Bool {
+        localMLXDownloadURLs[localMLXModel.rawValue]?.isEmpty == false
+    }
+
+    var currentLocalModelChecksum: String {
+        get { localMLXChecksums[localMLXModel.rawValue] ?? "" }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                localMLXChecksums.removeValue(forKey: localMLXModel.rawValue)
+            } else {
+                localMLXChecksums[localMLXModel.rawValue] = trimmed
+            }
         }
     }
 
@@ -406,6 +618,8 @@ class Settings: ObservableObject {
             return !mistralTranscriptionApiKey.isEmpty
         case .doubao:
             return !doubaoAppId.isEmpty && !doubaoAccessKey.isEmpty && !doubaoResourceId.isEmpty
+        case .localMLX:
+            return selectedLocalModelInstalled
         }
     }
 
@@ -426,6 +640,10 @@ class Settings: ObservableObject {
         case .doubao:
             if doubaoAppId.isEmpty || doubaoAccessKey.isEmpty || doubaoResourceId.isEmpty {
                 return "Doubao App ID, Access Key, and Resource ID required"
+            }
+        case .localMLX:
+            if !selectedLocalModelInstalled {
+                return "Install the selected MLX model to transcribe offline"
             }
         }
 
@@ -453,6 +671,15 @@ class Settings: ObservableObject {
         self.doubaoAccessKey = defaults.string(forKey: Keys.doubaoAccessKey) ?? ""
         self.doubaoResourceId = defaults.string(forKey: Keys.doubaoResourceId) ?? "volc.seedasr.sauc.duration"
         self.doubaoLanguage = defaults.string(forKey: Keys.doubaoLanguage) ?? "zh-CN"
+        let localModelRaw = defaults.string(forKey: Keys.localMLXModel) ?? LocalMLXModel.qwen3ASR06B4bit.rawValue
+        self.localMLXModel = LocalMLXModel(rawValue: localModelRaw) ?? .qwen3ASR06B4bit
+        let localLanguageRaw = defaults.string(forKey: Keys.localMLXLanguage) ?? LocalMLXLanguage.auto.rawValue
+        self.localMLXLanguage = LocalMLXLanguage(rawValue: localLanguageRaw) ?? .auto
+        let localComputeModeRaw = defaults.string(forKey: Keys.localMLXComputeMode) ?? LocalMLXComputeMode.balanced.rawValue
+        self.localMLXComputeMode = LocalMLXComputeMode(rawValue: localComputeModeRaw) ?? .balanced
+        self.localMLXInstalledModels = defaults.stringArray(forKey: Keys.localMLXInstalledModels) ?? []
+        self.localMLXDownloadURLs = defaults.dictionary(forKey: Keys.localMLXDownloadURLs) as? [String: String] ?? [:]
+        self.localMLXChecksums = defaults.dictionary(forKey: Keys.localMLXChecksums) as? [String: String] ?? [:]
 
         // Enhancement settings
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true

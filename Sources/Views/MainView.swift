@@ -24,6 +24,7 @@ struct MainView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     @State private var hasAccessibility = AXIsProcessTrusted()
     @StateObject private var updateChecker = UpdateChecker()
+    @StateObject private var localModelManager = LocalModelManager()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -171,6 +172,8 @@ struct MainView: View {
                     mistralTranscriptionSettings
                 } else if settings.transcriptionProvider == .doubao {
                     doubaoSettings
+                } else if settings.transcriptionProvider == .localMLX {
+                    localMLXSettings
                 } else {
                     openaiTranscriptionSettings
                 }
@@ -291,10 +294,15 @@ struct MainView: View {
 
     private var transcriptionStatus: some View {
         HStack(spacing: 6) {
-            if settings.currentTranscriptionApiKey.isEmpty {
+            if settings.transcriptionProvider.requiresApiKey && settings.currentTranscriptionApiKey.isEmpty {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(Theme.statusOrange)
                 Text("API key required")
+                    .foregroundStyle(Theme.textSecondary)
+            } else if settings.transcriptionProvider == .localMLX && !settings.selectedLocalModelInstalled {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.statusOrange)
+                Text("Model install required")
                     .foregroundStyle(Theme.textSecondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
@@ -304,6 +312,109 @@ struct MainView: View {
             }
         }
         .font(.system(size: 11))
+    }
+
+    private var localMLXSettings: some View {
+        Group {
+            SettingsCardRow(label: "Model") {
+                Picker("", selection: $settings.localMLXModel) {
+                    ForEach(LocalMLXModel.allCases) { model in
+                        Text(model.rawValue).tag(model)
+                    }
+                }
+                .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Language") {
+                Picker("", selection: $settings.localMLXLanguage) {
+                    ForEach(LocalMLXLanguage.allCases) { language in
+                        Text(language.rawValue).tag(language)
+                    }
+                }
+                .labelsHidden()
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Compute") {
+                Picker("", selection: $settings.localMLXComputeMode) {
+                    ForEach(LocalMLXComputeMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .labelsHidden()
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model Repo") {
+                Text(settings.localMLXModel.repoID)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model Files") {
+                HStack(spacing: 8) {
+                    Text(settings.selectedLocalModelInstalled ? "Installed" : "Not installed")
+                        .font(.system(size: 11))
+                        .foregroundStyle(settings.selectedLocalModelInstalled ? Theme.statusGreen : Theme.textSecondary)
+                    if settings.selectedLocalModelInstalled {
+                        Text("(\(ByteCountFormatter.string(fromByteCount: settings.selectedLocalModelFileSizeBytes, countStyle: .file)))")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Button("Install") {
+                        Task { await localModelManager.installSelectedModel(settings: settings) }
+                    }
+                    .disabled(settings.selectedLocalModelInstalled || localModelManager.isInstalling)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("Remove") {
+                        localModelManager.removeSelectedModel(settings: settings)
+                    }
+                    .disabled(!settings.selectedLocalModelInstalled || localModelManager.isRemoving)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+            if let status = localModelManager.statusMessage {
+                SettingsCardDivider()
+                SettingsCardRow(label: "Install Status") {
+                    Text(status)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            if let error = localModelManager.lastError {
+                SettingsCardDivider()
+                SettingsCardRow(label: "Install Error") {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.statusRed)
+                }
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Local Path") {
+                HStack(spacing: 8) {
+                    Text(Settings.localModelDirectoryURL(for: settings.localMLXModel).path)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Reveal") {
+                        let directoryURL = Settings.localModelDirectoryURL(for: settings.localMLXModel)
+                        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+                            try? FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+                        }
+                        NSWorkspace.shared.activateFileViewerSelecting([directoryURL])
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
     }
 
     // MARK: - Enhancement

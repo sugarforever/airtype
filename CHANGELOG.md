@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.13.0] - 2026-08-12
+
+### Added
+- Fully local speech transcription on Apple Silicon using MLX
+- Qwen3-ASR 0.6B 4-bit and 1.7B 4-bit model selection
+- In-app model download, installation status, removal, and local cache management
+- Automatic language detection with optional Chinese or English selection
+
+### Changed
+- Setup and Voice Input settings now support transcription providers that do not require API keys
+- Pinned the MLX Audio dependency to a verified revision for reproducible release builds
+
 ## [v0.12.0] - 2026-03-27
 
 ### Added

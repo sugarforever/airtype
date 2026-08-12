@@ -6,6 +6,7 @@ struct SetupWizardView: View {
     let onComplete: () -> Void
 
     @ObservedObject private var settings = Settings.shared
+    @StateObject private var localModelManager = LocalModelManager()
     @State private var currentStep = 0
     @State private var showSkipWarning = false
 
@@ -89,25 +90,52 @@ struct SetupWizardView: View {
 
                 SettingsCardDivider()
 
-                SettingsCardRow(label: "API Key") {
-                    HStack(spacing: 6) {
-                        SecureField("Enter API key...", text: currentTranscriptionApiKeyBinding)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(size: 12, design: .monospaced))
-                        if let url = settings.transcriptionProvider.apiKeyURL {
-                            Button {
-                                NSWorkspace.shared.open(url)
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.up.right.square")
-                                        .font(.system(size: 10))
-                                    Text("Get API Key")
-                                        .font(.system(size: 11))
+                if settings.transcriptionProvider.requiresApiKey {
+                    SettingsCardRow(label: "API Key") {
+                        HStack(spacing: 6) {
+                            SecureField("Enter API key...", text: currentTranscriptionApiKeyBinding)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 12, design: .monospaced))
+                            if let url = settings.transcriptionProvider.apiKeyURL {
+                                Button {
+                                    NSWorkspace.shared.open(url)
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.up.right.square")
+                                            .font(.system(size: 10))
+                                        Text("Get API Key")
+                                            .font(.system(size: 11))
+                                    }
                                 }
+                                .buttonStyle(.borderless)
+                                .foregroundStyle(Theme.brand)
+                                .controlSize(.small)
                             }
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(Theme.brand)
+                        }
+                    }
+                } else {
+                    SettingsCardRow(label: "Model Repo") {
+                        Text(settings.localMLXModel.repoID)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
+
+                    SettingsCardDivider()
+
+                    SettingsCardRow(label: "Model Files") {
+                        HStack(spacing: 8) {
+                            Text(settings.selectedLocalModelInstalled ? "Installed" : "Not installed")
+                                .font(.system(size: 11))
+                                .foregroundStyle(settings.selectedLocalModelInstalled ? Theme.brand : Theme.textSecondary)
+                            Spacer()
+                            Button("Install") {
+                                Task { await localModelManager.installSelectedModel(settings: settings) }
+                            }
+                            .buttonStyle(.borderedProminent)
                             .controlSize(.small)
+                            .disabled(settings.selectedLocalModelInstalled || localModelManager.isInstalling)
                         }
                     }
                 }
@@ -127,6 +155,7 @@ struct SetupWizardView: View {
         case .elevenlabs: return $settings.elevenlabsApiKey
         case .mistral: return $settings.mistralTranscriptionApiKey
         case .doubao: return $settings.doubaoAccessKey
+        case .localMLX: return .constant("")
         }
     }
 
@@ -154,6 +183,12 @@ struct SetupWizardView: View {
         case .doubao:
             Picker("", selection: $settings.doubaoLanguage) {
                 ForEach(Settings.doubaoLanguages, id: \.self) { Text($0).tag($0) }
+            }
+            .labelsHidden()
+            .font(.system(size: 12, design: .monospaced))
+        case .localMLX:
+            Picker("", selection: $settings.localMLXModel) {
+                ForEach(LocalMLXModel.allCases) { Text($0.rawValue).tag($0) }
             }
             .labelsHidden()
             .font(.system(size: 12, design: .monospaced))
@@ -403,7 +438,7 @@ struct SetupWizardView: View {
                 summaryRow(
                     "Voice Provider",
                     detail: settings.transcriptionProvider.rawValue,
-                    done: !settings.currentTranscriptionApiKey.isEmpty
+                    done: settings.isConfigured
                 )
                 SettingsCardDivider()
                 summaryRow(
@@ -482,7 +517,7 @@ struct SetupWizardView: View {
     }
 
     private func nextStep() {
-        if currentStep == 0 && settings.currentTranscriptionApiKey.isEmpty {
+        if currentStep == 0 && settings.transcriptionProvider.requiresApiKey && settings.currentTranscriptionApiKey.isEmpty {
             showSkipWarning = true
             return
         }
