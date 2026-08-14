@@ -1,12 +1,23 @@
 import Foundation
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 /// OpenAI GPT service for speech-to-text error correction
 /// Fixes transcription errors while preserving the speaker's original words
 class EnhancementService {
     private let settings: Settings
+    private let learningService: CorrectionLearningService?
+    private let promptBuilder: EnhancementPromptBuilder
 
-    init(settings: Settings = .shared) {
+    init(
+        settings: Settings = .shared,
+        learningService: CorrectionLearningService? = nil,
+        promptBuilder: EnhancementPromptBuilder = EnhancementPromptBuilder()
+    ) {
         self.settings = settings
+        self.learningService = learningService
+        self.promptBuilder = promptBuilder
     }
 
     /// Correct transcription errors using GPT with timeout and error handling
@@ -44,11 +55,12 @@ class EnhancementService {
 
         // GPT-5-mini and nano don't support custom temperature
         let supportsTemperature = !enhancementModel.contains("mini") && !enhancementModel.contains("nano")
+        let correctionExamples = await learningService?.examples(for: text) ?? []
 
         let requestBody = ChatCompletionRequest(
             model: enhancementModel,
             messages: [
-                ChatMessage(role: systemRole, content: enhancementPrompt),
+                ChatMessage(role: systemRole, content: promptBuilder.prompt(examples: correctionExamples)),
                 ChatMessage(role: "user", content: text)
             ],
             temperature: supportsTemperature ? 0.1 : nil,
@@ -123,32 +135,6 @@ class EnhancementService {
         return result
     }
 
-    private var enhancementPrompt: String {
-        """
-        You are a speech-to-text error corrector. Fix transcription errors while preserving the speaker's original words as much as possible.
-
-        CORRECT these issues:
-        - Misrecognized words due to pronunciation, accent, or background noise
-        - Homophones: choose contextually correct form (your/you're, their/there/they're, its/it's)
-        - Technical terms and proper nouns: use correct casing (react → React, ios → iOS, github → GitHub)
-        - Numbers and dates: convert to numerals (twenty three → 23, december fifth → December 5th)
-        - Missing punctuation and capitalization
-        - Sentence boundaries: split run-on sentences properly
-        - Immediate word stutters: remove duplicates (I I I think → I think, the the → the)
-
-        DO NOT change:
-        - Filler words (um, uh, like, you know) - keep them
-        - Self-corrections (keep "Monday, no wait, Tuesday" exactly as spoken)
-        - User's grammar or dialect (preserve "I seen him" if that's what they said)
-        - Repeated phrases for emphasis (keep "I think, I think we should")
-        - Word choices or sentence structure
-
-        IMPORTANT:
-        - When uncertain if something is an error or intentional, leave it unchanged
-        - Be conservative - only fix clear transcription errors
-        - Return ONLY the corrected text, nothing else
-        """
-    }
 }
 
 // MARK: - Request/Response Types

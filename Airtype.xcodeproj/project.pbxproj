@@ -41,6 +41,12 @@
 		A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001D00000000000000001D /* LocalASRAdapter.swift */; };
 		A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001E00000000000000001E /* QwenASRAdapter.swift */; };
 		A10020000000000000000020 /* MLXAudioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20020000000000000000020 /* MLXAudioRunner.swift */; };
+		A10021000000000000000021 /* CorrectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20021000000000000000021 /* CorrectionModels.swift */; };
+		A10022000000000000000022 /* CorrectionExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20022000000000000000022 /* CorrectionExtractor.swift */; };
+		A10023000000000000000023 /* CorrectionSampleIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20023000000000000000023 /* CorrectionSampleIndex.swift */; };
+		A10024000000000000000024 /* CorrectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024000000000000000024 /* CorrectionStore.swift */; };
+		A10025000000000000000025 /* CorrectionLearningService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* CorrectionLearningService.swift */; };
+		A10026000000000000000026 /* EnhancementPromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* EnhancementPromptBuilder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -70,6 +76,12 @@
 		A2001D00000000000000001D /* LocalASRAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalASRAdapter.swift; sourceTree = "<group>"; };
 		A2001E00000000000000001E /* QwenASRAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenASRAdapter.swift; sourceTree = "<group>"; };
 		A20020000000000000000020 /* MLXAudioRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXAudioRunner.swift; sourceTree = "<group>"; };
+		A20021000000000000000021 /* CorrectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionModels.swift; sourceTree = "<group>"; };
+		A20022000000000000000022 /* CorrectionExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionExtractor.swift; sourceTree = "<group>"; };
+		A20023000000000000000023 /* CorrectionSampleIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionSampleIndex.swift; sourceTree = "<group>"; };
+		A20024000000000000000024 /* CorrectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionStore.swift; sourceTree = "<group>"; };
+		A20025000000000000000025 /* CorrectionLearningService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionLearningService.swift; sourceTree = "<group>"; };
+		A20026000000000000000026 /* EnhancementPromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementPromptBuilder.swift; sourceTree = "<group>"; };
 		A20012000000000000000012 /* WhisperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperService.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* Airtype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airtype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -110,6 +122,7 @@
 				A20001000000000000000001 /* AirtypeApp.swift */,
 				A20013000000000000000013 /* Assets.xcassets */,
 				A50000000000000000000003 /* Models */,
+				A50000000000000000000008 /* CorrectionLearning */,
 				A50000000000000000000004 /* Views */,
 				A50000000000000000000005 /* Services */,
 			);
@@ -172,6 +185,19 @@
 				A20018000000000000000018 /* DoubaoStreamingService.swift */,
 			);
 			path = StreamingTranscription;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000008 /* CorrectionLearning */ = {
+			isa = PBXGroup;
+			children = (
+				A20021000000000000000021 /* CorrectionModels.swift */,
+				A20022000000000000000022 /* CorrectionExtractor.swift */,
+				A20023000000000000000023 /* CorrectionSampleIndex.swift */,
+				A20024000000000000000024 /* CorrectionStore.swift */,
+				A20025000000000000000025 /* CorrectionLearningService.swift */,
+				A20026000000000000000026 /* EnhancementPromptBuilder.swift */,
+			);
+			path = CorrectionLearning;
 			sourceTree = "<group>";
 		};
 		A50000000000000000000006 /* Products */ = {
@@ -286,6 +312,12 @@
 				A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */,
 				A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */,
 				A10020000000000000000020 /* MLXAudioRunner.swift in Sources */,
+				A10021000000000000000021 /* CorrectionModels.swift in Sources */,
+				A10022000000000000000022 /* CorrectionExtractor.swift in Sources */,
+				A10023000000000000000023 /* CorrectionSampleIndex.swift in Sources */,
+				A10024000000000000000024 /* CorrectionStore.swift in Sources */,
+				A10025000000000000000025 /* CorrectionLearningService.swift in Sources */,
+				A10026000000000000000026 /* EnhancementPromptBuilder.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
@@ -378,6 +410,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.airtype.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -404,6 +437,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.airtype.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
