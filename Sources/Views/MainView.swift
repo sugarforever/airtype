@@ -1,4 +1,7 @@
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 // MARK: - Design Tokens
 
@@ -18,8 +21,8 @@ enum Theme {
 struct MainView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var hotkeyManager: HotkeyManager
-    @State private var dashboardModel = DashboardModel()
-    @State private var historyModel = HistoryPageModel()
+    @Bindable var dashboardModel: DashboardModel
+    let historyModel: HistoryPageModel
 
     var body: some View {
         HStack(spacing: 0) {
@@ -50,7 +53,7 @@ struct MainView: View {
                 historyEntries: historyModel.entries
             )
         case .history:
-            TranscriptionHistoryView()
+            TranscriptionHistoryView(model: historyModel)
         case .vocabulary:
             DashboardPlaceholderView(
                 title: "Vocabulary",

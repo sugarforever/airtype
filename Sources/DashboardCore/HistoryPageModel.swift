@@ -16,6 +16,7 @@ public final class HistoryPageModel {
     @ObservationIgnored private let notificationCenter: NotificationCenter?
     @ObservationIgnored private let copyText: CopyText
     @ObservationIgnored private var notificationToken: NSObjectProtocol?
+    @ObservationIgnored private var copyFeedbackTask: Task<Void, Never>?
 
     public init(
         history: TranscriptionHistory = .shared,
@@ -48,6 +49,7 @@ public final class HistoryPageModel {
     }
 
     deinit {
+        copyFeedbackTask?.cancel()
         if let notificationToken {
             notificationCenter?.removeObserver(notificationToken)
         }
@@ -71,10 +73,13 @@ public final class HistoryPageModel {
         if copiedID != entry.id {
             copiedID = entry.id
         }
+        scheduleCopyFeedbackClear(for: entry.id)
     }
 
     public func clearCopyFeedback(for id: UUID) {
         guard copiedID == id else { return }
+        copyFeedbackTask?.cancel()
+        copyFeedbackTask = nil
         copiedID = nil
     }
 
@@ -97,5 +102,14 @@ public final class HistoryPageModel {
             entries = []
         }
         isClearConfirmationPresented = false
+    }
+
+    private func scheduleCopyFeedbackClear(for id: UUID) {
+        copyFeedbackTask?.cancel()
+        copyFeedbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            self?.clearCopyFeedback(for: id)
+        }
     }
 }

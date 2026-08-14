@@ -1,16 +1,26 @@
 import AppKit
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 /// Manages the main dashboard window as a separate NSWindow
-class MainWindowController {
+@MainActor
+final class MainWindowController {
     static let shared = MainWindowController()
 
     private var window: NSWindow?
     private var windowDelegate: NSWindowDelegate?
+    private let dashboardModel = DashboardModel()
+    private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
     var hotkeyManager: HotkeyManager?
 
-    func show() {
+    func show(destination: DashboardDestination? = nil) {
         debugLog("MainWindowController.show() called")
+
+        if let destination {
+            dashboardModel.destination = destination
+        }
 
         if let existingWindow = window {
             debugLog("Showing existing main window")
@@ -26,7 +36,12 @@ class MainWindowController {
             return
         }
 
-        let mainView = MainView(settings: Settings.shared, hotkeyManager: hotkeyManager)
+        let mainView = MainView(
+            settings: Settings.shared,
+            hotkeyManager: hotkeyManager,
+            dashboardModel: dashboardModel,
+            historyModel: historyModel
+        )
 
         let hostingView = NSHostingView(rootView: mainView)
         hostingView.frame = NSRect(x: 0, y: 0, width: 900, height: 680)
@@ -65,47 +80,6 @@ class MainWindowController {
     func close() {
         window?.close()
         window = nil
-    }
-
-    private var historyWindow: NSWindow?
-    private var historyWindowDelegate: NSWindowDelegate?
-
-    func showHistory() {
-        if let existing = historyWindow {
-            existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let historyView = TranscriptionHistoryView()
-        let hostingView = NSHostingView(rootView: historyView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 560, height: 520)
-
-        let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-
-        newWindow.title = "Recent Transcriptions"
-        newWindow.contentView = hostingView
-        newWindow.setContentSize(NSSize(width: 560, height: 520))
-        newWindow.center()
-        newWindow.isReleasedWhenClosed = false
-        newWindow.level = .normal
-        newWindow.minSize = NSSize(width: 480, height: 400)
-
-        let delegate = MainWindowDelegate { [weak self] in
-            self?.historyWindow = nil
-            self?.historyWindowDelegate = nil
-        }
-        self.historyWindowDelegate = delegate
-        newWindow.delegate = delegate
-        self.historyWindow = newWindow
-
-        newWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     private var wizardWindow: NSWindow?
@@ -159,6 +133,11 @@ class MainWindowController {
         wizardWindow?.close()
         wizardWindow = nil
         wizardWindowDelegate = nil
+    }
+
+    private static func copyToPasteboard(_ text: String) -> Bool {
+        NSPasteboard.general.clearContents()
+        return NSPasteboard.general.setString(text, forType: .string)
     }
 }
 

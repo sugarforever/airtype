@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Settings window now redirects to the main dashboard window.
-class SettingsWindowController {
+@MainActor
+final class SettingsWindowController {
     static let shared = SettingsWindowController()
 
     var hotkeyManager: HotkeyManager?
