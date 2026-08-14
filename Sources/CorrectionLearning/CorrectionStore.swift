@@ -8,12 +8,42 @@ public protocol CorrectionStoring: Sendable {
     func recordSession(_ session: EditSessionMetadata) throws
     func loadSessions() throws -> [EditSessionMetadata]
     func markMatched(ids: [UUID], at date: Date) throws
+    func applyLearningBatch(
+        upserting samples: [CorrectionSample],
+        deleting ids: [UUID],
+        session: EditSessionMetadata
+    ) throws
 }
 
-public enum CorrectionStoreError: Error {
+public extension CorrectionStoring {
+    func applyLearningBatch(
+        upserting samples: [CorrectionSample],
+        deleting ids: [UUID],
+        session: EditSessionMetadata
+    ) throws {
+        for sample in samples {
+            try upsert(sample: sample)
+        }
+        try deleteSamples(ids: ids)
+        try recordSession(session)
+    }
+}
+
+public enum CorrectionStoreError: Error, Sendable {
     case openFailed(String)
+    case busy
+    case locked
     case operationFailed(String)
     case invalidStoredValue
+
+    var isTransientLockContention: Bool {
+        switch self {
+        case .busy, .locked:
+            true
+        case .openFailed, .operationFailed, .invalidStoredValue:
+            false
+        }
+    }
 }
 
 public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable {
@@ -96,6 +126,10 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
     }
 
     public func upsert(sample: CorrectionSample) throws {
+        try upsertWithoutTransaction(sample: sample)
+    }
+
+    private func upsertWithoutTransaction(sample: CorrectionSample) throws {
         let statement = try prepare("""
             INSERT INTO correction_samples (
                 id, original, replacement, normalized_original,
@@ -134,19 +168,30 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
 
     public func deleteSamples(ids: [UUID]) throws {
         guard !ids.isEmpty else { return }
+        try transaction {
+            try deleteSamplesWithoutTransaction(ids: ids)
+        }
+    }
+
+    private func deleteSamplesWithoutTransaction(ids: [UUID]) throws {
+        guard !ids.isEmpty else { return }
         let statement = try prepare("DELETE FROM correction_samples WHERE id = ?")
         defer { sqlite3_finalize(statement) }
-        try transaction {
-            for id in ids {
-                sqlite3_reset(statement)
-                sqlite3_clear_bindings(statement)
-                bind(id.uuidString, to: 1, in: statement)
-                try stepDone(statement)
-            }
+        for id in ids {
+            sqlite3_reset(statement)
+            sqlite3_clear_bindings(statement)
+            bind(id.uuidString, to: 1, in: statement)
+            try stepDone(statement)
         }
     }
 
     public func recordSession(_ session: EditSessionMetadata) throws {
+        try transaction {
+            try recordSessionWithoutTransaction(session)
+        }
+    }
+
+    private func recordSessionWithoutTransaction(_ session: EditSessionMetadata) throws {
         let statement = try prepare("""
             INSERT OR REPLACE INTO edit_sessions (
                 id, application_bundle_id, original_character_count,
@@ -154,23 +199,21 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
             ) VALUES (?, ?, ?, ?, ?, ?)
             """)
         defer { sqlite3_finalize(statement) }
-        try transaction {
-            bind(session.id.uuidString, to: 1, in: statement)
-            bind(session.applicationBundleID, to: 2, in: statement)
-            sqlite3_bind_int64(statement, 3, Int64(session.originalCharacterCount))
-            bind(session.status.rawValue, to: 4, in: statement)
-            sqlite3_bind_double(statement, 5, session.createdAt.timeIntervalSince1970)
-            sqlite3_bind_double(statement, 6, session.completedAt.timeIntervalSince1970)
-            try stepDone(statement)
-            try execute("""
-                DELETE FROM edit_sessions
-                WHERE id IN (
-                    SELECT id FROM edit_sessions
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT -1 OFFSET 1000
-                )
-                """)
-        }
+        bind(session.id.uuidString, to: 1, in: statement)
+        bind(session.applicationBundleID, to: 2, in: statement)
+        sqlite3_bind_int64(statement, 3, Int64(session.originalCharacterCount))
+        bind(session.status.rawValue, to: 4, in: statement)
+        sqlite3_bind_double(statement, 5, session.createdAt.timeIntervalSince1970)
+        sqlite3_bind_double(statement, 6, session.completedAt.timeIntervalSince1970)
+        try stepDone(statement)
+        try execute("""
+            DELETE FROM edit_sessions
+            WHERE id IN (
+                SELECT id FROM edit_sessions
+                ORDER BY created_at DESC, id DESC
+                LIMIT -1 OFFSET 1000
+            )
+            """)
     }
 
     public func loadSessions() throws -> [EditSessionMetadata] {
@@ -206,7 +249,11 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
         guard !ids.isEmpty else { return }
         let statement = try prepare("""
             UPDATE correction_samples
-            SET match_count = match_count + 1, last_matched_at = ?
+            SET match_count = match_count + 1,
+                last_matched_at = CASE
+                    WHEN last_matched_at IS NULL OR last_matched_at < ? THEN ?
+                    ELSE last_matched_at
+                END
             WHERE id = ?
             """)
         defer { sqlite3_finalize(statement) }
@@ -215,9 +262,24 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
                 sqlite3_reset(statement)
                 sqlite3_clear_bindings(statement)
                 sqlite3_bind_double(statement, 1, date.timeIntervalSince1970)
-                bind(id.uuidString, to: 2, in: statement)
+                sqlite3_bind_double(statement, 2, date.timeIntervalSince1970)
+                bind(id.uuidString, to: 3, in: statement)
                 try stepDone(statement)
             }
+        }
+    }
+
+    public func applyLearningBatch(
+        upserting samples: [CorrectionSample],
+        deleting ids: [UUID],
+        session: EditSessionMetadata
+    ) throws {
+        try transaction {
+            for sample in samples {
+                try upsertWithoutTransaction(sample: sample)
+            }
+            try deleteSamplesWithoutTransaction(ids: ids)
+            try recordSessionWithoutTransaction(session)
         }
     }
 
@@ -233,17 +295,14 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
     }
 
     private func execute(_ sql: String) throws {
-        guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else {
-            throw CorrectionStoreError.operationFailed(String(cString: sqlite3_errmsg(database)))
-        }
+        let result = sqlite3_exec(database, sql, nil, nil, nil)
+        guard result == SQLITE_OK else { throw storeError(code: result) }
     }
 
     private func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
-              let statement else {
-            throw CorrectionStoreError.operationFailed(String(cString: sqlite3_errmsg(database)))
-        }
+        let result = sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        guard result == SQLITE_OK, let statement else { throw storeError(code: result) }
         return statement
     }
 
@@ -261,14 +320,25 @@ public final class SQLiteCorrectionStore: CorrectionStoring, @unchecked Sendable
     }
 
     private func stepDone(_ statement: OpaquePointer) throws {
-        guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw CorrectionStoreError.operationFailed(String(cString: sqlite3_errmsg(database)))
-        }
+        let result = sqlite3_step(statement)
+        guard result == SQLITE_DONE else { throw storeError(code: result) }
     }
 
     private func checkCompletion(_ statement: OpaquePointer) throws {
-        guard sqlite3_errcode(database) == SQLITE_OK || sqlite3_errcode(database) == SQLITE_DONE else {
-            throw CorrectionStoreError.operationFailed(String(cString: sqlite3_errmsg(database)))
+        let result = sqlite3_errcode(database)
+        guard result == SQLITE_OK || result == SQLITE_DONE else {
+            throw storeError(code: result)
+        }
+    }
+
+    private func storeError(code: Int32) -> CorrectionStoreError {
+        switch code & 0xFF {
+        case SQLITE_BUSY:
+            return .busy
+        case SQLITE_LOCKED:
+            return .locked
+        default:
+            return .operationFailed(String(cString: sqlite3_errmsg(database)))
         }
     }
 

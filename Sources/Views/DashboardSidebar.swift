@@ -1,4 +1,7 @@
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 struct DashboardSidebar: View {
     @Binding var selection: DashboardDestination

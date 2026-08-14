@@ -1,10 +1,12 @@
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 struct HomeView: View {
     @ObservedObject var settings: Settings
+    @Bindable var model: HomePageModel
     let historyEntries: [TranscriptionHistory.Entry]
-
-    @State private var learnedCorrectionCount = 0
 
     private var recentEntries: [TranscriptionHistory.Entry] {
         Array(historyEntries.prefix(2))
@@ -34,7 +36,7 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .task {
-            learnedCorrectionCount = await Self.loadTodayLearnedCorrectionCount()
+            await model.observeCorrectionUpdates()
         }
     }
 
@@ -94,7 +96,7 @@ struct HomeView: View {
             )
             HomeMetricCard(
                 title: "Learned corrections today",
-                value: learnedCorrectionCount,
+                value: model.todayLearnedCorrectionCount,
                 systemImage: "wand.and.stars"
             )
         }
@@ -140,13 +142,6 @@ struct HomeView: View {
         }
     }
 
-    nonisolated private static func loadTodayLearnedCorrectionCount() async -> Int {
-        guard let service = try? CorrectionLearningService.makeDefault() else {
-            return 0
-        }
-        let samples = await service.samples()
-        return samples.count { Calendar.current.isDateInToday($0.lastCorrectedAt) }
-    }
 }
 
 private struct HomeMetricCard: View {

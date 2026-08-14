@@ -1,4 +1,7 @@
 import Foundation
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 import AVFoundation
 
 /// OpenAI Whisper/GPT-4o API service for speech-to-text
@@ -140,7 +143,10 @@ class WhisperService {
                     progress: progressValue + (0.9 / Double(chunkCount))
                 ))
             } catch {
-                debugLog("WhisperService: Chunk \(chunkNumber) failed: \(error)")
+                debugLog(PrivacySafeDiagnostics.errorEvent(
+                    label: "WhisperService chunk \(chunkNumber) failed",
+                    error: error
+                ))
                 // Continue with other chunks, don't fail entirely
                 transcriptions.append("[transcription error]")
             }
@@ -321,10 +327,7 @@ class WhisperService {
 
         debugLog("OpenAI: Response status \(httpResponse.statusCode)")
 
-        // Debug: log raw response
-        if let rawResponse = String(data: data, encoding: .utf8) {
-            debugLog("OpenAI: Raw response: \(rawResponse.prefix(500))")
-        }
+        debugLog("OpenAI: Response body \(data.count) bytes")
 
         // Handle specific HTTP error codes
         if httpResponse.statusCode != 200 {
@@ -363,10 +366,16 @@ class WhisperService {
         do {
             transcription = try JSONDecoder().decode(TranscriptionResponse.self, from: data)
         } catch {
-            debugLog("OpenAI: Failed to decode response: \(error)")
+            debugLog(PrivacySafeDiagnostics.errorEvent(
+                label: "OpenAI response decode failed",
+                error: error
+            ))
             throw WhisperError.invalidResponse
         }
-        debugLog("OpenAI: Decoded text: '\(transcription.text)'")
+        debugLog(PrivacySafeDiagnostics.textEvent(
+            label: "OpenAI transcription decoded",
+            characterCount: transcription.text.count
+        ))
 
         // Check for empty transcription
         let text = transcription.text.trimmingCharacters(in: .whitespacesAndNewlines)

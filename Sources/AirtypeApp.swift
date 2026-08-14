@@ -1,30 +1,21 @@
 import SwiftUI
 import Combine
-import os.log
 #if SWIFT_PACKAGE
+import CorrectionLearningCore
 import DashboardCore
+import VocabularyCore
 #endif
 
-private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
-private let logQueue = DispatchQueue(label: "com.airtype.debuglog")
+private let purgeLegacyDebugLog: Void = {
+    let legacyURL = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
+    try? FileManager.default.removeItem(at: legacyURL)
+}()
 
 func debugLog(_ message: String) {
+    _ = purgeLegacyDebugLog
     let timestamp = ISO8601DateFormatter().string(from: Date())
     let line = "[\(timestamp)] \(message)\n"
     fputs(line, stderr)
-
-    guard let data = line.data(using: .utf8) else { return }
-    logQueue.async {
-        if FileManager.default.fileExists(atPath: logFile.path) {
-            if let handle = try? FileHandle(forWritingTo: logFile) {
-                handle.seekToEndOfFile()
-                handle.write(data)
-                handle.closeFile()
-            }
-        } else {
-            try? data.write(to: logFile)
-        }
-    }
 }
 
 /// Print transcription output to stdout (for terminal streaming)
@@ -236,6 +227,7 @@ class AppState: ObservableObject {
     let textEditTracker: TextEditTracker
     private let correctionLearningService: CorrectionLearningService?
     let vocabularyRepository: VocabularyRepository?
+    let homePageModel: HomePageModel
     let vocabularyPageModel: VocabularyPageModel
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
@@ -269,6 +261,7 @@ class AppState: ObservableObject {
         let accessibilityClient = AccessibilityTextClient()
         correctionLearningService = learningService
         self.vocabularyRepository = vocabularyRepository
+        homePageModel = HomePageModel(learningService: learningService)
         vocabularyPageModel = VocabularyPageModel(
             repository: vocabularyRepository,
             learningService: learningService
@@ -287,6 +280,7 @@ class AppState: ObservableObject {
         }
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
+        MainWindowController.shared.homeModel = homePageModel
         MainWindowController.shared.vocabularyModel = vocabularyPageModel
         Task { @MainActor in
             if settings.hasCompletedSetup {
@@ -388,7 +382,10 @@ class AppState: ObservableObject {
                     debugLog("Streaming pre-connected")
                 }
             } catch {
-                debugLog("Streaming pre-connect failed: \(error)")
+                debugLog(PrivacySafeDiagnostics.errorEvent(
+                    label: "Streaming pre-connect failed",
+                    error: error
+                ))
             }
         }
     }
@@ -410,7 +407,6 @@ class AppState: ObservableObject {
 
     func startRecording() async {
         debugLog("startRecording called")
-        textEditTracker.finishForRecordingStart()
         guard !isRecording && !isProcessing else {
             debugLog("Already recording or processing, skipping")
             return
@@ -420,13 +416,14 @@ class AppState: ObservableObject {
             lastError = settings.configurationError ?? "Please configure API keys in Settings"
             return
         }
+        textEditTracker.finishForRecordingStart()
 
         do {
             if shouldUseStreaming {
                 try await startStreamingRecording()
             } else {
-                let url = try audioRecorder.startRecording()
-                debugLog("Recording started, saving to: \(url.path)")
+                _ = try audioRecorder.startRecording()
+                debugLog("Recording started")
             }
 
             isRecording = true
@@ -440,7 +437,10 @@ class AppState: ObservableObject {
                 floatingWindowManager.show(with: self)
             }
         } catch {
-            debugLog("Failed to start recording: \(error)")
+            debugLog(PrivacySafeDiagnostics.errorEvent(
+                label: "Failed to start recording",
+                error: error
+            ))
             lastError = error.localizedDescription
         }
     }
@@ -484,7 +484,10 @@ class AppState: ObservableObject {
                 case .final_(let text):
                     self.finalizedStreamText += text
                 case .error(let error):
-                    debugLog("Streaming error: \(error)")
+                    debugLog(PrivacySafeDiagnostics.errorEvent(
+                        label: "Streaming failed",
+                        error: error
+                    ))
                     self.lastError = error.localizedDescription
                 }
             }
@@ -525,7 +528,10 @@ class AppState: ObservableObject {
             await streamingService?.disconnect()
             streamingService = nil
 
-            debugLog("Streaming transcription result: \(transcription)")
+            debugLog(PrivacySafeDiagnostics.textEvent(
+                label: "Streaming transcription completed",
+                characterCount: transcription.count
+            ))
             streamOutput("\n--- Raw transcription (streaming) ---")
             streamOutput(transcription)
 
@@ -540,7 +546,10 @@ class AppState: ObservableObject {
                 streamOutput("\n--- Correcting errors... ---")
                 processingProgress = 0.75
                 finalText = try await enhancementService.enhance(text: transcription)
-                debugLog("Enhanced result: \(finalText)")
+                debugLog(PrivacySafeDiagnostics.textEvent(
+                    label: "Enhancement completed",
+                    characterCount: finalText.count
+                ))
                 streamOutput("\n--- Corrected text ---")
                 streamOutput(finalText)
             } else {
@@ -571,7 +580,10 @@ class AppState: ObservableObject {
             debugLog("Streaming processing cancelled")
             return
         } catch {
-            debugLog("Streaming processing error: \(error)")
+            debugLog(PrivacySafeDiagnostics.errorEvent(
+                label: "Streaming processing failed",
+                error: error
+            ))
             if case WhisperError.emptyRecording = error {
                 lastNotice = error.localizedDescription
             } else {
@@ -610,7 +622,7 @@ class AppState: ObservableObject {
             return
         }
 
-        debugLog("Recording stopped, file: \(audioURL.path)")
+        debugLog("Recording stopped")
 
         // Check file size and validate
         var fileSize: Int64 = 0
@@ -696,7 +708,10 @@ class AppState: ObservableObject {
                 )
             }
 
-            debugLog("Transcription result: \(transcription)")
+            debugLog(PrivacySafeDiagnostics.textEvent(
+                label: "Transcription completed",
+                characterCount: transcription.count
+            ))
             streamOutput("\n\n--- Raw transcription ---")
             streamOutput(transcription)
 
@@ -712,7 +727,10 @@ class AppState: ObservableObject {
                 streamOutput("\n--- Correcting errors... ---")
                 processingProgress = 0.75
                 finalText = try await enhancementService.enhance(text: transcription)
-                debugLog("Enhanced result: \(finalText)")
+                debugLog(PrivacySafeDiagnostics.textEvent(
+                    label: "Enhancement completed",
+                    characterCount: finalText.count
+                ))
                 streamOutput("\n--- Corrected text ---")
                 streamOutput(finalText)
                 processingProgress = 0.9
@@ -750,7 +768,10 @@ class AppState: ObservableObject {
             debugLog("Processing cancelled")
             return
         } catch {
-            debugLog("Error: \(error)")
+            debugLog(PrivacySafeDiagnostics.errorEvent(
+                label: "Processing failed",
+                error: error
+            ))
             let isEmptyRecording: Bool
             if case WhisperError.emptyRecording = error { isEmptyRecording = true }
             else if case MistralTranscriptionError.emptyRecording = error { isEmptyRecording = true }
@@ -793,7 +814,10 @@ class AppState: ObservableObject {
 
     private func insertAndTrack(text: String) async throws {
         do {
-            let outcome = try await textInserter.insert(text: text)
+            let outcome = try await textInserter.insert(
+                text: text,
+                learningEnabled: settings.learnFromCorrections
+            )
             if case .accessibility(let insertion) = outcome {
                 if let insertionToTrack = CorrectionLearningFlow.insertionToTrack(
                     learningEnabled: settings.learnFromCorrections,

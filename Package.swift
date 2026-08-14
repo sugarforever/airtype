@@ -4,6 +4,10 @@ import Foundation
 
 let coreTestsOnly = ProcessInfo.processInfo.environment["AIRTYPE_CORE_TESTS"] == "1"
 
+var packageDependencies: [Package.Dependency] = [
+    .package(url: "https://github.com/soffes/HotKey.git", from: "0.2.0")
+]
+
 var products: [Product] = [
     .library(name: "CorrectionLearningCore", targets: ["CorrectionLearningCore"]),
     .library(name: "VocabularyCore", targets: ["VocabularyCore"]),
@@ -44,13 +48,30 @@ var targets: [Target] = [
 ]
 
 if !coreTestsOnly {
+    packageDependencies.append(.package(
+        url: "https://github.com/Blaizzy/mlx-audio-swift.git",
+        revision: "be7b8f60e9ea77b7fa80db81c3ae864dc4e8938c"
+    ))
     products.append(.executable(name: "Airtype", targets: ["Airtype"]))
     targets.insert(
         .executableTarget(
             name: "Airtype",
-            dependencies: ["HotKey", "CorrectionLearningCore", "VocabularyCore", "DashboardCore"],
+            dependencies: [
+                "HotKey",
+                "CorrectionLearningCore",
+                "VocabularyCore",
+                "DashboardCore",
+                .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
+                .product(name: "MLXAudioSTT", package: "mlx-audio-swift")
+            ],
             path: "Sources",
-            exclude: ["CorrectionLearning", "VocabularyCore", "DashboardCore"]
+            exclude: [
+                "Assets.xcassets",
+                "CorrectionLearning",
+                "DashboardCore",
+                "Services/GLMASRAdapter.swift",
+                "VocabularyCore"
+            ]
         ),
         at: 0
     )
@@ -59,11 +80,9 @@ if !coreTestsOnly {
 let package = Package(
     name: "Airtype",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     products: products,
-    dependencies: [
-        .package(url: "https://github.com/soffes/HotKey.git", from: "0.2.0")
-    ],
+    dependencies: packageDependencies,
     targets: targets
 )

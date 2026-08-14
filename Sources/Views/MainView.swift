@@ -23,6 +23,7 @@ struct MainView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     @Bindable var dashboardModel: DashboardModel
     let historyModel: HistoryPageModel
+    let homeModel: HomePageModel
     let vocabularyModel: VocabularyPageModel
 
     var body: some View {
@@ -51,6 +52,7 @@ struct MainView: View {
         case .home:
             HomeView(
                 settings: settings,
+                model: homeModel,
                 historyEntries: historyModel.entries
             )
         case .history:

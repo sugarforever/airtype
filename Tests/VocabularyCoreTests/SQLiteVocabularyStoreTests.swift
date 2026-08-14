@@ -61,6 +61,27 @@ final class SQLiteVocabularyStoreTests: XCTestCase {
         XCTAssertEqual(try store.loadTerms(), [])
     }
 
+    func testDeletionPersistsAcrossOpenConnectionsAndReopen() throws {
+        let databaseURL = temporaryDatabaseURL()
+        defer { removeDatabase(at: databaseURL) }
+        let writer = try SQLiteVocabularyStore(url: databaseURL)
+        let reader = try SQLiteVocabularyStore(url: databaseURL)
+        let term = VocabularyTerm(
+            id: UUID(),
+            value: "Cloudflare",
+            normalizedValue: "cloudflare",
+            createdAt: .now
+        )
+        try writer.insert(term)
+        XCTAssertEqual(try reader.loadTerms().map(\.id), [term.id])
+
+        try writer.delete(id: term.id)
+
+        XCTAssertTrue(try reader.loadTerms().isEmpty)
+        let reopened = try SQLiteVocabularyStore(url: databaseURL)
+        XCTAssertTrue(try reopened.loadTerms().isEmpty)
+    }
+
     private func temporaryDatabaseURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

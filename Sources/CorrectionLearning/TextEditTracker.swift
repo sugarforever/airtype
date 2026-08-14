@@ -10,7 +10,7 @@ public final class TextEditTracker {
 
     private struct ActiveSession {
         let insertion: AccessibilityInsertion
-        var didChange: Bool
+        var editedText: String?
     }
 
     private let client: any AccessibilityTextClientProtocol
@@ -29,14 +29,22 @@ public final class TextEditTracker {
 
     public func begin(_ insertion: AccessibilityInsertion) {
         finishActiveSession()
-        activeSession = ActiveSession(insertion: insertion, didChange: false)
-        let observed = client.observe(sessionID: insertion.sessionID) { [weak self] event in
+        activeSession = ActiveSession(insertion: insertion, editedText: nil)
+        let sessionID = insertion.sessionID
+        let observed = client.observe(sessionID: sessionID) { [weak self] event in
             guard let self else { return }
+            guard self.activeSession?.insertion.sessionID == sessionID else {
+                return
+            }
             switch event {
-            case .valueChanged:
-                self.activeSession?.didChange = true
+            case .valueChanged(let editedText):
+                guard let editedText else {
+                    self.discardActiveSession(expectedSessionID: sessionID)
+                    return
+                }
+                self.activeSession?.editedText = editedText
             case .focusLost:
-                self.finishActiveSession()
+                self.finishActiveSession(expectedSessionID: sessionID)
             }
         }
         if !observed {
@@ -53,14 +61,21 @@ public final class TextEditTracker {
         client.stopObserving(sessionID: insertion.sessionID)
     }
 
-    private func finishActiveSession() {
-        guard let session = activeSession else { return }
+    private func discardActiveSession(expectedSessionID: UUID) {
+        guard activeSession?.insertion.sessionID == expectedSessionID else { return }
         activeSession = nil
-        let finalText = session.didChange
-            ? client.editedText(sessionID: session.insertion.sessionID)
-            : nil
+        client.stopObserving(sessionID: expectedSessionID)
+    }
+
+    private func finishActiveSession(expectedSessionID: UUID? = nil) {
+        guard let session = activeSession else { return }
+        if let expectedSessionID,
+           session.insertion.sessionID != expectedSessionID {
+            return
+        }
+        activeSession = nil
         client.stopObserving(sessionID: session.insertion.sessionID)
-        guard let finalText,
+        guard let finalText = session.editedText,
               !finalText.isEmpty,
               finalText != session.insertion.originalText else { return }
 

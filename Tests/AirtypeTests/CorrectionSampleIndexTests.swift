@@ -54,7 +54,7 @@ final class CorrectionSampleIndexTests: XCTestCase {
             before: "Deploy",
             after: "Workers"
         )
-        var index = CorrectionSampleIndex(samples: [contextual, exact])
+        let index = CorrectionSampleIndex(samples: [contextual, exact])
 
         let results = index.retrieve(
             for: "Deploy Cloud Flower with Workers",
@@ -77,7 +77,7 @@ final class CorrectionSampleIndexTests: XCTestCase {
                 after: "suffix"
             )
         }
-        var index = CorrectionSampleIndex(samples: samples)
+        let index = CorrectionSampleIndex(samples: samples)
 
         let results = index.retrieve(
             for: "shared context term0 term1 term2 term3 term4 term5",
@@ -92,7 +92,7 @@ final class CorrectionSampleIndexTests: XCTestCase {
     }
 
     func testDoesNotFuzzyMatchShortChineseToken() {
-        var index = CorrectionSampleIndex(samples: [sample(
+        let index = CorrectionSampleIndex(samples: [sample(
             id: UUID(),
             original: "苹果",
             replacement: "Apple",
@@ -109,6 +109,145 @@ final class CorrectionSampleIndexTests: XCTestCase {
         )
 
         XCTAssertTrue(results.isEmpty)
+    }
+
+    func testPathologicalLongFuzzyTokenIsRejectedWithinDeadline() {
+        let original = String(repeating: "a", count: 1_000)
+        let nearMatch = String(repeating: "a", count: 999) + "b"
+        let index = CorrectionSampleIndex(samples: [sample(
+            id: UUID(),
+            original: original,
+            replacement: "fixed",
+            before: "deploy"
+        )])
+        let clock = ContinuousClock()
+        let start = clock.now
+
+        let results = index.retrieve(
+            for: "deploy \(nearMatch)",
+            limit: 5,
+            tokenBudget: 300,
+            timeBudget: .seconds(1),
+            now: now
+        )
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertLessThan(start.duration(to: clock.now), .milliseconds(5))
+    }
+
+    func testOlderDeferredMatchDoesNotRegressLastMatchedAt() {
+        let newestMatch = now.addingTimeInterval(60)
+        var matched = sample(
+            id: UUID(),
+            original: "Cloud Flower",
+            replacement: "Cloudflare"
+        )
+        matched.matchCount = 1
+        matched.lastMatchedAt = newestMatch
+        var index = CorrectionSampleIndex(samples: [matched])
+
+        index.recordMatches(ids: [matched.id], at: now)
+
+        XCTAssertEqual(index.samples.first?.matchCount, 2)
+        XCTAssertEqual(index.samples.first?.lastMatchedAt, newestMatch)
+    }
+
+    func testExactOriginalChoosesTheContextMatchingVariant() {
+        let deployment = sample(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            original: "Mercury",
+            replacement: "Mercury planet",
+            before: "space mission",
+            after: "launch",
+            correctionCount: 1
+        )
+        let thermometer = sample(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
+            original: "Mercury",
+            replacement: "mercury element",
+            before: "temperature thermometer",
+            after: "rises",
+            correctionCount: 100
+        )
+        let index = CorrectionSampleIndex(samples: [thermometer, deployment])
+
+        let results = index.retrieve(
+            for: "The space mission to Mercury will launch tomorrow",
+            limit: 5,
+            tokenBudget: 300,
+            timeBudget: .milliseconds(5),
+            now: now
+        )
+
+        XCTAssertEqual(results.map(\.sampleID), [deployment.id])
+    }
+
+    func testAmbiguousExactVariantsAreOmittedWithoutContextEvidence() {
+        let first = sample(
+            id: UUID(),
+            original: "Mercury",
+            replacement: "Mercury planet",
+            before: "space mission",
+            after: "launch"
+        )
+        let second = sample(
+            id: UUID(),
+            original: "Mercury",
+            replacement: "mercury element",
+            before: "temperature thermometer",
+            after: "rises"
+        )
+        let index = CorrectionSampleIndex(samples: [first, second])
+
+        let results = index.retrieve(
+            for: "Mention Mercury here",
+            limit: 5,
+            tokenBudget: 300,
+            timeBudget: .milliseconds(5),
+            now: now
+        )
+
+        XCTAssertTrue(results.isEmpty)
+    }
+
+    func testSingleSharedContextTokenDoesNotMeetConfidenceFloor() {
+        let index = CorrectionSampleIndex(samples: [sample(
+            id: UUID(),
+            original: "Cloud Flower",
+            replacement: "Cloudflare",
+            before: "deploy private platform",
+            after: "workers"
+        )])
+
+        let results = index.retrieve(
+            for: "deploy an unrelated garden",
+            limit: 5,
+            tokenBudget: 300,
+            timeBudget: .milliseconds(5),
+            now: now
+        )
+
+        XCTAssertTrue(results.isEmpty)
+    }
+
+    func testExpiredDeadlineReturnsNoExamplesAndDoesNotChangeStatistics() {
+        let exact = sample(
+            id: UUID(),
+            original: "Cloud Flower",
+            replacement: "Cloudflare"
+        )
+        let index = CorrectionSampleIndex(samples: [exact])
+
+        let results = index.retrieve(
+            for: "Cloud Flower",
+            limit: 5,
+            tokenBudget: 300,
+            timeBudget: .zero,
+            now: now
+        )
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertEqual(index.samples, [exact])
     }
 
     func testEvictionRemovesOldSingleCorrectionNeverMatchedSample() {
@@ -149,7 +288,7 @@ final class CorrectionSampleIndexTests: XCTestCase {
                 after: "service"
             )
         }
-        var index = CorrectionSampleIndex(samples: samples)
+        let index = CorrectionSampleIndex(samples: samples)
         let clock = ContinuousClock()
         let start = clock.now
 

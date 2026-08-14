@@ -9,7 +9,7 @@ final class SettingsWindowController {
     var hotkeyManager: HotkeyManager?
 
     func show() {
-        MainWindowController.shared.show()
+        MainWindowController.shared.showSettings()
     }
 
     func close() {

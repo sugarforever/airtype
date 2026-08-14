@@ -214,7 +214,7 @@ struct MenuBarView: View {
             }
 
             MenuButton(title: "Settings...", shortcut: "⌘,") {
-                MainWindowController.shared.show()
+                MainWindowController.shared.showSettings()
             }
 
             MenuButton(title: "Quit Airtype", shortcut: "⌘Q") {

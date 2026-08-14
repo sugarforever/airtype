@@ -1,4 +1,7 @@
 import Foundation
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 /// ElevenLabs Speech-to-Text API service
 class ElevenLabsService {
@@ -36,7 +39,6 @@ class ElevenLabsService {
 
         debugLog("ElevenLabs: Request body size: \(body.count) bytes")
         debugLog("ElevenLabs: Sending request with model \(settings.elevenlabsModel)")
-        debugLog("ElevenLabs: Filename: \(audioURL.lastPathComponent)")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -46,10 +48,7 @@ class ElevenLabsService {
 
         debugLog("ElevenLabs: Response status \(httpResponse.statusCode)")
 
-        // Debug: log raw response
-        if let rawResponse = String(data: data, encoding: .utf8) {
-            debugLog("ElevenLabs: Raw response: \(rawResponse.prefix(500))")
-        }
+        debugLog("ElevenLabs: Response body \(data.count) bytes")
 
         if httpResponse.statusCode != 200 {
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -61,7 +60,10 @@ class ElevenLabsService {
         }
 
         let transcription = try JSONDecoder().decode(ElevenLabsTranscriptionResponse.self, from: data)
-        debugLog("ElevenLabs: Decoded text: '\(transcription.text)'")
+        debugLog(PrivacySafeDiagnostics.textEvent(
+            label: "ElevenLabs transcription decoded",
+            characterCount: transcription.text.count
+        ))
         return transcription.text
     }
 

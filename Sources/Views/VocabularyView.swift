@@ -23,6 +23,9 @@ struct VocabularyView: View {
         .task {
             await model.load()
         }
+        .task {
+            await model.observeCorrectionUpdates()
+        }
     }
 
     @ViewBuilder
@@ -52,7 +55,6 @@ struct VocabularyView: View {
 
     private func addTerm() async -> Bool {
         await model.addTerm()
-        return model.validationText == nil && model.localErrorText == nil
     }
 
     private func deleteTerm(id: UUID) async {
@@ -81,7 +83,10 @@ private struct VocabularyHeader: View {
 
                 Spacer()
 
-                Label("All vocabulary data remains on this Mac.", systemImage: "lock.fill")
+                Label(
+                    "Stored locally; bounded guidance is sent to your Enhancement provider.",
+                    systemImage: "lock.fill"
+                )
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.textTertiary)
             }

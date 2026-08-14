@@ -1,4 +1,7 @@
 import Foundation
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 /// Mistral Audio Transcription API service
 class MistralTranscriptionService {
@@ -45,9 +48,7 @@ class MistralTranscriptionService {
 
         debugLog("Mistral: Response status \(httpResponse.statusCode)")
 
-        if let raw = String(data: data, encoding: .utf8) {
-            debugLog("Mistral: Raw response: \(raw.prefix(500))")
-        }
+        debugLog("Mistral: Response body \(data.count) bytes")
 
         guard httpResponse.statusCode == 200 else {
             if let errorResponse = try? JSONDecoder().decode(MistralErrorResponse.self, from: data) {

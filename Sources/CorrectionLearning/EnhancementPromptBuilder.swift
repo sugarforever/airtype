@@ -61,3 +61,16 @@ public struct EnhancementPromptBuilder: Sendable {
         - Return ONLY the corrected text, nothing else
         """
 }
+
+/// Formats diagnostic metadata without retaining or rendering the underlying text.
+public enum PrivacySafeDiagnostics {
+    public static func textEvent(label: String, characterCount: Int) -> String {
+        let safeCount = max(0, characterCount)
+        let unit = safeCount == 1 ? "character" : "characters"
+        return "\(label) (\(safeCount) \(unit))"
+    }
+
+    public static func errorEvent(label: String, error: any Error) -> String {
+        "\(label) (\(String(reflecting: type(of: error))))"
+    }
+}

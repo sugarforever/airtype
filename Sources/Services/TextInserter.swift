@@ -22,17 +22,26 @@ final class TextInserter {
     }
 
     @discardableResult
-    func insert(text: String) async throws -> TextInsertionOutcome {
+    func insert(
+        text: String,
+        learningEnabled: Bool
+    ) async throws -> TextInsertionOutcome {
         do {
-            return try await coordinator.insert(text: text)
-        } catch AccessibilityTextError.permissionDenied {
-            let options = [
-                kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
-            ] as CFDictionary
-            guard AXIsProcessTrustedWithOptions(options) else {
-                throw TextInsertionError.noAccessibilityPermission
+            do {
+                return try await coordinator.insert(text: text, learningEnabled: learningEnabled)
+            } catch AccessibilityTextError.permissionDenied {
+                let options = [
+                    kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+                ] as CFDictionary
+                guard AXIsProcessTrustedWithOptions(options) else {
+                    throw TextInsertionError.noAccessibilityPermission
+                }
+                return try await coordinator.insert(text: text, learningEnabled: learningEnabled)
             }
-            return try await coordinator.insert(text: text)
+        } catch AccessibilityTextError.insertionFailed {
+            throw TextInsertionError.ambiguousAccessibilityFailure
+        } catch AccessibilityTextError.permissionDenied {
+            throw TextInsertionError.noAccessibilityPermission
         }
     }
 
@@ -79,6 +88,7 @@ enum TextInsertionError: LocalizedError {
     case noAccessibilityPermission
     case pasteboardUnavailable
     case eventCreationFailed
+    case ambiguousAccessibilityFailure
 
     var errorDescription: String? {
         switch self {
@@ -88,6 +98,8 @@ enum TextInsertionError: LocalizedError {
             return "The system pasteboard is unavailable"
         case .eventCreationFailed:
             return "Unable to create a system paste event"
+        case .ambiguousAccessibilityFailure:
+            return "Accessibility insertion could not be confirmed. Text was not pasted to avoid duplication."
         }
     }
 }

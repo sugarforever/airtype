@@ -174,9 +174,72 @@ final class VocabularyPageModelTests: XCTestCase {
 
         await model.load()
 
-        XCTAssertEqual(model.corrections.count, 1)
+        XCTAssertTrue(model.corrections.isEmpty)
         XCTAssertNotNil(model.localErrorText)
         XCTAssertFalse(model.isLoading)
+    }
+
+    func testSuccessfulTermAddDoesNotClearPersistentCorrectionError() async throws {
+        let model = VocabularyPageModel(
+            repository: try VocabularyRepository(store: MemoryVocabularyStore()),
+            learningService: CorrectionLearningService(store: LoadFailingCorrectionStore())
+        )
+        await model.load()
+        model.termText = "Cloudflare"
+
+        let succeeded = await model.addTerm()
+
+        XCTAssertTrue(succeeded)
+        XCTAssertEqual(model.terms.map(\.value), ["Cloudflare"])
+        XCTAssertEqual(model.localErrorText, "Learned-correction storage is unavailable.")
+    }
+
+    func testSuccessfulCorrectionDeleteDoesNotClearPersistentProperNounError() async throws {
+        let sample = correction(original: "Air Type", replacement: "Airtype")
+        let model = VocabularyPageModel(
+            repository: nil,
+            learningService: CorrectionLearningService(
+                store: MemoryCorrectionStore(samples: [sample])
+            )
+        )
+        await model.load()
+
+        await model.deleteCorrection(id: sample.id)
+
+        XCTAssertTrue(model.corrections.isEmpty)
+        XCTAssertEqual(model.localErrorText, "Proper-noun storage is unavailable.")
+    }
+
+    func testLearningPublishesToSharedHomeAndVocabularyModels() async throws {
+        let learningService = CorrectionLearningService(store: MemoryCorrectionStore())
+        let homeModel = HomePageModel(learningService: learningService)
+        let vocabularyModel = VocabularyPageModel(
+            repository: try VocabularyRepository(store: MemoryVocabularyStore()),
+            learningService: learningService
+        )
+        let homeObservation = Task { await homeModel.observeCorrectionUpdates() }
+        let vocabularyObservation = Task { await vocabularyModel.observeCorrectionUpdates() }
+        defer {
+            homeObservation.cancel()
+            vocabularyObservation.cancel()
+        }
+        await Task.yield()
+
+        await learningService.learn(
+            original: "Use Cloud Flower today.",
+            final: "Use Cloudflare today.",
+            applicationBundleID: "com.example.editor"
+        )
+
+        for _ in 0..<100 {
+            if homeModel.todayLearnedCorrectionCount == 1,
+               vocabularyModel.corrections.count == 1 {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(homeModel.todayLearnedCorrectionCount, 1)
+        XCTAssertEqual(vocabularyModel.corrections.count, 1)
     }
 
     private func correction(original: String, replacement: String) -> CorrectionSample {

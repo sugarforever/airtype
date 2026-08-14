@@ -1,5 +1,8 @@
 import Foundation
 import Compression
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 actor DoubaoStreamingService: StreamingTranscriptionService {
     private let appId: String
@@ -41,7 +44,7 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
         request.setValue(resourceId, forHTTPHeaderField: "X-Api-Resource-Id")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Api-Connect-Id")
 
-        debugLog("Doubao connecting to \(endpoint) with appId=\(appId), resourceId=\(resourceId)")
+        debugLog("Doubao connecting")
 
         let session = URLSession(configuration: .default)
         self.session = session
@@ -65,7 +68,10 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
         let frame = buildClientFrame(messageType: 0x02, flags: 0x00, serialization: 0x00, compression: 0x00, payload: data)
         webSocketTask?.send(.data(frame)) { [weak self] error in
             if let error = error {
-                debugLog("Doubao sendAudio error: \(error)")
+                debugLog(PrivacySafeDiagnostics.errorEvent(
+                    label: "Doubao sendAudio failed",
+                    error: error
+                ))
                 Task { await self?.surfaceSendError(error) }
             }
         }
@@ -130,7 +136,7 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
         ]
 
         let jsonData = try JSONSerialization.data(withJSONObject: config)
-        debugLog("Doubao init JSON: \(String(data: jsonData, encoding: .utf8) ?? "")")
+        debugLog("Doubao init payload \(jsonData.count) bytes")
         let compressed = try gzipCompress(jsonData)
 
         let frame = buildClientFrame(messageType: 0x01, flags: 0x00, serialization: 0x01, compression: 0x01, payload: compressed)
@@ -150,13 +156,19 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
                     case .data(let data):
                         await self.handleServerMessage(data)
                     case .string(let text):
-                        debugLog("Doubao text message: \(text)")
+                        debugLog(PrivacySafeDiagnostics.textEvent(
+                            label: "Doubao text message received",
+                            characterCount: text.count
+                        ))
                     @unknown default:
                         break
                     }
                 } catch {
                     if !Task.isCancelled {
-                        debugLog("Doubao receive error: \(error)")
+                        debugLog(PrivacySafeDiagnostics.errorEvent(
+                            label: "Doubao receive failed",
+                            error: error
+                        ))
                         await self.surfaceSendError(error)
                         await self.finishContinuation()
                     }
@@ -180,7 +192,10 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
                 guard let task = await self.webSocketTask else { return }
                 task.sendPing { error in
                     if let error {
-                        debugLog("Doubao ping error: \(error)")
+                        debugLog(PrivacySafeDiagnostics.errorEvent(
+                            label: "Doubao ping failed",
+                            error: error
+                        ))
                     }
                 }
             }
@@ -192,15 +207,14 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
     private func handleServerMessage(_ data: Data) {
         guard data.count >= 4 else { return }
 
-        let headerHex = data.prefix(min(16, data.count)).map { String(format: "%02x", $0) }.joined(separator: " ")
-        debugLog("Doubao raw header (\(data.count) bytes): \(headerHex)")
+        debugLog("Doubao frame received (\(data.count) bytes)")
 
         let messageType = (data[1] >> 4) & 0x0F
 
         if messageType == 0x0F {
             if data.count > 12 {
                 let errorBody = String(data: data[12...], encoding: .utf8) ?? "Unknown error"
-                debugLog("Doubao server error: \(errorBody)")
+                debugLog("Doubao server error payload (\(data.count - 12) bytes)")
                 continuation?.yield(.error(DoubaoError.serverError(errorBody)))
             }
             return
@@ -223,8 +237,7 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
             jsonData = payloadData
         }
 
-        guard let text = String(data: jsonData, encoding: .utf8) else { return }
-        debugLog("Doubao response: \(text)")
+        debugLog("Doubao response payload (\(jsonData.count) bytes)")
 
         guard let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else { return }
 

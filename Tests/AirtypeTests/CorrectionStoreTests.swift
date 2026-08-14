@@ -1,4 +1,5 @@
 import XCTest
+import SQLite3
 @testable import CorrectionLearningCore
 
 final class CorrectionStoreTests: XCTestCase {
@@ -86,6 +87,82 @@ final class CorrectionStoreTests: XCTestCase {
         XCTAssertEqual(loaded.first(where: { $0.id == untouched.id })?.matchCount, 0)
     }
 
+    func testOlderDeferredMatchDoesNotRegressPersistedLastMatchedAt() throws {
+        let store = try SQLiteCorrectionStore(url: databaseURL)
+        var matched = sample(id: UUID())
+        let newestMatch = Date(timeIntervalSince1970: 1_700_000_500)
+        matched.matchCount = 1
+        matched.lastMatchedAt = newestMatch
+        try store.upsert(sample: matched)
+
+        try store.markMatched(
+            ids: [matched.id],
+            at: Date(timeIntervalSince1970: 1_700_000_400)
+        )
+
+        let loaded = try XCTUnwrap(try store.loadSamples().first)
+        XCTAssertEqual(loaded.matchCount, 2)
+        XCTAssertEqual(loaded.lastMatchedAt, newestMatch)
+    }
+
+    func testLearningBatchRollsBackEveryRowWhenSecondUpsertFails() throws {
+        let store = try SQLiteCorrectionStore(url: databaseURL)
+        var connection: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(databaseURL.path, &connection), SQLITE_OK)
+        defer { sqlite3_close(connection) }
+        XCTAssertEqual(sqlite3_exec(connection, """
+            CREATE TRIGGER fail_second_learning_upsert
+            BEFORE INSERT ON correction_samples
+            WHEN NEW.original = 'trigger failure'
+            BEGIN
+                SELECT RAISE(ABORT, 'injected failure');
+            END;
+            """, nil, nil, nil), SQLITE_OK)
+        let first = sample(id: UUID(), original: "first")
+        let second = sample(id: UUID(), original: "trigger failure")
+        let session = editSession()
+
+        XCTAssertThrowsError(try store.applyLearningBatch(
+            upserting: [first, second],
+            deleting: [],
+            session: session
+        ))
+
+        XCTAssertTrue(try store.loadSamples().isEmpty)
+        XCTAssertTrue(try store.loadSessions().isEmpty)
+    }
+
+    func testBusyLearningBatchCanSucceedOnTheSameStoreAfterLockClears() throws {
+        let store = try SQLiteCorrectionStore(url: databaseURL)
+        var lockConnection: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(databaseURL.path, &lockConnection), SQLITE_OK)
+        defer { sqlite3_close(lockConnection) }
+        XCTAssertEqual(sqlite3_exec(lockConnection, "BEGIN IMMEDIATE", nil, nil, nil), SQLITE_OK)
+        let expected = sample(id: UUID())
+        let session = editSession()
+
+        XCTAssertThrowsError(try store.applyLearningBatch(
+            upserting: [expected],
+            deleting: [],
+            session: session
+        )) { error in
+            guard case CorrectionStoreError.busy = error else {
+                return XCTFail("Expected typed busy error, got \(error)")
+            }
+        }
+        XCTAssertEqual(sqlite3_exec(lockConnection, "ROLLBACK", nil, nil, nil), SQLITE_OK)
+
+        try store.applyLearningBatch(
+            upserting: [expected],
+            deleting: [],
+            session: session
+        )
+
+        let reopened = try SQLiteCorrectionStore(url: databaseURL)
+        XCTAssertEqual(try reopened.loadSamples(), [expected])
+        XCTAssertEqual(try reopened.loadSessions(), [session])
+    }
+
     private func sample(id: UUID, original: String = "Cloud Flower") -> CorrectionSample {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         return CorrectionSample(
@@ -100,6 +177,18 @@ final class CorrectionStoreTests: XCTestCase {
             createdAt: date,
             lastCorrectedAt: date,
             lastMatchedAt: nil
+        )
+    }
+
+    private func editSession() -> EditSessionMetadata {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        return EditSessionMetadata(
+            id: UUID(),
+            applicationBundleID: "com.example.editor",
+            originalCharacterCount: 12,
+            status: .learned,
+            createdAt: date,
+            completedAt: date
         )
     }
 }

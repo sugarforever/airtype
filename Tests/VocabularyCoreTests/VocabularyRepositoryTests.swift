@@ -28,6 +28,20 @@ final class VocabularyRepositoryTests: XCTestCase {
         XCTAssertEqual(term.normalizedValue, "café platform")
     }
 
+    func testRepositoryRejectsEmptyNormalizedTermWithoutStoreMutation() async throws {
+        let store = MemoryVocabularyStore()
+        let repository = try VocabularyRepository(store: store)
+
+        do {
+            _ = try await repository.add(" \t\n ")
+            XCTFail("Expected emptyTerm")
+        } catch VocabularyRepositoryError.emptyTerm {
+            // Expected.
+        }
+
+        XCTAssertTrue(try store.loadTerms().isEmpty)
+    }
+
     func testDeleteRemovesAddedTermFromAllTerms() async throws {
         let repository = try VocabularyRepository(store: MemoryVocabularyStore())
         let term = try await repository.add("Cloudflare", now: .now)

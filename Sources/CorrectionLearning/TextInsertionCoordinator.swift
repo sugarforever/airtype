@@ -33,8 +33,11 @@ public final class TextInsertionCoordinator {
         self.paste = paste
     }
 
-    public func insert(text: String) async throws -> TextInsertionOutcome {
-        switch client.insert(text: text) {
+    public func insert(
+        text: String,
+        learningEnabled: Bool
+    ) async throws -> TextInsertionOutcome {
+        switch client.insert(text: text, observationEnabled: learningEnabled) {
         case .observable(let insertion):
             return .accessibility(insertion)
         case .insertedWithoutObservation:
@@ -44,6 +47,8 @@ public final class TextInsertionCoordinator {
             return .paste
         case .permissionDenied:
             throw AccessibilityTextError.permissionDenied
+        case .failed:
+            throw AccessibilityTextError.insertionFailed
         }
     }
 }

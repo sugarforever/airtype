@@ -24,7 +24,8 @@ public final class VocabularyPageModel {
     public private(set) var corrections: [CorrectionSample] = []
     public private(set) var validationText: String?
     public private(set) var isLoading = false
-    public private(set) var localErrorText: String?
+    public private(set) var properNounErrorText: String?
+    public private(set) var correctionErrorText: String?
 
     @ObservationIgnored private let repository: VocabularyRepository?
     @ObservationIgnored private let learningService: CorrectionLearningService?
@@ -38,16 +39,9 @@ public final class VocabularyPageModel {
     }
 
     public var visibleTerms: [VocabularyTerm] {
-        let matchingTerms = query.isEmpty
+        query.isEmpty
             ? terms
             : terms.filter { $0.value.localizedStandardContains(query) }
-        return matchingTerms.sorted {
-            let comparison = $0.value.localizedStandardCompare($1.value)
-            if comparison != .orderedSame {
-                return comparison == .orderedAscending
-            }
-            return $0.id.uuidString < $1.id.uuidString
-        }
     }
 
     public var visibleCorrections: [CorrectionSample] {
@@ -58,42 +52,62 @@ public final class VocabularyPageModel {
         }
     }
 
+    public var localErrorText: String? {
+        let messages = [properNounErrorText, correctionErrorText].compactMap { $0 }
+        return messages.isEmpty ? nil : messages.joined(separator: " ")
+    }
+
     public func load() async {
         beginLoading()
-        var messages: [String] = []
 
         if let repository {
             publishTerms(await repository.allTerms())
+            publishProperNounError(nil)
         } else {
             publishTerms([])
-            messages.append("Proper-noun storage is unavailable.")
+            publishProperNounError("Proper-noun storage is unavailable.")
         }
 
         if let learningService {
             publishCorrections(await learningService.samples())
             if await learningService.persistenceHealth == .unavailable {
-                messages.append("Learned-correction storage is unavailable.")
+                publishCorrectionError("Learned-correction storage is unavailable.")
+            } else {
+                publishCorrectionError(nil)
             }
         } else {
             publishCorrections([])
-            messages.append("Learned-correction storage is unavailable.")
+            publishCorrectionError("Learned-correction storage is unavailable.")
         }
 
-        publishLocalError(messages.isEmpty ? nil : messages.joined(separator: " "))
         endLoading()
     }
 
-    public func addTerm() async {
+    public func observeCorrectionUpdates() async {
+        guard let learningService else { return }
+        for await snapshot in await learningService.updates() {
+            guard !Task.isCancelled else { return }
+            publishCorrections(snapshot.samples)
+            publishCorrectionError(
+                snapshot.persistenceHealth == .available
+                    ? nil
+                    : "Learned-correction storage is unavailable."
+            )
+        }
+    }
+
+    @discardableResult
+    public func addTerm() async -> Bool {
         publishValidation(nil)
-        publishLocalError(nil)
+        publishProperNounError(nil)
         let trimmedTerm = termText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTerm.isEmpty else {
             publishValidation("Enter a proper noun.")
-            return
+            return false
         }
         guard let repository else {
-            publishLocalError("Proper-noun storage is unavailable.")
-            return
+            publishProperNounError("Proper-noun storage is unavailable.")
+            return false
         }
 
         beginLoading()
@@ -104,17 +118,20 @@ public final class VocabularyPageModel {
             if !termText.isEmpty {
                 termText = ""
             }
+            return true
         } catch VocabularyRepositoryError.duplicateTerm {
             publishValidation("That proper noun already exists.")
+            return false
         } catch {
-            publishLocalError("The proper noun could not be saved locally.")
+            publishProperNounError("The proper noun could not be saved locally.")
+            return false
         }
     }
 
     public func deleteTerm(id: UUID) async {
-        publishLocalError(nil)
+        publishProperNounError(nil)
         guard let repository else {
-            publishLocalError("Proper-noun storage is unavailable.")
+            publishProperNounError("Proper-noun storage is unavailable.")
             return
         }
 
@@ -124,14 +141,14 @@ public final class VocabularyPageModel {
             try await repository.delete(id: id)
             publishTerms(await repository.allTerms())
         } catch {
-            publishLocalError("The proper noun could not be deleted locally.")
+            publishProperNounError("The proper noun could not be deleted locally.")
         }
     }
 
     public func deleteCorrection(id: UUID) async {
-        publishLocalError(nil)
+        publishCorrectionError(nil)
         guard let learningService else {
-            publishLocalError("Learned-correction storage is unavailable.")
+            publishCorrectionError("Learned-correction storage is unavailable.")
             return
         }
 
@@ -142,7 +159,7 @@ public final class VocabularyPageModel {
             publishCorrections(await learningService.samples())
         } catch {
             publishCorrections(await learningService.samples())
-            publishLocalError("The learned correction could not be deleted locally.")
+            publishCorrectionError("The learned correction could not be deleted locally.")
         }
     }
 
@@ -159,8 +176,15 @@ public final class VocabularyPageModel {
     }
 
     private func publishTerms(_ newTerms: [VocabularyTerm]) {
-        if terms != newTerms {
-            terms = newTerms
+        let sortedTerms = newTerms.sorted {
+            let comparison = $0.value.localizedStandardCompare($1.value)
+            if comparison != .orderedSame {
+                return comparison == .orderedAscending
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        if terms != sortedTerms {
+            terms = sortedTerms
         }
     }
 
@@ -176,9 +200,15 @@ public final class VocabularyPageModel {
         }
     }
 
-    private func publishLocalError(_ message: String?) {
-        if localErrorText != message {
-            localErrorText = message
+    private func publishProperNounError(_ message: String?) {
+        if properNounErrorText != message {
+            properNounErrorText = message
+        }
+    }
+
+    private func publishCorrectionError(_ message: String?) {
+        if correctionErrorText != message {
+            correctionErrorText = message
         }
     }
 }

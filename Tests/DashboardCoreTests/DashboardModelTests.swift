@@ -9,4 +9,12 @@ final class DashboardModelTests: XCTestCase {
 
         XCTAssertEqual(model.destination, .home)
     }
+
+    func testSettingsEntryPointSelectsSettingsAfterAnotherDestination() {
+        let model = DashboardModel(destination: .history)
+
+        model.showSettings()
+
+        XCTAssertEqual(model.destination, .settings)
+    }
 }

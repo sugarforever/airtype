@@ -105,15 +105,10 @@ class EnhancementService {
         }
 
         if httpResponse.statusCode != 200 {
-            // Log raw error response
-            if let rawError = String(data: data, encoding: .utf8) {
-                debugLog("Enhancement: Error response (\(httpResponse.statusCode)): \(rawError)")
-            }
+            debugLog("Enhancement: Error response status \(httpResponse.statusCode), \(data.count) bytes")
 
             if let errorResponse = try? JSONDecoder().decode(OpenAIErrorResponse.self, from: data) {
                 let message = errorResponse.error.message
-                debugLog("Enhancement: API error message: \(message)")
-
                 // Detect specific error types
                 if message.lowercased().contains("rate limit") {
                     throw EnhancementError.apiError("Rate limit exceeded. Text will be used without enhancement.")

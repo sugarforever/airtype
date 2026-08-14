@@ -14,6 +14,7 @@ final class MainWindowController {
     private let dashboardModel = DashboardModel()
     private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
     var hotkeyManager: HotkeyManager?
+    var homeModel: HomePageModel?
     var vocabularyModel: VocabularyPageModel?
 
     func show(destination: DashboardDestination? = nil) {
@@ -42,11 +43,17 @@ final class MainWindowController {
             return
         }
 
+        guard let homeModel else {
+            debugLog("ERROR: homeModel not set on MainWindowController")
+            return
+        }
+
         let mainView = MainView(
             settings: Settings.shared,
             hotkeyManager: hotkeyManager,
             dashboardModel: dashboardModel,
             historyModel: historyModel,
+            homeModel: homeModel,
             vocabularyModel: vocabularyModel
         )
 
@@ -66,7 +73,7 @@ final class MainWindowController {
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         newWindow.level = .normal
-        newWindow.minSize = NSSize(width: 760, height: 560)
+        newWindow.contentMinSize = NSSize(width: 760, height: 560)
 
         let delegate = MainWindowDelegate { [weak self] in
             self?.window = nil
@@ -87,6 +94,11 @@ final class MainWindowController {
     func close() {
         window?.close()
         window = nil
+    }
+
+    func showSettings() {
+        dashboardModel.showSettings()
+        show()
     }
 
     private var wizardWindow: NSWindow?
