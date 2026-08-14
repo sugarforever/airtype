@@ -186,6 +186,22 @@ public struct CorrectionSampleIndex: Sendable {
         return removedIDs
     }
 
+    @discardableResult
+    public mutating func remove(id: UUID) -> Bool {
+        let oldCount = samples.count
+        samples.removeAll { $0.id == id }
+        if samples.count != oldCount {
+            rebuildIndexes()
+        }
+        return samples.count != oldCount
+    }
+
+    public mutating func restore(_ sample: CorrectionSample) {
+        guard !samples.contains(where: { $0.id == sample.id }) else { return }
+        samples.append(sample)
+        rebuildIndexes()
+    }
+
     private mutating func rebuildIndexes() {
         positionsByID.removeAll(keepingCapacity: true)
         sampleIDsByToken.removeAll(keepingCapacity: true)

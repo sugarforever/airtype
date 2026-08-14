@@ -76,6 +76,29 @@ public actor CorrectionLearningService {
         return examples
     }
 
+    public func samples() -> [CorrectionSample] {
+        index.samples.sorted {
+            if $0.lastCorrectedAt != $1.lastCorrectedAt {
+                return $0.lastCorrectedAt > $1.lastCorrectedAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    public func deleteSample(id: UUID) throws {
+        guard let removedSample = index.samples.first(where: { $0.id == id }),
+              index.remove(id: id) else {
+            return
+        }
+
+        do {
+            try store.deleteSamples(ids: [id])
+        } catch {
+            index.restore(removedSample)
+            throw error
+        }
+    }
+
     public static func makeDefault() throws -> CorrectionLearningService {
         let applicationSupport = try FileManager.default.url(
             for: .applicationSupportDirectory,

@@ -30,6 +30,59 @@ final class CorrectionLearningServiceTests: XCTestCase {
         XCTAssertNotNil(try store.loadSamples().first?.lastMatchedAt)
     }
 
+    func testDeleteRemovesSampleFromBrowseAndEnhancementRetrieval() async throws {
+        let store = InMemoryCorrectionStore()
+        let service = CorrectionLearningService(store: store)
+        await service.learn(
+            original: "Deploy Cloud Flower today.",
+            final: "Deploy Cloudflare today.",
+            applicationBundleID: "test"
+        )
+        let learnedSamples = await service.samples()
+        let id = try XCTUnwrap(learnedSamples.first?.id)
+
+        try await service.deleteSample(id: id)
+
+        let samplesAfterDeletion = await service.samples()
+        let examplesAfterDeletion = await service.examples(for: "Cloud Flower")
+        XCTAssertTrue(samplesAfterDeletion.isEmpty)
+        XCTAssertTrue(examplesAfterDeletion.isEmpty)
+        XCTAssertTrue(try store.loadSamples().isEmpty)
+    }
+
+    func testBrowseOrdersSamplesByMostRecentlyCorrected() async {
+        let older = sample(lastCorrectedAt: Date(timeIntervalSince1970: 1_700_000_000))
+        let newer = sample(
+            original: "Workers",
+            replacement: "Cloudflare Workers",
+            lastCorrectedAt: Date(timeIntervalSince1970: 1_700_000_100)
+        )
+        let service = CorrectionLearningService(store: InMemoryCorrectionStore(samples: [older, newer]))
+
+        let samples = await service.samples()
+
+        XCTAssertEqual(samples.map(\.id), [newer.id, older.id])
+    }
+
+    func testDeleteRestoresSampleWhenPersistenceFails() async throws {
+        let storedSample = sample()
+        let service = CorrectionLearningService(
+            store: DeleteFailingCorrectionStore(samples: [storedSample])
+        )
+
+        do {
+            try await service.deleteSample(id: storedSample.id)
+            XCTFail("Expected deleting a sample to surface the persistence failure")
+        } catch {
+            // The service restores the in-memory sample when local persistence fails.
+        }
+
+        let samplesAfterFailure = await service.samples()
+        let examplesAfterFailure = await service.examples(for: "Cloud Flower")
+        XCTAssertEqual(samplesAfterFailure, [storedSample])
+        XCTAssertEqual(examplesAfterFailure.first?.sampleID, storedSample.id)
+    }
+
     func testStoreFailureDoesNotEscapeIntoLearningCall() async {
         let service = CorrectionLearningService(store: FailingCorrectionStore())
 
@@ -57,19 +110,23 @@ final class CorrectionLearningServiceTests: XCTestCase {
         XCTAssertEqual(try store.loadSessions().first?.status, .discarded)
     }
 
-    private func sample() -> CorrectionSample {
+    private func sample(
+        original: String = "Cloud Flower",
+        replacement: String = "Cloudflare",
+        lastCorrectedAt: Date = Date(timeIntervalSince1970: 1_700_000_000)
+    ) -> CorrectionSample {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         return CorrectionSample(
             id: UUID(),
-            original: "Cloud Flower",
-            replacement: "Cloudflare",
-            normalizedOriginal: "cloud flower",
+            original: original,
+            replacement: replacement,
+            normalizedOriginal: CorrectionSampleIndex.normalize(original),
             contextBefore: "Deploy",
             contextAfter: "today",
             correctionCount: 1,
             matchCount: 0,
             createdAt: date,
-            lastCorrectedAt: date,
+            lastCorrectedAt: lastCorrectedAt,
             lastMatchedAt: nil
         )
     }
@@ -125,4 +182,20 @@ private struct FailingCorrectionStore: CorrectionStoring {
     func recordSession(_ session: EditSessionMetadata) throws { throw Failure() }
     func loadSessions() throws -> [EditSessionMetadata] { throw Failure() }
     func markMatched(ids: [UUID], at date: Date) throws { throw Failure() }
+}
+
+private struct DeleteFailingCorrectionStore: CorrectionStoring {
+    struct Failure: Error {}
+    private let samples: [CorrectionSample]
+
+    init(samples: [CorrectionSample]) {
+        self.samples = samples
+    }
+
+    func loadSamples() throws -> [CorrectionSample] { samples }
+    func upsert(sample: CorrectionSample) throws {}
+    func deleteSamples(ids: [UUID]) throws { throw Failure() }
+    func recordSession(_ session: EditSessionMetadata) throws {}
+    func loadSessions() throws -> [EditSessionMetadata] { [] }
+    func markMatched(ids: [UUID], at date: Date) throws {}
 }
