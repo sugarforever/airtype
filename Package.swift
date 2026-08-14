@@ -11,7 +11,8 @@ var products: [Product] = [
 var targets: [Target] = [
     .target(
         name: "CorrectionLearningCore",
-        path: "Sources/CorrectionLearning"
+        path: "Sources/CorrectionLearning",
+        linkerSettings: [.linkedLibrary("sqlite3")]
     ),
     .testTarget(
         name: "AirtypeTests",

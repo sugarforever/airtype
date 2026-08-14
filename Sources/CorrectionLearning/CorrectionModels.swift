@@ -78,3 +78,34 @@ public struct CorrectionPromptExample: Equatable, Sendable {
         return max(1, (byteCount + 3) / 4)
     }
 }
+
+public struct EditSessionMetadata: Equatable, Sendable {
+    public enum Status: String, Sendable {
+        case learned
+        case discarded
+        case unsupported
+    }
+
+    public let id: UUID
+    public let applicationBundleID: String
+    public let originalCharacterCount: Int
+    public let status: Status
+    public let createdAt: Date
+    public let completedAt: Date
+
+    public init(
+        id: UUID,
+        applicationBundleID: String,
+        originalCharacterCount: Int,
+        status: Status,
+        createdAt: Date,
+        completedAt: Date
+    ) {
+        self.id = id
+        self.applicationBundleID = applicationBundleID
+        self.originalCharacterCount = originalCharacterCount
+        self.status = status
+        self.createdAt = createdAt
+        self.completedAt = completedAt
+    }
+}

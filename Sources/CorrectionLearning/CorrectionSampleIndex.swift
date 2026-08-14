@@ -27,7 +27,8 @@ public struct CorrectionSampleIndex: Sendable {
             .joined(separator: " ")
     }
 
-    public mutating func record(_ hunk: CorrectionHunk, at date: Date) {
+    @discardableResult
+    public mutating func record(_ hunk: CorrectionHunk, at date: Date) -> CorrectionSample {
         let normalizedOriginal = Self.normalize(hunk.original)
         let normalizedReplacement = Self.normalize(hunk.replacement)
         let normalizedBefore = Self.normalize(hunk.contextBefore)
@@ -41,8 +42,11 @@ public struct CorrectionSampleIndex: Sendable {
         }) {
             samples[position].correctionCount += 1
             samples[position].lastCorrectedAt = date
+            let sample = samples[position]
+            rebuildIndexes()
+            return sample
         } else {
-            samples.append(CorrectionSample(
+            let sample = CorrectionSample(
                 id: UUID(),
                 original: hunk.original,
                 replacement: hunk.replacement,
@@ -54,9 +58,11 @@ public struct CorrectionSampleIndex: Sendable {
                 createdAt: date,
                 lastCorrectedAt: date,
                 lastMatchedAt: nil
-            ))
+            )
+            samples.append(sample)
+            rebuildIndexes()
+            return sample
         }
-        rebuildIndexes()
     }
 
     public mutating func retrieve(
