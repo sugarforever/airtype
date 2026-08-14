@@ -5,7 +5,8 @@ import Foundation
 let coreTestsOnly = ProcessInfo.processInfo.environment["AIRTYPE_CORE_TESTS"] == "1"
 
 var products: [Product] = [
-    .library(name: "CorrectionLearningCore", targets: ["CorrectionLearningCore"])
+    .library(name: "CorrectionLearningCore", targets: ["CorrectionLearningCore"]),
+    .library(name: "VocabularyCore", targets: ["VocabularyCore"])
 ]
 
 var targets: [Target] = [
@@ -14,10 +15,19 @@ var targets: [Target] = [
         path: "Sources/CorrectionLearning",
         linkerSettings: [.linkedLibrary("sqlite3")]
     ),
+    .target(
+        name: "VocabularyCore",
+        path: "Sources/VocabularyCore"
+    ),
     .testTarget(
         name: "AirtypeTests",
         dependencies: ["CorrectionLearningCore"],
         path: "Tests/AirtypeTests"
+    ),
+    .testTarget(
+        name: "VocabularyCoreTests",
+        dependencies: ["VocabularyCore"],
+        path: "Tests/VocabularyCoreTests"
     )
 ]
 
@@ -26,9 +36,9 @@ if !coreTestsOnly {
     targets.insert(
         .executableTarget(
             name: "Airtype",
-            dependencies: ["HotKey", "CorrectionLearningCore"],
+            dependencies: ["HotKey", "CorrectionLearningCore", "VocabularyCore"],
             path: "Sources",
-            exclude: ["CorrectionLearning"]
+            exclude: ["CorrectionLearning", "VocabularyCore"]
         ),
         at: 0
     )
