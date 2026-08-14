@@ -25,57 +25,93 @@ public struct CorrectionExtractor: CorrectionExtracting {
         let finalTokens = tokens(in: final)
         guard !originalTokens.isEmpty, !finalTokens.isEmpty else { return [] }
 
-        var prefixCount = 0
-        while prefixCount < min(originalTokens.count, finalTokens.count),
-              originalTokens[prefixCount].value == finalTokens[prefixCount].value {
-            prefixCount += 1
+        let difference = finalTokens.map(\.value).difference(from: originalTokens.map(\.value))
+        var removals = Set<Int>()
+        var insertions = Set<Int>()
+        for change in difference {
+            switch change {
+            case .remove(let offset, _, _): removals.insert(offset)
+            case .insert(let offset, _, _): insertions.insert(offset)
+            }
         }
 
-        var suffixCount = 0
-        while suffixCount < min(originalTokens.count, finalTokens.count) - prefixCount,
-              originalTokens[originalTokens.count - suffixCount - 1].value
-                == finalTokens[finalTokens.count - suffixCount - 1].value {
-            suffixCount += 1
-        }
-
-        let originalChangedCount = originalTokens.count - prefixCount - suffixCount
-        let finalChangedCount = finalTokens.count - prefixCount - suffixCount
+        let originalChangedCount = removals.count
+        let finalChangedCount = insertions.count
         let changedRatio = Double(max(originalChangedCount, finalChangedCount))
             / Double(max(originalTokens.count, finalTokens.count))
         guard changedRatio <= rewriteThreshold else { return [] }
 
+        var runs: [(old: Range<Int>, new: Range<Int>)] = []
+        var oldIndex = 0
+        var newIndex = 0
+        var runStart: (old: Int, new: Int)?
+
+        func finishRun() {
+            guard let start = runStart else { return }
+            runs.append((start.old..<oldIndex, start.new..<newIndex))
+            runStart = nil
+        }
+
+        while oldIndex < originalTokens.count || newIndex < finalTokens.count {
+            let removesCurrent = removals.contains(oldIndex)
+            let insertsCurrent = insertions.contains(newIndex)
+            if removesCurrent || insertsCurrent {
+                if runStart == nil { runStart = (oldIndex, newIndex) }
+                if removesCurrent { oldIndex += 1 }
+                if insertsCurrent { newIndex += 1 }
+                continue
+            }
+
+            finishRun()
+            if oldIndex < originalTokens.count { oldIndex += 1 }
+            if newIndex < finalTokens.count { newIndex += 1 }
+        }
+        finishRun()
+
+        return runs.compactMap { run in
+            makeHunk(
+                original: original,
+                final: final,
+                originalTokens: originalTokens,
+                finalTokens: finalTokens,
+                oldRange: run.old,
+                newRange: run.new
+            )
+        }
+    }
+
+    private func makeHunk(
+        original: String,
+        final: String,
+        originalTokens: [Token],
+        finalTokens: [Token],
+        oldRange: Range<Int>,
+        newRange: Range<Int>
+    ) -> CorrectionHunk? {
         let originalFragment = fragment(
-            in: original,
-            tokens: originalTokens,
-            lower: prefixCount,
-            upper: originalTokens.count - suffixCount
+            in: original, tokens: originalTokens,
+            lower: oldRange.lowerBound, upper: oldRange.upperBound
         )
         let replacementFragment = fragment(
-            in: final,
-            tokens: finalTokens,
-            lower: prefixCount,
-            upper: finalTokens.count - suffixCount
+            in: final, tokens: finalTokens,
+            lower: newRange.lowerBound, upper: newRange.upperBound
         )
-
         let originalValue = originalFragment.text.trimmingCharacters(in: .whitespacesAndNewlines)
         let replacementValue = replacementFragment.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !originalValue.isEmpty || !replacementValue.isEmpty else { return [] }
+        guard !originalValue.isEmpty || !replacementValue.isEmpty else { return nil }
 
-        let sentenceRange = containingSentenceRange(
-            in: final,
-            around: replacementFragment.range.lowerBound
-        )
+        let sentenceRange = containingSentenceRange(in: final, around: replacementFragment.range.lowerBound)
         let before = bounded(String(final[sentenceRange.lowerBound..<replacementFragment.range.lowerBound]))
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let after = bounded(String(final[replacementFragment.range.upperBound..<sentenceRange.upperBound]))
+        let after = String(String(final[replacementFragment.range.upperBound..<sentenceRange.upperBound])
+            .prefix(maximumContextCharacters))
             .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return [CorrectionHunk(
+        return CorrectionHunk(
             original: originalValue,
             replacement: replacementValue,
             contextBefore: before,
             contextAfter: after
-        )]
+        )
     }
 
     private func tokens(in text: String) -> [Token] {

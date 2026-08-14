@@ -96,4 +96,14 @@ final class CorrectionExtractorTests: XCTestCase {
 
         XCTAssertLessThanOrEqual(result.first?.contextBefore.count ?? .max, 40)
     }
+
+    func testSeparatesDistantCorrectionsIntoIndependentHunks() {
+        let result = CorrectionExtractor().extract(
+            original: "Use Cloud Flower for the service and React Native for the app.",
+            final: "Use Cloudflare for the service and ReactNative for the app."
+        )
+
+        XCTAssertEqual(result.map(\.original), ["Cloud Flower", "React Native"])
+        XCTAssertEqual(result.map(\.replacement), ["Cloudflare", "ReactNative"])
+    }
 }

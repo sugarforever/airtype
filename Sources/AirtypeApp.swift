@@ -228,8 +228,10 @@ class AppState: ObservableObject {
     let elevenlabsService = ElevenLabsService()
     let mistralTranscriptionService = MistralTranscriptionService()
     let mlxTranscriptionService = MLXTranscriptionService()
-    let enhancementService = EnhancementService()
-    let textInserter = TextInserter()
+    let enhancementService: EnhancementService
+    let textInserter: TextInserter
+    let textEditTracker: TextEditTracker
+    private let correctionLearningService: CorrectionLearningService?
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
     private var streamingCapture: StreamingAudioCapture?
@@ -252,6 +254,18 @@ class AppState: ObservableObject {
     private var providerObserver: AnyCancellable?
 
     init() {
+        let learningService = try? CorrectionLearningService.makeDefault()
+        let accessibilityClient = AccessibilityTextClient()
+        correctionLearningService = learningService
+        enhancementService = EnhancementService(learningService: learningService)
+        textInserter = TextInserter(accessibilityClient: accessibilityClient)
+        textEditTracker = TextEditTracker(client: accessibilityClient) { original, final, bundleID in
+            await learningService?.learn(
+                original: original,
+                final: final,
+                applicationBundleID: bundleID
+            )
+        }
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
         Task { @MainActor in
@@ -364,6 +378,7 @@ class AppState: ObservableObject {
 
     func startRecording() async {
         debugLog("startRecording called")
+        textEditTracker.finishForRecordingStart()
         guard !isRecording && !isProcessing else {
             debugLog("Already recording or processing, skipping")
             return
@@ -502,33 +517,23 @@ class AppState: ObservableObject {
 
             // Insert (bail out if cancelled while enhancing)
             try Task.checkCancellation()
-            if settings.previewBeforeInsert {
-                processingStage = "Ready to apply"
-                partialTranscription = finalText
-                processingProgress = 1.0
-                isProcessing = false
-                lastError = nil
-                lastNotice = nil
-            } else {
-                processingProgress = 0.95
-                if !finalText.isEmpty {
-                    try await textInserter.insert(text: finalText)
-                    TranscriptionHistory.shared.save(text: finalText, inserted: true)
-                    debugLog("Inserted text (\(finalText.count) chars)")
-                }
-                streamOutput("Done!\n")
+            processingProgress = 0.95
+            if !finalText.isEmpty {
+                try await insertAndTrack(text: finalText)
+                debugLog("Inserted text (\(finalText.count) chars)")
+            }
+            streamOutput("Done!\n")
 
-                lastError = nil
-                lastNotice = nil
-                isProcessing = false
-                processingStage = ""
-                processingProgress = 0.0
-                partialTranscription = ""
+            lastError = nil
+            lastNotice = nil
+            isProcessing = false
+            processingStage = ""
+            processingProgress = 0.0
+            partialTranscription = ""
 
-                if settings.showFloatingWindow {
-                    let manager = floatingWindowManager
-                    Task { try? await Task.sleep(nanoseconds: 500_000_000); manager.hide() }
-                }
+            if settings.showFloatingWindow {
+                let manager = floatingWindowManager
+                Task { try? await Task.sleep(nanoseconds: 500_000_000); manager.hide() }
             }
         } catch is CancellationError {
             debugLog("Streaming processing cancelled")
@@ -684,46 +689,29 @@ class AppState: ObservableObject {
                 processingProgress = 0.9
             }
 
-            // Step 3: Insert at cursor (or preview if enabled)
+            // Step 3: Insert at cursor and optionally observe subsequent edits.
             try Task.checkCancellation()
-            if settings.previewBeforeInsert {
-                // Store for preview - user will manually apply
-                debugLog("Preview mode - waiting for user to apply")
-                processingStage = "Ready to apply"
-                streamOutput("\n--- Ready to apply (preview mode) ---")
-                partialTranscription = finalText
-                processingProgress = 1.0
-                isProcessing = false
-                // Don't clear partialTranscription - user needs to see it
-                lastError = nil
-                lastNotice = nil
-            } else {
-                // Direct insert
-                debugLog("Inserting text...")
-                streamOutput("\n--- Inserting at cursor ---")
-                processingProgress = 0.95
-                try await textInserter.insert(text: finalText)
-                TranscriptionHistory.shared.save(text: finalText, inserted: true)
-                debugLog("Text inserted successfully")
-                streamOutput("Done!\n")
-                processingProgress = 1.0
+            debugLog("Inserting text...")
+            streamOutput("\n--- Inserting at cursor ---")
+            processingProgress = 0.95
+            try await insertAndTrack(text: finalText)
+            debugLog("Text inserted successfully")
+            streamOutput("Done!\n")
+            processingProgress = 1.0
 
-                lastError = nil
-                lastNotice = nil
+            lastError = nil
+            lastNotice = nil
 
-                // Cleanup
-                isProcessing = false
-                processingStage = ""
-                processingProgress = 0.0
-                partialTranscription = ""
-                transcriptionChunkInfo = ""
+            isProcessing = false
+            processingStage = ""
+            processingProgress = 0.0
+            partialTranscription = ""
+            transcriptionChunkInfo = ""
 
-                // Hide floating window after successful insert (with delay for feedback)
-                if settings.showFloatingWindow {
-                    Task {
-                        try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 second
-                        floatingWindowManager.hide()
-                    }
+            if settings.showFloatingWindow {
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    floatingWindowManager.hide()
                 }
             }
         } catch is CancellationError {
@@ -769,6 +757,26 @@ class AppState: ObservableObject {
         isRecording = false
         recordingStartTime = nil
         partialTranscription = ""
+    }
+
+    private func insertAndTrack(text: String) async throws {
+        do {
+            let outcome = try await textInserter.insert(text: text)
+            if case .accessibility(let insertion) = outcome {
+                if let insertionToTrack = CorrectionLearningFlow.insertionToTrack(
+                    learningEnabled: settings.learnFromCorrections,
+                    outcome: outcome
+                ) {
+                    textEditTracker.begin(insertionToTrack)
+                } else {
+                    textEditTracker.discard(insertion)
+                }
+            }
+            TranscriptionHistory.shared.save(text: text, inserted: true)
+        } catch {
+            TranscriptionHistory.shared.save(text: text, inserted: false)
+            throw error
+        }
     }
 
     func cancelProcessing() {

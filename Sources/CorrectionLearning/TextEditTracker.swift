@@ -49,6 +49,10 @@ public final class TextEditTracker {
         finishActiveSession()
     }
 
+    public func discard(_ insertion: AccessibilityInsertion) {
+        client.stopObserving(sessionID: insertion.sessionID)
+    }
+
     private func finishActiveSession() {
         guard let session = activeSession else { return }
         activeSession = nil

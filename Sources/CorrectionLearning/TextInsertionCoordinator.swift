@@ -6,6 +6,18 @@ public enum TextInsertionOutcome: Equatable, Sendable {
     case paste
 }
 
+public enum CorrectionLearningFlow {
+    public static func insertionToTrack(
+        learningEnabled: Bool,
+        outcome: TextInsertionOutcome
+    ) -> AccessibilityInsertion? {
+        guard learningEnabled, case .accessibility(let insertion) = outcome else {
+            return nil
+        }
+        return insertion
+    }
+}
+
 @MainActor
 public final class TextInsertionCoordinator {
     public typealias PasteHandler = @MainActor (String) async throws -> Void

@@ -317,7 +317,8 @@ class Settings: ObservableObject {
         // Floating window
         static let showFloatingWindow = "show_floating_window"
         static let floatingWindowPosition = "floating_window_position"
-        static let previewBeforeInsert = "preview_before_insert"
+        static let learnFromCorrections = "learn_from_corrections"
+        static let legacyPreviewBeforeInsert = "preview_before_insert"
         static let hasCompletedSetup = "has_completed_setup"
     }
 
@@ -426,8 +427,8 @@ class Settings: ObservableObject {
         didSet { defaults.set(floatingWindowPosition.rawValue, forKey: Keys.floatingWindowPosition) }
     }
 
-    @Published var previewBeforeInsert: Bool {
-        didSet { defaults.set(previewBeforeInsert, forKey: Keys.previewBeforeInsert) }
+    @Published var learnFromCorrections: Bool {
+        didSet { defaults.set(learnFromCorrections, forKey: Keys.learnFromCorrections) }
     }
 
     @Published var hasCompletedSetup: Bool {
@@ -742,7 +743,11 @@ class Settings: ObservableObject {
         self.showFloatingWindow = defaults.object(forKey: Keys.showFloatingWindow) as? Bool ?? true
         let positionRaw = defaults.string(forKey: Keys.floatingWindowPosition) ?? FloatingWindowPosition.bottomRight.rawValue
         self.floatingWindowPosition = FloatingWindowPosition(rawValue: positionRaw) ?? .bottomRight
-        self.previewBeforeInsert = defaults.object(forKey: Keys.previewBeforeInsert) as? Bool ?? false
+        if let savedLearningPreference = defaults.object(forKey: Keys.learnFromCorrections) as? Bool {
+            self.learnFromCorrections = savedLearningPreference
+        } else {
+            self.learnFromCorrections = defaults.object(forKey: Keys.legacyPreviewBeforeInsert) as? Bool ?? false
+        }
         self.hasCompletedSetup = defaults.object(forKey: Keys.hasCompletedSetup) as? Bool ?? false
     }
 

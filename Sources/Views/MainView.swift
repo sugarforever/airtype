@@ -539,20 +539,24 @@ struct MainView: View {
                         .labelsHidden()
                     }
 
-                    SettingsCardDivider()
-
-                    Toggle(isOn: $settings.previewBeforeInsert) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Confirm before inserting")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Theme.textPrimary)
-                            Text("Review transcription before inserting at cursor")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                    .toggleStyle(.switch)
                 }
+            }
+
+            SettingsCard {
+                Toggle(isOn: $settings.learnFromCorrections) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Learn from my corrections")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Insert text immediately and learn subsequent edits locally")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text("Relevant examples are sent only to your configured Enhancement provider")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                }
+                .toggleStyle(.switch)
             }
         }
     }

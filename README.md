@@ -34,7 +34,8 @@ Airtype runs in the menu bar. Keyboard shortcuts can be changed in Settings.
 
 - Fully local transcription with no API key required
 - Push-to-talk and toggle-recording shortcuts
-- Optional preview and editing before text is inserted
+- Direct text insertion at the active cursor through macOS Accessibility, with paste fallback
+- Optional local learning from subsequent word and phrase corrections
 - A floating panel for recording and transcription status
 - Up to 50 recent transcriptions stored locally
 - Optional AI cleanup for grammar, punctuation, and formatting
@@ -50,6 +51,8 @@ Airtype runs in the menu bar. Keyboard shortcuts can be changed in Settings.
 Local transcription is the simplest private setup, but Airtype also supports cloud transcription through **OpenAI**, **ElevenLabs**, **Mistral**, and **Doubao**. These providers require their own credentials and send audio to the selected service.
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
+
+When **Learn from my corrections** is enabled, Airtype stores compact before/after correction samples in a local SQLite database. Retrieval and diffing happen off the insertion path. Only a small set of relevant examples is included when a later transcription is sent to the configured Enhancement provider; the correction database itself never leaves the Mac.
 
 ## Development
 
