@@ -14,6 +14,7 @@ final class MainWindowController {
     private let dashboardModel = DashboardModel()
     private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
     var hotkeyManager: HotkeyManager?
+    var vocabularyModel: VocabularyPageModel?
 
     func show(destination: DashboardDestination? = nil) {
         debugLog("MainWindowController.show() called")
@@ -36,11 +37,17 @@ final class MainWindowController {
             return
         }
 
+        guard let vocabularyModel = vocabularyModel else {
+            debugLog("ERROR: vocabularyModel not set on MainWindowController")
+            return
+        }
+
         let mainView = MainView(
             settings: Settings.shared,
             hotkeyManager: hotkeyManager,
             dashboardModel: dashboardModel,
-            historyModel: historyModel
+            historyModel: historyModel,
+            vocabularyModel: vocabularyModel
         )
 
         let hostingView = NSHostingView(rootView: mainView)

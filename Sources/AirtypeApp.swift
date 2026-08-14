@@ -236,6 +236,7 @@ class AppState: ObservableObject {
     let textEditTracker: TextEditTracker
     private let correctionLearningService: CorrectionLearningService?
     let vocabularyRepository: VocabularyRepository?
+    let vocabularyPageModel: VocabularyPageModel
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
     private var streamingCapture: StreamingAudioCapture?
@@ -268,6 +269,10 @@ class AppState: ObservableObject {
         let accessibilityClient = AccessibilityTextClient()
         correctionLearningService = learningService
         self.vocabularyRepository = vocabularyRepository
+        vocabularyPageModel = VocabularyPageModel(
+            repository: vocabularyRepository,
+            learningService: learningService
+        )
         enhancementService = EnhancementService(
             learningService: learningService,
             vocabularyRepository: vocabularyRepository
@@ -282,6 +287,7 @@ class AppState: ObservableObject {
         }
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
+        MainWindowController.shared.vocabularyModel = vocabularyPageModel
         Task { @MainActor in
             if settings.hasCompletedSetup {
                 MainWindowController.shared.show()

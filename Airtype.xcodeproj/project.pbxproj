@@ -60,6 +60,9 @@
 		A100310000000000000000031 /* DashboardSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200310000000000000000031 /* DashboardSidebar.swift */; };
 		A100320000000000000000032 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200320000000000000000032 /* HomeView.swift */; };
 		A100330000000000000000033 /* AirtypeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200330000000000000000033 /* AirtypeSettingsView.swift */; };
+		A100340000000000000000034 /* VocabularyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200340000000000000000034 /* VocabularyView.swift */; };
+		A100350000000000000000035 /* ProperNounTagWall.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200350000000000000000035 /* ProperNounTagWall.swift */; };
+		A100360000000000000000036 /* LearnedCorrectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200360000000000000000036 /* LearnedCorrectionsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -116,6 +119,9 @@
 		A200310000000000000000031 /* DashboardSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSidebar.swift; sourceTree = "<group>"; };
 		A200320000000000000000032 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A200330000000000000000033 /* AirtypeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirtypeSettingsView.swift; sourceTree = "<group>"; };
+		A200340000000000000000034 /* VocabularyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyView.swift; sourceTree = "<group>"; };
+		A200350000000000000000035 /* ProperNounTagWall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProperNounTagWall.swift; sourceTree = "<group>"; };
+		A200360000000000000000036 /* LearnedCorrectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnedCorrectionsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -172,6 +178,9 @@
 				A200310000000000000000031 /* DashboardSidebar.swift */,
 				A200320000000000000000032 /* HomeView.swift */,
 				A200330000000000000000033 /* AirtypeSettingsView.swift */,
+				A200340000000000000000034 /* VocabularyView.swift */,
+				A200350000000000000000035 /* ProperNounTagWall.swift */,
+				A200360000000000000000036 /* LearnedCorrectionsView.swift */,
 				A20004000000000000000004 /* MenuBarView.swift */,
 				A20005000000000000000005 /* SettingsView.swift */,
 				A20006000000000000000006 /* FloatingView.swift */,
@@ -347,6 +356,9 @@
 				A100310000000000000000031 /* DashboardSidebar.swift in Sources */,
 				A100320000000000000000032 /* HomeView.swift in Sources */,
 				A100330000000000000000033 /* AirtypeSettingsView.swift in Sources */,
+				A100340000000000000000034 /* VocabularyView.swift in Sources */,
+				A100350000000000000000035 /* ProperNounTagWall.swift in Sources */,
+				A100360000000000000000036 /* LearnedCorrectionsView.swift in Sources */,
 				A10004000000000000000004 /* MenuBarView.swift in Sources */,
 				A10005000000000000000005 /* SettingsView.swift in Sources */,
 				A10006000000000000000006 /* FloatingView.swift in Sources */,

@@ -23,6 +23,7 @@ struct MainView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     @Bindable var dashboardModel: DashboardModel
     let historyModel: HistoryPageModel
+    let vocabularyModel: VocabularyPageModel
 
     var body: some View {
         HStack(spacing: 0) {
@@ -55,40 +56,12 @@ struct MainView: View {
         case .history:
             TranscriptionHistoryView(model: historyModel)
         case .vocabulary:
-            DashboardPlaceholderView(
-                title: "Vocabulary",
-                message: "Your proper nouns and learned corrections will appear here.",
-                systemImage: "text.book.closed"
-            )
+            VocabularyView(model: vocabularyModel)
         case .settings:
             AirtypeSettingsView(
                 settings: settings,
                 hotkeyManager: hotkeyManager
             )
         }
-    }
-}
-
-private struct DashboardPlaceholderView: View {
-    let title: String
-    let message: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 32))
-                .foregroundStyle(Theme.textSecondary)
-            Text(title)
-                .font(.title2)
-                .bold()
-                .foregroundStyle(Theme.textPrimary)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(Theme.textSecondary)
-        }
-        .multilineTextAlignment(.center)
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

@@ -1,0 +1,153 @@
+import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
+
+struct VocabularyView: View {
+    @Bindable var model: VocabularyPageModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VocabularyHeader(model: model)
+
+            Divider()
+                .overlay(Theme.border)
+
+            if let localErrorText = model.localErrorText {
+                VocabularyErrorState(message: localErrorText)
+            }
+
+            tabContent
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            await model.load()
+        }
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch model.selectedTab {
+        case .properNouns:
+            ProperNounTagWall(
+                terms: model.visibleTerms,
+                totalTermCount: model.terms.count,
+                isSearching: !model.query.isEmpty,
+                termText: $model.termText,
+                validationText: model.validationText,
+                isBusy: model.isLoading,
+                onAdd: addTerm,
+                onDelete: deleteTerm
+            )
+        case .learnedCorrections:
+            LearnedCorrectionsView(
+                corrections: model.visibleCorrections,
+                totalCorrectionCount: model.corrections.count,
+                isSearching: !model.query.isEmpty,
+                isBusy: model.isLoading,
+                onDelete: deleteCorrection
+            )
+        }
+    }
+
+    private func addTerm() async -> Bool {
+        await model.addTerm()
+        return model.validationText == nil && model.localErrorText == nil
+    }
+
+    private func deleteTerm(id: UUID) async {
+        await model.deleteTerm(id: id)
+    }
+
+    private func deleteCorrection(id: UUID) async {
+        await model.deleteCorrection(id: id)
+    }
+}
+
+private struct VocabularyHeader: View {
+    @Bindable var model: VocabularyPageModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vocabulary")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Names and corrections Airtype uses to improve your text")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Label("All vocabulary data remains on this Mac.", systemImage: "lock.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+
+            HStack(spacing: 12) {
+                Picker("Vocabulary section", selection: $model.selectedTab) {
+                    ForEach(VocabularyTab.allCases) { tab in
+                        Text(tab.title)
+                            .tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 320)
+
+                Spacer(minLength: 0)
+
+                TextField(model.selectedTab.searchPrompt, text: $model.query)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 220)
+
+                ProgressView()
+                    .controlSize(.small)
+                    .opacity(model.isLoading ? 1 : 0)
+                    .accessibilityHidden(!model.isLoading)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 20)
+    }
+}
+
+private struct VocabularyErrorState: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Theme.statusOrange)
+
+            Text(message)
+                .foregroundStyle(Theme.textPrimary)
+
+            Spacer()
+        }
+        .font(.system(size: 11))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Theme.statusOrange.opacity(0.1), in: .rect(cornerRadius: 8))
+        .padding(.horizontal, 28)
+        .padding(.top, 16)
+    }
+}
+
+private extension VocabularyTab {
+    var title: String {
+        switch self {
+        case .properNouns: "Proper Nouns"
+        case .learnedCorrections: "Learned Corrections"
+        }
+    }
+
+    var searchPrompt: String {
+        switch self {
+        case .properNouns: "Search proper nouns"
+        case .learnedCorrections: "Search corrections"
+        }
+    }
+}
