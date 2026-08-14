@@ -29,20 +29,22 @@ class MainWindowController {
         let mainView = MainView(settings: Settings.shared, hotkeyManager: hotkeyManager)
 
         let hostingView = NSHostingView(rootView: mainView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 520, height: 700)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 900, height: 680)
 
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 700),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 680),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
 
         newWindow.title = "Airtype"
         newWindow.contentView = hostingView
+        newWindow.setContentSize(NSSize(width: 900, height: 680))
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         newWindow.level = .normal
+        newWindow.minSize = NSSize(width: 760, height: 560)
 
         let delegate = MainWindowDelegate { [weak self] in
             self?.window = nil
