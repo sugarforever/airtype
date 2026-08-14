@@ -3,8 +3,20 @@ import Foundation
 public struct EnhancementPromptBuilder: Sendable {
     public init() {}
 
-    public func prompt(examples: [CorrectionPromptExample]) -> String {
-        guard !examples.isEmpty else { return Self.basePrompt }
+    public func prompt(
+        examples: [CorrectionPromptExample],
+        vocabularySection: String
+    ) -> String {
+        var localSections: [String] = []
+        if !vocabularySection.isEmpty {
+            localSections.append(vocabularySection)
+        }
+
+        guard !examples.isEmpty else {
+            guard !localSections.isEmpty else { return Self.basePrompt }
+            return Self.basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
+        }
+
         let rendered = examples.enumerated().map { position, example in
             """
             \(position + 1).
@@ -14,14 +26,14 @@ public struct EnhancementPromptBuilder: Sendable {
             """
         }.joined(separator: "\n")
 
-        return Self.basePrompt + """
-
-
+        localSections.append("""
         LOCAL USER CORRECTION EXAMPLES:
         These examples were learned from this user's local edits. Apply a correction only when the current context matches; do not treat it as a global replacement rule.
 
         \(rendered)
-        """
+        """)
+
+        return Self.basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
     }
 
     public static let basePrompt = """

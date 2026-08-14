@@ -2,9 +2,9 @@ import XCTest
 @testable import CorrectionLearningCore
 
 final class EnhancementPromptTests: XCTestCase {
-    func testNoExamplesPreservesBasePrompt() {
+    func testNoTermsAndNoExamplesPreserveExactBasePrompt() {
         XCTAssertEqual(
-            EnhancementPromptBuilder().prompt(examples: []),
+            EnhancementPromptBuilder().prompt(examples: [], vocabularySection: ""),
             EnhancementPromptBuilder.basePrompt
         )
     }
@@ -18,7 +18,10 @@ final class EnhancementPromptTests: XCTestCase {
             contextAfter: "Workers"
         )
 
-        let prompt = EnhancementPromptBuilder().prompt(examples: [example])
+        let prompt = EnhancementPromptBuilder().prompt(
+            examples: [example],
+            vocabularySection: ""
+        )
 
         XCTAssertTrue(prompt.contains("LOCAL USER CORRECTION EXAMPLES"))
         XCTAssertTrue(prompt.contains("Original: Cloud Flower"))
@@ -43,11 +46,34 @@ final class EnhancementPromptTests: XCTestCase {
             contextAfter: ""
         )
 
-        let prompt = EnhancementPromptBuilder().prompt(examples: [first, second])
+        let prompt = EnhancementPromptBuilder().prompt(
+            examples: [first, second],
+            vocabularySection: ""
+        )
 
         XCTAssertLessThan(
             prompt.range(of: "Original: first wrong")!.lowerBound,
             prompt.range(of: "Original: second wrong")!.lowerBound
+        )
+    }
+
+    func testVocabularyAppearsBeforeContextualCorrectionExamples() {
+        let example = CorrectionPromptExample(
+            sampleID: UUID(),
+            original: "Cloud Flower",
+            replacement: "Cloudflare",
+            contextBefore: "",
+            contextAfter: ""
+        )
+
+        let prompt = EnhancementPromptBuilder().prompt(
+            examples: [example],
+            vocabularySection: "LOCAL USER VOCABULARY:\n- Cloudflare"
+        )
+
+        XCTAssertLessThan(
+            prompt.range(of: "LOCAL USER VOCABULARY")!.lowerBound,
+            prompt.range(of: "LOCAL USER CORRECTION EXAMPLES")!.lowerBound
         )
     }
 }

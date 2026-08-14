@@ -1,6 +1,7 @@
 import Foundation
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
+import VocabularyCore
 #endif
 
 /// OpenAI GPT service for speech-to-text error correction
@@ -8,16 +9,22 @@ import CorrectionLearningCore
 class EnhancementService {
     private let settings: Settings
     private let learningService: CorrectionLearningService?
+    private let vocabularyRepository: VocabularyRepository?
     private let promptBuilder: EnhancementPromptBuilder
+    private let vocabularyPromptBuilder: VocabularyPromptBuilder
 
     init(
         settings: Settings = .shared,
         learningService: CorrectionLearningService? = nil,
-        promptBuilder: EnhancementPromptBuilder = EnhancementPromptBuilder()
+        vocabularyRepository: VocabularyRepository? = nil,
+        promptBuilder: EnhancementPromptBuilder = EnhancementPromptBuilder(),
+        vocabularyPromptBuilder: VocabularyPromptBuilder = VocabularyPromptBuilder()
     ) {
         self.settings = settings
         self.learningService = learningService
+        self.vocabularyRepository = vocabularyRepository
         self.promptBuilder = promptBuilder
+        self.vocabularyPromptBuilder = vocabularyPromptBuilder
     }
 
     /// Correct transcription errors using GPT with timeout and error handling
@@ -56,11 +63,19 @@ class EnhancementService {
         // GPT-5-mini and nano don't support custom temperature
         let supportsTemperature = !enhancementModel.contains("mini") && !enhancementModel.contains("nano")
         let correctionExamples = await learningService?.examples(for: text) ?? []
+        let vocabularyTerms = await vocabularyRepository?.promptTerms(tokenBudget: 300) ?? []
+        let vocabularySection = vocabularyPromptBuilder.section(terms: vocabularyTerms)
 
         let requestBody = ChatCompletionRequest(
             model: enhancementModel,
             messages: [
-                ChatMessage(role: systemRole, content: promptBuilder.prompt(examples: correctionExamples)),
+                ChatMessage(
+                    role: systemRole,
+                    content: promptBuilder.prompt(
+                        examples: correctionExamples,
+                        vocabularySection: vocabularySection
+                    )
+                ),
                 ChatMessage(role: "user", content: text)
             ],
             temperature: supportsTemperature ? 0.1 : nil,

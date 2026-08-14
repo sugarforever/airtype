@@ -232,6 +232,7 @@ class AppState: ObservableObject {
     let textInserter: TextInserter
     let textEditTracker: TextEditTracker
     private let correctionLearningService: CorrectionLearningService?
+    let vocabularyRepository: VocabularyRepository?
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
     private var streamingCapture: StreamingAudioCapture?
@@ -254,10 +255,20 @@ class AppState: ObservableObject {
     private var providerObserver: AnyCancellable?
 
     init() {
-        let learningService = try? CorrectionLearningService.makeDefault()
+        let databaseURL = try? Self.applicationSupportDatabaseURL()
+        let learningService = databaseURL.flatMap {
+            try? CorrectionLearningService(store: SQLiteCorrectionStore(url: $0))
+        }
+        let vocabularyRepository = databaseURL.flatMap {
+            try? VocabularyRepository(store: SQLiteVocabularyStore(url: $0))
+        }
         let accessibilityClient = AccessibilityTextClient()
         correctionLearningService = learningService
-        enhancementService = EnhancementService(learningService: learningService)
+        self.vocabularyRepository = vocabularyRepository
+        enhancementService = EnhancementService(
+            learningService: learningService,
+            vocabularyRepository: vocabularyRepository
+        )
         textInserter = TextInserter(accessibilityClient: accessibilityClient)
         textEditTracker = TextEditTracker(client: accessibilityClient) { original, final, bundleID in
             await learningService?.learn(
@@ -282,6 +293,18 @@ class AppState: ObservableObject {
                 self?.preconnectStreamingIfNeeded()
             }
         }
+    }
+
+    private static func applicationSupportDatabaseURL() throws -> URL {
+        let applicationSupport = try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return applicationSupport
+            .appendingPathComponent("Airtype", isDirectory: true)
+            .appendingPathComponent("corrections.sqlite3")
     }
 
     private func setupHotkeyCallbacks() {

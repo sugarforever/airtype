@@ -53,6 +53,7 @@
 		A1002A0000000000000000002A /* VocabularyTerm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002A0000000000000000002A /* VocabularyTerm.swift */; };
 		A1002B0000000000000000002B /* VocabularyRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002B0000000000000000002B /* VocabularyRepository.swift */; };
 		A1002C0000000000000000002C /* SQLiteVocabularyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */; };
+		A1002D0000000000000000002D /* VocabularyPromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002D0000000000000000002D /* VocabularyPromptBuilder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -102,6 +103,7 @@
 		A2002A0000000000000000002A /* VocabularyTerm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyTerm.swift; sourceTree = "<group>"; };
 		A2002B0000000000000000002B /* VocabularyRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyRepository.swift; sourceTree = "<group>"; };
 		A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteVocabularyStore.swift; sourceTree = "<group>"; };
+		A2002D0000000000000000002D /* VocabularyPromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyPromptBuilder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -222,6 +224,7 @@
 				A2002A0000000000000000002A /* VocabularyTerm.swift */,
 				A2002B0000000000000000002B /* VocabularyRepository.swift */,
 				A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */,
+				A2002D0000000000000000002D /* VocabularyPromptBuilder.swift */,
 			);
 			path = VocabularyCore;
 			sourceTree = "<group>";
@@ -350,6 +353,7 @@
 				A1002A0000000000000000002A /* VocabularyTerm.swift in Sources */,
 				A1002B0000000000000000002B /* VocabularyRepository.swift in Sources */,
 				A1002C0000000000000000002C /* SQLiteVocabularyStore.swift in Sources */,
+				A1002D0000000000000000002D /* VocabularyPromptBuilder.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
