@@ -4,7 +4,7 @@
 
 **Goal:** Replace Airtype's compact settings-only window with a minimal four-destination dashboard that exposes full-text history, learned corrections, and a local proper-noun vocabulary used by Enhancement.
 
-**Architecture:** Add an isolated `VocabularyCore` Swift package target backed by a new table in the existing SQLite database, extend correction learning with explicit browse/delete APIs, and place both behind a main-actor dashboard model. Split the SwiftUI window into a sidebar container plus focused Home, History, Vocabulary, and Settings views; keep all expensive work off view rendering and the transcription/insertion path.
+**Architecture:** Add isolated `VocabularyCore` and `DashboardCore` Swift package targets, back vocabulary with a new table in the existing SQLite database, extend correction learning with explicit browse/delete APIs, and place both behind main-actor dashboard models. Split the SwiftUI window into a sidebar container plus focused Home, History, Vocabulary, and Settings views; keep all expensive work off view rendering and the transcription/insertion path.
 
 **Tech Stack:** Swift 6, SwiftUI, AppKit, Observation, Foundation, SQLite3, XCTest, macOS 14+
 
@@ -309,17 +309,18 @@ git commit -m "feat: guide enhancement with local vocabulary"
 ### Task 5: Dashboard models and history behavior
 
 **Files:**
-- Modify: `Sources/Services/TranscriptionHistory.swift`
-- Create: `Sources/Models/DashboardModel.swift`
-- Create: `Sources/Models/HistoryPageModel.swift`
-- Create: `Sources/Models/VocabularyPageModel.swift`
-- Test: `Tests/AirtypeTests/DashboardModelTests.swift`
-- Test: `Tests/AirtypeTests/HistoryPageModelTests.swift`
-- Test: `Tests/AirtypeTests/VocabularyPageModelTests.swift`
+- Move: `Sources/Services/TranscriptionHistory.swift` → `Sources/DashboardCore/TranscriptionHistory.swift`
+- Create: `Sources/DashboardCore/DashboardModel.swift`
+- Create: `Sources/DashboardCore/HistoryPageModel.swift`
+- Create: `Sources/DashboardCore/VocabularyPageModel.swift`
+- Test: `Tests/DashboardCoreTests/DashboardModelTests.swift`
+- Test: `Tests/DashboardCoreTests/HistoryPageModelTests.swift`
+- Test: `Tests/DashboardCoreTests/VocabularyPageModelTests.swift`
+- Modify: `Package.swift`
 
 **Interfaces:**
 - Consumes: `TranscriptionHistory`, `VocabularyRepository`, and `CorrectionLearningService`.
-- Produces: `DashboardDestination`, `DashboardModel`, and main-actor observable page models with stable snapshots and actions.
+- Produces: a separate `DashboardCore` library target containing `DashboardDestination`, `DashboardModel`, and main-actor observable page models with stable snapshots and actions. The target depends on `VocabularyCore` and `CorrectionLearningCore`, not SwiftUI.
 
 - [ ] **Step 1: Write failing model tests**
 
@@ -344,13 +345,13 @@ Also test navigation defaults to Home, clear-history confirmation state, copied-
 
 - [ ] **Step 2: Run model tests and verify failure**
 
-Run: `AIRTYPE_CORE_TESTS=1 swift test --filter PageModelTests`
+Add `DashboardCore` and `DashboardCoreTests` targets to `Package.swift`, then run: `AIRTYPE_CORE_TESTS=1 swift test --filter PageModelTests`
 
 Expected: FAIL because the models do not exist.
 
 - [ ] **Step 3: Make history observable without changing retention**
 
-Add a `Notification.Name.transcriptionHistoryDidChange`. Post it after `save` and `clear`. Keep `maxEntries = 50` and existing Codable compatibility. Add dependency-injectable UserDefaults suite/key parameters for tests while retaining `.shared` defaults.
+Move the Foundation-only service into `DashboardCore` and add a `Notification.Name.transcriptionHistoryDidChange`. Post it after `save` and `clear`. Keep `maxEntries = 50` and existing Codable compatibility. Add dependency-injectable UserDefaults suite/key parameters for tests while retaining `.shared` defaults. Add the moved file to the Xcode app target and import `DashboardCore` under `#if SWIFT_PACKAGE` at app call sites.
 
 - [ ] **Step 4: Implement focused main-actor observable models**
 
@@ -379,7 +380,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit dashboard behavior models**
 
 ```bash
-git add Sources/Services/TranscriptionHistory.swift Sources/Models/DashboardModel.swift Sources/Models/HistoryPageModel.swift Sources/Models/VocabularyPageModel.swift Tests/AirtypeTests/DashboardModelTests.swift Tests/AirtypeTests/HistoryPageModelTests.swift Tests/AirtypeTests/VocabularyPageModelTests.swift
+git add Package.swift Sources/Services/TranscriptionHistory.swift Sources/DashboardCore Tests/DashboardCoreTests Airtype.xcodeproj/project.pbxproj
 git commit -m "feat: add dashboard page models"
 ```
 
