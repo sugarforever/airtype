@@ -17,7 +17,8 @@ var targets: [Target] = [
     ),
     .target(
         name: "VocabularyCore",
-        path: "Sources/VocabularyCore"
+        path: "Sources/VocabularyCore",
+        linkerSettings: [.linkedLibrary("sqlite3")]
     ),
     .testTarget(
         name: "AirtypeTests",

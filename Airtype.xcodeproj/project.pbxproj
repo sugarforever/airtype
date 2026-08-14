@@ -50,6 +50,9 @@
 		A10027000000000000000027 /* AccessibilityTextClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027000000000000000027 /* AccessibilityTextClient.swift */; };
 		A10028000000000000000028 /* TextInsertionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20028000000000000000028 /* TextInsertionCoordinator.swift */; };
 		A10029000000000000000029 /* TextEditTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20029000000000000000029 /* TextEditTracker.swift */; };
+		A1002A0000000000000000002A /* VocabularyTerm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002A0000000000000000002A /* VocabularyTerm.swift */; };
+		A1002B0000000000000000002B /* VocabularyRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002B0000000000000000002B /* VocabularyRepository.swift */; };
+		A1002C0000000000000000002C /* SQLiteVocabularyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -96,6 +99,9 @@
 		A20016000000000000000016 /* StreamingTranscriptionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingTranscriptionProtocol.swift; sourceTree = "<group>"; };
 		A20017000000000000000017 /* StreamingAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingAudioCapture.swift; sourceTree = "<group>"; };
 		A20018000000000000000018 /* DoubaoStreamingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubaoStreamingService.swift; sourceTree = "<group>"; };
+		A2002A0000000000000000002A /* VocabularyTerm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyTerm.swift; sourceTree = "<group>"; };
+		A2002B0000000000000000002B /* VocabularyRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyRepository.swift; sourceTree = "<group>"; };
+		A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteVocabularyStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +135,7 @@
 				A20013000000000000000013 /* Assets.xcassets */,
 				A50000000000000000000003 /* Models */,
 				A50000000000000000000008 /* CorrectionLearning */,
+				A50000000000000000000009 /* VocabularyCore */,
 				A50000000000000000000004 /* Views */,
 				A50000000000000000000005 /* Services */,
 			);
@@ -207,6 +214,16 @@
 				A20029000000000000000029 /* TextEditTracker.swift */,
 			);
 			path = CorrectionLearning;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000009 /* VocabularyCore */ = {
+			isa = PBXGroup;
+			children = (
+				A2002A0000000000000000002A /* VocabularyTerm.swift */,
+				A2002B0000000000000000002B /* VocabularyRepository.swift */,
+				A2002C0000000000000000002C /* SQLiteVocabularyStore.swift */,
+			);
+			path = VocabularyCore;
 			sourceTree = "<group>";
 		};
 		A50000000000000000000006 /* Products */ = {
@@ -330,6 +347,9 @@
 				A10027000000000000000027 /* AccessibilityTextClient.swift in Sources */,
 				A10028000000000000000028 /* TextInsertionCoordinator.swift in Sources */,
 				A10029000000000000000029 /* TextEditTracker.swift in Sources */,
+				A1002A0000000000000000002A /* VocabularyTerm.swift in Sources */,
+				A1002B0000000000000000002B /* VocabularyRepository.swift in Sources */,
+				A1002C0000000000000000002C /* SQLiteVocabularyStore.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,
