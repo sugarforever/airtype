@@ -30,6 +30,8 @@ Get the latest release from [GitHub Releases](https://github.com/sugarforever/ai
 
 Airtype runs in the menu bar. Keyboard shortcuts can be changed in Settings.
 
+The main window organizes Airtype into four pages: **Home**, **History**, **Vocabulary**, and **Settings**. History keeps the 50 most recent complete transcription text entries locally on your Mac. Vocabulary lets you manage proper nouns that Airtype should preserve during enhancement.
+
 ## Features
 
 - Fully local transcription with no API key required
@@ -52,7 +54,7 @@ Local transcription is the simplest private setup, but Airtype also supports clo
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
 
-When **Learn from my corrections** is enabled, Airtype stores compact before/after correction samples in a local SQLite database. Retrieval and diffing happen off the insertion path. Only a small set of relevant examples is included when a later transcription is sent to the configured Enhancement provider; the correction database itself never leaves the Mac.
+Proper nouns and learned corrections are stored in a local SQLite database. When **Learn from my corrections** is enabled, Airtype records compact before/after correction samples; retrieval and diffing happen off the insertion path. Only bounded prompt guidance—a token-limited selection of proper nouns and a small set of relevant correction examples—is sent with a later transcription to the configured Enhancement provider. The local databases themselves never leave the Mac.
 
 ## Development
 

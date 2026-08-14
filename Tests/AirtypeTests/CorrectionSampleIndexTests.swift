@@ -164,7 +164,7 @@ final class CorrectionSampleIndexTests: XCTestCase {
         let duration = start.duration(to: clock.now)
         print("1,000-sample correction lookup: \(duration)")
         XCTAssertEqual(results.first?.replacement, "TechnicalTerm777")
-        XCTAssertLessThan(duration, .milliseconds(50))
+        XCTAssertLessThan(duration, .milliseconds(5))
     }
 
     private func sample(

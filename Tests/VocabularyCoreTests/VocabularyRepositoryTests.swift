@@ -65,11 +65,38 @@ final class VocabularyRepositoryTests: XCTestCase {
         let terms = await repository.promptTerms(tokenBudget: 2)
         XCTAssertEqual(terms, ["new"])
     }
+
+    func testPromptSelectionPerformanceWithFiveHundredTerms() async throws {
+        let seededTerms = (0..<500).map { position in
+            let value = String(format: "term%04d", position)
+            return VocabularyTerm(
+                id: UUID(),
+                value: value,
+                normalizedValue: value,
+                createdAt: Date(timeIntervalSince1970: TimeInterval(position))
+            )
+        }
+        let repository = try VocabularyRepository(store: MemoryVocabularyStore(terms: seededTerms))
+        let clock = ContinuousClock()
+        let start = clock.now
+
+        let terms = await repository.promptTerms(tokenBudget: 300)
+
+        let duration = start.duration(to: clock.now)
+        print("500-term vocabulary lookup: \(duration)")
+        XCTAssertEqual(terms.count, 150)
+        XCTAssertLessThanOrEqual(terms.count * 2, 300)
+        XCTAssertLessThan(duration, .milliseconds(5))
+    }
 }
 
 private final class MemoryVocabularyStore: VocabularyStoring, @unchecked Sendable {
     private let lock = NSLock()
-    private var terms: [VocabularyTerm] = []
+    private var terms: [VocabularyTerm]
+
+    init(terms: [VocabularyTerm] = []) {
+        self.terms = terms
+    }
 
     func loadTerms() throws -> [VocabularyTerm] {
         lock.withLock { terms }
