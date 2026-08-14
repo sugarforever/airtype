@@ -1,10 +1,16 @@
 import Foundation
 
+public enum CorrectionPersistenceHealth: Equatable, Sendable {
+    case available
+    case unavailable
+}
+
 public actor CorrectionLearningService {
     private let store: any CorrectionStoring
     private let extractor: any CorrectionExtracting
     private var index: CorrectionSampleIndex
     private var persistenceAvailable: Bool
+    private var persistenceHealthy: Bool
     private let maximumSampleCount: Int
 
     public init(
@@ -18,10 +24,16 @@ public actor CorrectionLearningService {
         do {
             index = CorrectionSampleIndex(samples: try store.loadSamples())
             persistenceAvailable = true
+            persistenceHealthy = true
         } catch {
             index = CorrectionSampleIndex()
             persistenceAvailable = false
+            persistenceHealthy = false
         }
+    }
+
+    public var persistenceHealth: CorrectionPersistenceHealth {
+        persistenceHealthy ? .available : .unavailable
     }
 
     public func learn(
@@ -51,6 +63,7 @@ public actor CorrectionLearningService {
                 ))
             } catch {
                 persistenceAvailable = false
+                persistenceHealthy = false
             }
         }
     }
@@ -72,6 +85,7 @@ public actor CorrectionLearningService {
             try store.markMatched(ids: examples.map(\.sampleID), at: now)
         } catch {
             persistenceAvailable = false
+            persistenceHealthy = false
         }
         return examples
     }
@@ -95,6 +109,7 @@ public actor CorrectionLearningService {
             try store.deleteSamples(ids: [id])
         } catch {
             index.restore(removedSample)
+            persistenceHealthy = false
             throw error
         }
     }

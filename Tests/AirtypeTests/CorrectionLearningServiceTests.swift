@@ -79,8 +79,31 @@ final class CorrectionLearningServiceTests: XCTestCase {
 
         let samplesAfterFailure = await service.samples()
         let examplesAfterFailure = await service.examples(for: "Cloud Flower")
+        let persistenceHealth = await service.persistenceHealth
         XCTAssertEqual(samplesAfterFailure, [storedSample])
         XCTAssertEqual(examplesAfterFailure.first?.sampleID, storedSample.id)
+        XCTAssertEqual(persistenceHealth, .unavailable)
+    }
+
+    func testInitialLoadFailureReportsUnavailablePersistenceHealth() async {
+        let service = CorrectionLearningService(store: FailingCorrectionStore())
+
+        let persistenceHealth = await service.persistenceHealth
+
+        XCTAssertEqual(persistenceHealth, .unavailable)
+    }
+
+    func testLearningWriteFailureReportsUnavailablePersistenceHealth() async {
+        let service = CorrectionLearningService(store: WriteFailingCorrectionStore())
+
+        await service.learn(
+            original: "Use Cloud Flower.",
+            final: "Use Cloudflare.",
+            applicationBundleID: "com.example.editor"
+        )
+        let persistenceHealth = await service.persistenceHealth
+
+        XCTAssertEqual(persistenceHealth, .unavailable)
     }
 
     func testStoreFailureDoesNotEscapeIntoLearningCall() async {
@@ -182,6 +205,16 @@ private struct FailingCorrectionStore: CorrectionStoring {
     func recordSession(_ session: EditSessionMetadata) throws { throw Failure() }
     func loadSessions() throws -> [EditSessionMetadata] { throw Failure() }
     func markMatched(ids: [UUID], at date: Date) throws { throw Failure() }
+}
+
+private struct WriteFailingCorrectionStore: CorrectionStoring {
+    struct Failure: Error {}
+    func loadSamples() throws -> [CorrectionSample] { [] }
+    func upsert(sample: CorrectionSample) throws { throw Failure() }
+    func deleteSamples(ids: [UUID]) throws {}
+    func recordSession(_ session: EditSessionMetadata) throws {}
+    func loadSessions() throws -> [EditSessionMetadata] { [] }
+    func markMatched(ids: [UUID], at date: Date) throws {}
 }
 
 private struct DeleteFailingCorrectionStore: CorrectionStoring {

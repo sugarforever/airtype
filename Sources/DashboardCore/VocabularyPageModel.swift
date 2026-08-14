@@ -71,6 +71,9 @@ public final class VocabularyPageModel {
 
         if let learningService {
             publishCorrections(await learningService.samples())
+            if await learningService.persistenceHealth == .unavailable {
+                messages.append("Learned-correction storage is unavailable.")
+            }
         } else {
             publishCorrections([])
             messages.append("Learned-correction storage is unavailable.")

@@ -143,6 +143,42 @@ final class VocabularyPageModelTests: XCTestCase {
         XCTAssertFalse(model.isLoading)
     }
 
+    func testCorrectionLoadFailurePublishesLocalError() async throws {
+        let model = VocabularyPageModel(
+            repository: try VocabularyRepository(store: MemoryVocabularyStore()),
+            learningService: CorrectionLearningService(
+                store: LoadFailingCorrectionStore()
+            )
+        )
+
+        await model.load()
+
+        XCTAssertTrue(model.corrections.isEmpty)
+        XCTAssertNotNil(model.localErrorText)
+        XCTAssertFalse(model.isLoading)
+    }
+
+    func testCorrectionWriteFailureMarksStaleSnapshotWithLocalError() async throws {
+        let learningService = CorrectionLearningService(
+            store: WriteFailingCorrectionStore()
+        )
+        await learningService.learn(
+            original: "Use Cloud Flower.",
+            final: "Use Cloudflare.",
+            applicationBundleID: "com.example.editor"
+        )
+        let model = VocabularyPageModel(
+            repository: try VocabularyRepository(store: MemoryVocabularyStore()),
+            learningService: learningService
+        )
+
+        await model.load()
+
+        XCTAssertEqual(model.corrections.count, 1)
+        XCTAssertNotNil(model.localErrorText)
+        XCTAssertFalse(model.isLoading)
+    }
+
     private func correction(original: String, replacement: String) -> CorrectionSample {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         return CorrectionSample(
@@ -218,6 +254,26 @@ private final class MemoryCorrectionStore: CorrectionStoring, @unchecked Sendabl
         lock.withLock { samples.removeAll { ids.contains($0.id) } }
     }
 
+    func recordSession(_ session: EditSessionMetadata) throws {}
+    func loadSessions() throws -> [EditSessionMetadata] { [] }
+    func markMatched(ids: [UUID], at date: Date) throws {}
+}
+
+private struct LoadFailingCorrectionStore: CorrectionStoring {
+    struct Failure: Error {}
+    func loadSamples() throws -> [CorrectionSample] { throw Failure() }
+    func upsert(sample: CorrectionSample) throws { throw Failure() }
+    func deleteSamples(ids: [UUID]) throws { throw Failure() }
+    func recordSession(_ session: EditSessionMetadata) throws { throw Failure() }
+    func loadSessions() throws -> [EditSessionMetadata] { throw Failure() }
+    func markMatched(ids: [UUID], at date: Date) throws { throw Failure() }
+}
+
+private struct WriteFailingCorrectionStore: CorrectionStoring {
+    struct Failure: Error {}
+    func loadSamples() throws -> [CorrectionSample] { [] }
+    func upsert(sample: CorrectionSample) throws { throw Failure() }
+    func deleteSamples(ids: [UUID]) throws {}
     func recordSession(_ session: EditSessionMetadata) throws {}
     func loadSessions() throws -> [EditSessionMetadata] { [] }
     func markMatched(ids: [UUID], at date: Date) throws {}
