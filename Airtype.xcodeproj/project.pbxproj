@@ -47,6 +47,9 @@
 		A10024000000000000000024 /* CorrectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024000000000000000024 /* CorrectionStore.swift */; };
 		A10025000000000000000025 /* CorrectionLearningService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* CorrectionLearningService.swift */; };
 		A10026000000000000000026 /* EnhancementPromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* EnhancementPromptBuilder.swift */; };
+		A10027000000000000000027 /* AccessibilityTextClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027000000000000000027 /* AccessibilityTextClient.swift */; };
+		A10028000000000000000028 /* TextInsertionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20028000000000000000028 /* TextInsertionCoordinator.swift */; };
+		A10029000000000000000029 /* TextEditTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20029000000000000000029 /* TextEditTracker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +85,9 @@
 		A20024000000000000000024 /* CorrectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionStore.swift; sourceTree = "<group>"; };
 		A20025000000000000000025 /* CorrectionLearningService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionLearningService.swift; sourceTree = "<group>"; };
 		A20026000000000000000026 /* EnhancementPromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementPromptBuilder.swift; sourceTree = "<group>"; };
+		A20027000000000000000027 /* AccessibilityTextClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTextClient.swift; sourceTree = "<group>"; };
+		A20028000000000000000028 /* TextInsertionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInsertionCoordinator.swift; sourceTree = "<group>"; };
+		A20029000000000000000029 /* TextEditTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditTracker.swift; sourceTree = "<group>"; };
 		A20012000000000000000012 /* WhisperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperService.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* Airtype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airtype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -196,6 +202,9 @@
 				A20024000000000000000024 /* CorrectionStore.swift */,
 				A20025000000000000000025 /* CorrectionLearningService.swift */,
 				A20026000000000000000026 /* EnhancementPromptBuilder.swift */,
+				A20027000000000000000027 /* AccessibilityTextClient.swift */,
+				A20028000000000000000028 /* TextInsertionCoordinator.swift */,
+				A20029000000000000000029 /* TextEditTracker.swift */,
 			);
 			path = CorrectionLearning;
 			sourceTree = "<group>";
@@ -318,6 +327,9 @@
 				A10024000000000000000024 /* CorrectionStore.swift in Sources */,
 				A10025000000000000000025 /* CorrectionLearningService.swift in Sources */,
 				A10026000000000000000026 /* EnhancementPromptBuilder.swift in Sources */,
+				A10027000000000000000027 /* AccessibilityTextClient.swift in Sources */,
+				A10028000000000000000028 /* TextInsertionCoordinator.swift in Sources */,
+				A10029000000000000000029 /* TextEditTracker.swift in Sources */,
 				A10012000000000000000012 /* WhisperService.swift in Sources */,
 				A10016000000000000000016 /* StreamingTranscriptionProtocol.swift in Sources */,
 				A10017000000000000000017 /* StreamingAudioCapture.swift in Sources */,

@@ -1,105 +1,93 @@
 import AppKit
 import Carbon.HIToolbox
 import ApplicationServices
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
-/// Inserts text at the current cursor position using system paste
-class TextInserter {
+/// Inserts text at the current cursor position, preferring direct Accessibility insertion.
+@MainActor
+final class TextInserter {
+    private let coordinator: TextInsertionCoordinator
 
-    /// Check if accessibility is enabled
     var hasAccessibilityPermission: Bool {
         AXIsProcessTrusted()
     }
 
-    /// Insert text at current cursor position
-    /// Uses clipboard + paste for reliable cross-app insertion
-    func insert(text: String) async throws {
-        debugLog("TextInserter.insert called with: \(text)")
-
-        // Check accessibility permission
-        if !hasAccessibilityPermission {
-            debugLog("WARNING: Accessibility permission NOT granted!")
-            debugLog("Requesting accessibility permission...")
-            // This will prompt the user
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            let trusted = AXIsProcessTrustedWithOptions(options)
-            debugLog("AXIsProcessTrustedWithOptions returned: \(trusted)")
-
-            if !trusted {
-                throw TextInsertionError.noAccessibilityPermission
-            }
-        } else {
-            debugLog("Accessibility permission granted")
+    init(accessibilityClient: (any AccessibilityTextClientProtocol)? = nil) {
+        let client = accessibilityClient ?? AccessibilityTextClient()
+        coordinator = TextInsertionCoordinator(client: client) { text in
+            try await Self.insertByPaste(text: text)
         }
-
-        // Store current clipboard content
-        let pasteboard = NSPasteboard.general
-        let previousContents = pasteboard.string(forType: .string)
-        debugLog("Previous clipboard: \(previousContents ?? "nil")")
-
-        // Set our text to clipboard
-        pasteboard.clearContents()
-        let success = pasteboard.setString(text, forType: .string)
-        debugLog("Clipboard set success: \(success)")
-
-        // Verify clipboard
-        let verify = pasteboard.string(forType: .string)
-        debugLog("Clipboard verify: \(verify ?? "nil")")
-
-        // Small delay to ensure clipboard is ready
-        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
-
-        // Simulate Cmd+V paste
-        debugLog("Simulating Cmd+V...")
-        simulatePaste()
-
-        // Wait for paste to complete
-        try await Task.sleep(nanoseconds: 200_000_000) // 200ms
-
-        // Restore previous clipboard content (optional - comment out to debug)
-        // if let previous = previousContents {
-        //     pasteboard.clearContents()
-        //     pasteboard.setString(previous, forType: .string)
-        // }
-
-        debugLog("Text insertion complete")
     }
 
-    private func simulatePaste() {
+    @discardableResult
+    func insert(text: String) async throws -> TextInsertionOutcome {
+        do {
+            return try await coordinator.insert(text: text)
+        } catch AccessibilityTextError.permissionDenied {
+            let options = [
+                kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+            ] as CFDictionary
+            guard AXIsProcessTrustedWithOptions(options) else {
+                throw TextInsertionError.noAccessibilityPermission
+            }
+            return try await coordinator.insert(text: text)
+        }
+    }
+
+    private static func insertByPaste(text: String) async throws {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        guard pasteboard.setString(text, forType: .string) else {
+            throw TextInsertionError.pasteboardUnavailable
+        }
+
+        try await Task.sleep(for: .milliseconds(100))
+        try simulatePaste()
+        try await Task.sleep(for: .milliseconds(200))
+    }
+
+    private static func simulatePaste() throws {
         let source = CGEventSource(stateID: .hidSystemState)
+        guard
+            let keyDown = CGEvent(
+                keyboardEventSource: source,
+                virtualKey: CGKeyCode(kVK_ANSI_V),
+                keyDown: true
+            ),
+            let keyUp = CGEvent(
+                keyboardEventSource: source,
+                virtualKey: CGKeyCode(kVK_ANSI_V),
+                keyDown: false
+            )
+        else { throw TextInsertionError.eventCreationFailed }
 
-        // Key down: Cmd+V
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true) else {
-            debugLog("Failed to create keyDown event")
-            return
-        }
         keyDown.flags = .maskCommand
-
-        // Key up: Cmd+V
-        guard let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else {
-            debugLog("Failed to create keyUp event")
-            return
-        }
         keyUp.flags = .maskCommand
-
-        // Post events
         keyDown.post(tap: .cghidEventTap)
-        debugLog("Posted keyDown event")
-
-        // Small delay between key down and up
-        usleep(50000) // 50ms
-
+        try? awaitKeyGap()
         keyUp.post(tap: .cghidEventTap)
-        debugLog("Posted keyUp event")
+    }
+
+    private static func awaitKeyGap() throws {
+        usleep(50_000)
     }
 }
 
 enum TextInsertionError: LocalizedError {
     case noAccessibilityPermission
+    case pasteboardUnavailable
+    case eventCreationFailed
 
     var errorDescription: String? {
         switch self {
         case .noAccessibilityPermission:
             return "Accessibility permission required. Please enable in System Settings → Privacy & Security → Accessibility"
+        case .pasteboardUnavailable:
+            return "The system pasteboard is unavailable"
+        case .eventCreationFailed:
+            return "Unable to create a system paste event"
         }
     }
 }
