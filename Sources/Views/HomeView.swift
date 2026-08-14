@@ -59,7 +59,7 @@ struct HomeView: View {
                 Text(settings.isConfigured ? "Ready" : "Setup required")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Text(settings.isConfigured ? "Hold (primaryShortcut) to record, then release to transcribe." : "Complete your provider setup in Settings to start transcribing.")
+                Text(settings.isConfigured ? "Hold \(primaryShortcut) to record, then release to transcribe." : "Complete your provider setup in Settings to start transcribing.")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textSecondary)
             }
