@@ -1,6 +1,9 @@
 import SwiftUI
 import Combine
 import os.log
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 private let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("airtype_debug.log")
 private let logQueue = DispatchQueue(label: "com.airtype.debuglog")

@@ -6,7 +6,8 @@ let coreTestsOnly = ProcessInfo.processInfo.environment["AIRTYPE_CORE_TESTS"] ==
 
 var products: [Product] = [
     .library(name: "CorrectionLearningCore", targets: ["CorrectionLearningCore"]),
-    .library(name: "VocabularyCore", targets: ["VocabularyCore"])
+    .library(name: "VocabularyCore", targets: ["VocabularyCore"]),
+    .library(name: "DashboardCore", targets: ["DashboardCore"])
 ]
 
 var targets: [Target] = [
@@ -20,6 +21,11 @@ var targets: [Target] = [
         path: "Sources/VocabularyCore",
         linkerSettings: [.linkedLibrary("sqlite3")]
     ),
+    .target(
+        name: "DashboardCore",
+        dependencies: ["VocabularyCore", "CorrectionLearningCore"],
+        path: "Sources/DashboardCore"
+    ),
     .testTarget(
         name: "AirtypeTests",
         dependencies: ["CorrectionLearningCore"],
@@ -29,6 +35,11 @@ var targets: [Target] = [
         name: "VocabularyCoreTests",
         dependencies: ["VocabularyCore"],
         path: "Tests/VocabularyCoreTests"
+    ),
+    .testTarget(
+        name: "DashboardCoreTests",
+        dependencies: ["DashboardCore", "VocabularyCore", "CorrectionLearningCore"],
+        path: "Tests/DashboardCoreTests"
     )
 ]
 
@@ -37,9 +48,9 @@ if !coreTestsOnly {
     targets.insert(
         .executableTarget(
             name: "Airtype",
-            dependencies: ["HotKey", "CorrectionLearningCore", "VocabularyCore"],
+            dependencies: ["HotKey", "CorrectionLearningCore", "VocabularyCore", "DashboardCore"],
             path: "Sources",
-            exclude: ["CorrectionLearning", "VocabularyCore"]
+            exclude: ["CorrectionLearning", "VocabularyCore", "DashboardCore"]
         ),
         at: 0
     )

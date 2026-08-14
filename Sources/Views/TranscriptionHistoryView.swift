@@ -1,4 +1,7 @@
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 struct TranscriptionHistoryView: View {
     @State private var entries: [TranscriptionHistory.Entry] = []
