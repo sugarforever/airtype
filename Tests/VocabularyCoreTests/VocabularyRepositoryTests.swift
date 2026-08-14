@@ -47,6 +47,15 @@ final class VocabularyRepositoryTests: XCTestCase {
         XCTAssertEqual(terms, ["NewestTerm"])
     }
 
+    func testPromptTermsUsesDefaultThreeHundredTokenBudget() async throws {
+        let repository = try VocabularyRepository(store: MemoryVocabularyStore())
+        _ = try await repository.add(String(repeating: "a", count: 1_201), now: .now)
+
+        let terms = await repository.promptTerms()
+
+        XCTAssertEqual(terms, [])
+    }
+
     func testPromptTermsStopsBeforeFirstTermThatExceedsRemainingBudget() async throws {
         let repository = try VocabularyRepository(store: MemoryVocabularyStore())
         _ = try await repository.add("new", now: Date(timeIntervalSince1970: 2))

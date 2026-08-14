@@ -40,7 +40,7 @@ public actor VocabularyRepository {
         terms.removeAll { $0.id == id }
     }
 
-    public func promptTerms(tokenBudget: Int) -> [String] {
+    public func promptTerms(tokenBudget: Int = 300) -> [String] {
         var remainingBudget = tokenBudget
         var promptTerms: [String] = []
 
