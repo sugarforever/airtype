@@ -6,11 +6,11 @@ import SwiftUI
 // MARK: - Transcription Provider
 
 enum TranscriptionProvider: String, CaseIterable, Identifiable {
+    case localMLX = "MLX Local"
     case elevenlabs = "ElevenLabs"
     case openai = "OpenAI"
     case mistral = "Mistral"
     case doubao = "Doubao"
-    case localMLX = "MLX Local"
 
     var id: String { rawValue }
 
@@ -659,8 +659,8 @@ class Settings: ObservableObject {
 
     private init() {
         // Transcription settings
-        let providerRaw = defaults.string(forKey: Keys.transcriptionProvider) ?? TranscriptionProvider.elevenlabs.rawValue
-        self.transcriptionProvider = TranscriptionProvider(rawValue: providerRaw) ?? .elevenlabs
+        let providerRaw = defaults.string(forKey: Keys.transcriptionProvider) ?? TranscriptionProvider.localMLX.rawValue
+        self.transcriptionProvider = TranscriptionProvider(rawValue: providerRaw) ?? .localMLX
 
         self.openaiTranscriptionApiKey = defaults.string(forKey: Keys.openaiTranscriptionApiKey) ?? ""
         self.openaiTranscriptionModel = defaults.string(forKey: Keys.openaiTranscriptionModel) ?? "gpt-4o-transcribe"

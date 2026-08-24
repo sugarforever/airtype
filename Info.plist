@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Airtype</string>
+    <string>$(APP_DISPLAY_NAME)</string>
     <key>CFBundleDisplayName</key>
-    <string>Airtype</string>
+    <string>$(APP_DISPLAY_NAME)</string>
     <key>CFBundleIdentifier</key>
-    <string>com.airtype.app</string>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>

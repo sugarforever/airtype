@@ -475,6 +475,7 @@
 		A80000000000000000000020 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = "Airtype Dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Airtype.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -491,7 +492,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.airtype.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.airtype.app.debug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -501,6 +502,7 @@
 		A80000000000000000000021 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = Airtype;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Airtype.entitlements;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
