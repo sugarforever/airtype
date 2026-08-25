@@ -392,6 +392,38 @@ final class TextEditTrackerTests: XCTestCase {
         XCTAssertEqual(values.first?.final, "Cloudflare")
     }
 
+    func testClearingEditedTextLearnsLastNonEmptyVersionOnce() async {
+        let insertion = AccessibilityInsertion(
+            sessionID: UUID(),
+            originalText: "Deploy with Cloud Flower today",
+            applicationBundleID: "com.openai.codex"
+        )
+        let client = FakeAccessibilityTextClient(
+            insertionResult: .observable(insertion)
+        )
+        let learned = expectation(description: "learned before composer cleared")
+        let recorder = LearnedTextRecorder(expectation: learned)
+        let tracker = TextEditTracker(client: client) { original, final, bundleID in
+            await recorder.record(original: original, final: final, bundleID: bundleID)
+        }
+        tracker.begin(insertion)
+
+        client.send(
+            .valueChanged(editedText: "Deploy with Cloudflare today"),
+            sessionID: insertion.sessionID
+        )
+        client.send(.valueChanged(editedText: ""), sessionID: insertion.sessionID)
+        client.send(.focusLost, sessionID: insertion.sessionID)
+
+        await fulfillment(of: [learned], timeout: 1)
+        let values = await recorder.values
+        XCTAssertEqual(values.count, 1)
+        XCTAssertEqual(values.first?.original, "Deploy with Cloud Flower today")
+        XCTAssertEqual(values.first?.final, "Deploy with Cloudflare today")
+        XCTAssertEqual(values.first?.bundleID, "com.openai.codex")
+        XCTAssertFalse(tracker.hasActiveSession)
+    }
+
     func testRecordingStartReturnsWithoutWaitingForLearning() async {
         let insertion = AccessibilityInsertion(
             sessionID: UUID(),

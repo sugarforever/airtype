@@ -42,6 +42,10 @@ public final class TextEditTracker {
                     self.discardActiveSession(expectedSessionID: sessionID)
                     return
                 }
+                if editedText.isEmpty {
+                    self.finishActiveSession(expectedSessionID: sessionID)
+                    return
+                }
                 self.activeSession?.editedText = editedText
             case .focusLost:
                 self.finishActiveSession(expectedSessionID: sessionID)
