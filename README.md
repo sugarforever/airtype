@@ -1,6 +1,6 @@
 # Airtype
 
-Voice-to-text for macOS. Hold a shortcut, speak, and Airtype inserts the transcription at your cursor in any application.
+Local and privacy first voice-to-text MacOS app that transcribes your voice and inserts text at your cursor — in any application. Hold a shortcut, speak, and Airtype inserts the transcription at your cursor in any application.
 
 ## Local by default
 
