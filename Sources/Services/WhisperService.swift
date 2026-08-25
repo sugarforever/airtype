@@ -1,19 +1,22 @@
 import Foundation
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
+import VocabularyCore
 #endif
 import AVFoundation
 
 /// OpenAI Whisper/GPT-4o API service for speech-to-text
 class WhisperService {
     private let settings: Settings
+    private let session: URLSession?
 
     // Constants for chunking
     private let maxFileSizeBytes: Int64 = 24 * 1024 * 1024  // 24MB (buffer below 25MB limit)
     private let targetChunkDuration: TimeInterval = 120     // 2 minutes per chunk for safety
 
-    init(settings: Settings = .shared) {
+    init(settings: Settings = .shared, session: URLSession? = nil) {
         self.settings = settings
+        self.session = session
     }
 
     // MARK: - Progress Callback Types
@@ -37,6 +40,7 @@ class WhisperService {
     /// Automatically chunks long recordings for better UX and to stay within API limits
     func transcribeWithProgress(
         audioURL: URL,
+        context: TranscriptionContext = .empty,
         onProgress: @escaping (TranscriptionProgress) -> Void
     ) async throws -> String {
         // Check file size to determine if chunking is needed
@@ -49,7 +53,7 @@ class WhisperService {
         let needsChunking = fileSize > maxFileSizeBytes || duration > targetChunkDuration * 2
 
         if needsChunking {
-            return try await transcribeChunked(audioURL: audioURL, duration: duration, onProgress: onProgress)
+            return try await transcribeChunked(audioURL: audioURL, duration: duration, context: context, onProgress: onProgress)
         } else {
             // Single file transcription with progress
             onProgress(TranscriptionProgress(
@@ -60,7 +64,7 @@ class WhisperService {
                 progress: 0.1
             ))
 
-            let result = try await transcribe(audioURL: audioURL)
+            let result = try await transcribe(audioURL: audioURL, context: context)
 
             onProgress(TranscriptionProgress(
                 stage: .complete,
@@ -77,9 +81,10 @@ class WhisperService {
     /// Legacy streaming method - now uses progress-based approach
     func transcribeStreaming(
         audioURL: URL,
+        context: TranscriptionContext = .empty,
         onPartialResult: @escaping (String) -> Void
     ) async throws -> String {
-        return try await transcribeWithProgress(audioURL: audioURL) { progress in
+        return try await transcribeWithProgress(audioURL: audioURL, context: context) { progress in
             if !progress.partialText.isEmpty {
                 onPartialResult(progress.partialText)
             }
@@ -92,6 +97,7 @@ class WhisperService {
     private func transcribeChunked(
         audioURL: URL,
         duration: TimeInterval,
+        context: TranscriptionContext,
         onProgress: @escaping (TranscriptionProgress) -> Void
     ) async throws -> String {
         // Calculate number of chunks
@@ -130,7 +136,7 @@ class WhisperService {
             ))
 
             do {
-                let chunkText = try await transcribe(audioURL: chunkURL)
+                let chunkText = try await transcribe(audioURL: chunkURL, context: context)
                 transcriptions.append(chunkText)
                 accumulatedText = transcriptions.joined(separator: " ")
 
@@ -259,7 +265,7 @@ class WhisperService {
     }
 
     /// Transcribe audio file (non-streaming) with timeout and retry
-    func transcribe(audioURL: URL) async throws -> String {
+    func transcribe(audioURL: URL, context: TranscriptionContext = .empty) async throws -> String {
         guard !settings.openaiTranscriptionApiKey.isEmpty else {
             throw WhisperError.noAPIKey
         }
@@ -291,7 +297,8 @@ class WhisperService {
             audioData: audioData,
             fileName: audioURL.lastPathComponent,
             model: transcriptionModel,
-            boundary: boundary
+            boundary: boundary,
+            context: context
         )
         request.httpBody = body
 
@@ -301,7 +308,10 @@ class WhisperService {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 120
         config.timeoutIntervalForResource = 180
-        let session = URLSession(configuration: config)
+        let session = self.session ?? URLSession(configuration: config)
+        defer {
+            if self.session == nil { session.finishTasksAndInvalidate() }
+        }
 
         let data: Data
         let response: URLResponse
@@ -388,13 +398,15 @@ class WhisperService {
 
     // MARK: - Multipart Body Creation
 
-    private func createMultipartBody(audioData: Data, fileName: String, model: String, boundary: String) -> Data {
+    func createMultipartBody(audioData: Data, fileName: String, model: String, boundary: String, context: TranscriptionContext = .empty) -> Data {
         var body = Data()
 
         // Model field
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(model)\r\n".data(using: .utf8)!)
+
+        body.append(context.multipartData(for: .openai, model: model, boundary: boundary))
 
         // Audio file
         body.append("--\(boundary)\r\n".data(using: .utf8)!)

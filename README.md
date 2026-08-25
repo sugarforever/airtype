@@ -30,7 +30,7 @@ Get the latest release from [GitHub Releases](https://github.com/sugarforever/ai
 
 Airtype runs in the menu bar. Keyboard shortcuts can be changed in Settings.
 
-The main window organizes Airtype into four pages: **Home**, **History**, **Vocabulary**, and **Settings**. History keeps the 50 most recent complete transcription text entries locally on your Mac. Vocabulary lets you manage proper nouns that Airtype should preserve during enhancement.
+The main window organizes Airtype into four pages: **Home**, **History**, **Vocabulary**, and **Settings**. History keeps the 50 most recent complete transcription text entries locally on your Mac. Vocabulary lets you manage proper nouns for recognition-time guidance and optional enhancement.
 
 ## Features
 
@@ -53,7 +53,23 @@ Local transcription is the simplest private setup, but Airtype also supports clo
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
 
-Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Only bounded prompt guidance—a token-limited selection of proper nouns and relevant correction examples—is sent with a later transcription to the configured Enhancement provider. The local databases themselves never leave the Mac.
+Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Enhancement receives only bounded vocabulary guidance and relevant correction examples. When recognition-time vocabulary is enabled, a bounded selection of proper nouns is also sent to the selected transcription backend. The local databases themselves never leave the Mac.
+
+### Vocabulary during transcription
+
+Turn on **Settings > Voice Input > Use Vocabulary during transcription** to guide recognition with your existing proper nouns, even when Enhancement is off. This is opt-in and disabled by default. With MLX Local the vocabulary stays on your Mac; cloud transcription sends the selected terms along with your audio.
+
+| Backend | Recognition-time guidance |
+| --- | --- |
+| MLX Local (both Qwen3-ASR models) | Native `context` text, entirely on-device |
+| OpenAI (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `whisper-1`) | `prompt` text; soft guidance, not forced replacements |
+| ElevenLabs (`scribe_v2`) | `keyterms`; incurs an additional 20% transcription surcharge under current provider pricing |
+| Mistral (`voxtral-mini-2602`, `voxtral-mini-latest`) | `context_bias`; optimized for English, other languages experimental |
+| Doubao (SeedASR bidirectional streaming) | JSON-encoded hotwords in `request.corpus.context` |
+
+Airtype selects newer terms first, removes duplicates and invalid entries, and sends at most 100 terms with additional provider-specific byte/length limits. OpenAI Whisper and Doubao use especially conservative budgets, so only a small subset may fit. Oversized terms are skipped rather than cut in half. Empty vocabularies and unsupported model variants add no optional parameters. Vocabulary changes apply to the next recording/session, including reused Doubao preconnections; OpenAI chunks share one snapshot. Hints can improve proper-noun recognition but do not guarantee accuracy or constrain the transcript to the vocabulary.
+
+Provider references: [MLX context support](https://github.com/Blaizzy/mlx-audio-swift/pull/126), [OpenAI prompting](https://platform.openai.com/docs/guides/speech-to-text), [ElevenLabs keyterms and pricing conditions](https://elevenlabs.io/docs/api-reference/speech-to-text/convert), [Mistral context biasing](https://docs.mistral.ai/studio/audio/speech_to_text/offline_transcription), [Doubao streaming API](https://www.volcengine.com/docs/6561/1354869?lang=en).
 
 ## Development
 

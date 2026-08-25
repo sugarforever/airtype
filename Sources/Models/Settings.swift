@@ -250,13 +250,14 @@ class Settings: ObservableObject {
         return primaryCandidates + [legacy]
     }
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
     // MARK: - Storage Keys
 
     private enum Keys {
         // Transcription
         static let transcriptionProvider = "transcription_provider"
+        static let transcriptionVocabularyEnabled = "transcription_vocabulary_enabled"
         static let openaiTranscriptionApiKey = "openai_transcription_api_key"
         static let openaiTranscriptionModel = "openai_transcription_model"
         static let elevenlabsApiKey = "elevenlabs_api_key"
@@ -324,6 +325,10 @@ class Settings: ObservableObject {
 
     @Published var transcriptionProvider: TranscriptionProvider {
         didSet { defaults.set(transcriptionProvider.rawValue, forKey: Keys.transcriptionProvider) }
+    }
+
+    @Published var transcriptionVocabularyEnabled: Bool {
+        didSet { defaults.set(transcriptionVocabularyEnabled, forKey: Keys.transcriptionVocabularyEnabled) }
     }
 
     @Published var openaiTranscriptionApiKey: String {
@@ -651,10 +656,12 @@ class Settings: ObservableObject {
 
     // MARK: - Initialization
 
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         // Transcription settings
         let providerRaw = defaults.string(forKey: Keys.transcriptionProvider) ?? TranscriptionProvider.localMLX.rawValue
         self.transcriptionProvider = TranscriptionProvider(rawValue: providerRaw) ?? .localMLX
+        self.transcriptionVocabularyEnabled = defaults.bool(forKey: Keys.transcriptionVocabularyEnabled)
 
         self.openaiTranscriptionApiKey = defaults.string(forKey: Keys.openaiTranscriptionApiKey) ?? ""
         self.openaiTranscriptionModel = defaults.string(forKey: Keys.openaiTranscriptionModel) ?? "gpt-4o-transcribe"

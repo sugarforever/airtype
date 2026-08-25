@@ -1,18 +1,21 @@
 import Foundation
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
+import VocabularyCore
 #endif
 
 /// ElevenLabs Speech-to-Text API service
 class ElevenLabsService {
     private let settings: Settings
+    private let session: URLSession
 
-    init(settings: Settings = .shared) {
+    init(settings: Settings = .shared, session: URLSession = .shared) {
         self.settings = settings
+        self.session = session
     }
 
     /// Transcribe audio file using ElevenLabs Scribe API
-    func transcribe(audioURL: URL) async throws -> String {
+    func transcribe(audioURL: URL, context: TranscriptionContext = .empty) async throws -> String {
         guard !settings.elevenlabsApiKey.isEmpty else {
             throw ElevenLabsError.noAPIKey
         }
@@ -33,14 +36,15 @@ class ElevenLabsService {
             audioData: audioData,
             fileName: audioURL.lastPathComponent,
             modelId: settings.elevenlabsModel,
-            boundary: boundary
+            boundary: boundary,
+            context: context
         )
         request.httpBody = body
 
         debugLog("ElevenLabs: Request body size: \(body.count) bytes")
         debugLog("ElevenLabs: Sending request with model \(settings.elevenlabsModel)")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ElevenLabsError.invalidResponse
@@ -67,13 +71,15 @@ class ElevenLabsService {
         return transcription.text
     }
 
-    private func createMultipartBody(audioData: Data, fileName: String, modelId: String, boundary: String) -> Data {
+    func createMultipartBody(audioData: Data, fileName: String, modelId: String, boundary: String, context: TranscriptionContext = .empty) -> Data {
         var body = Data()
 
         // Model ID field
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"model_id\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(modelId)\r\n".data(using: .utf8)!)
+
+        body.append(context.multipartData(for: .elevenlabs, model: modelId, boundary: boundary))
 
         // Audio file - use application/octet-stream to let API auto-detect format
         body.append("--\(boundary)\r\n".data(using: .utf8)!)

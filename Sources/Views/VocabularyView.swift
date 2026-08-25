@@ -53,7 +53,7 @@ private struct VocabularyHeader: View {
                     Text("Vocabulary")
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Proper nouns Airtype uses to improve your text")
+                    Text("Proper nouns for transcription and enhancement")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -61,7 +61,7 @@ private struct VocabularyHeader: View {
                 Spacer()
 
                 Label(
-                    "Stored locally; bounded guidance is sent to your Enhancement provider.",
+                    "Stored locally; enabled cloud transcription and Enhancement receive selected terms.",
                     systemImage: "lock.fill"
                 )
                     .font(.system(size: 10))

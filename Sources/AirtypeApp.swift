@@ -451,8 +451,13 @@ class AppState: ObservableObject {
             try await service.connect()
             debugLog("Streaming WebSocket connected (fresh)")
         }
+        // Snapshot at session start, not transport preconnection, so vocabulary edits are fresh.
+        let context = await TranscriptionContext.load(
+            repository: vocabularyRepository,
+            enabled: settings.transcriptionVocabularyEnabled
+        )
         // Send init message now — starts the server's audio timeout
-        try await service.startSession()
+        try await service.startSession(context: context)
         self.streamingService = service
 
         finalizedStreamText = ""
@@ -652,9 +657,14 @@ class AppState: ObservableObject {
             lastStreamedLength = 0
             let transcription: String
 
+            let context = await TranscriptionContext.load(
+                repository: vocabularyRepository,
+                enabled: settings.transcriptionVocabularyEnabled
+            )
+
             switch settings.transcriptionProvider {
             case .openai:
-                transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL) { [weak self] progress in
+                transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL, context: context) { [weak self] progress in
                     Task { @MainActor in
                         guard let self = self else { return }
                         self.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
@@ -678,9 +688,9 @@ class AppState: ObservableObject {
                     }
                 }
             case .elevenlabs:
-                transcription = try await elevenlabsService.transcribe(audioURL: audioURL)
+                transcription = try await elevenlabsService.transcribe(audioURL: audioURL, context: context)
             case .mistral:
-                transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL)
+                transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL, context: context)
             case .doubao:
                 throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
             case .localMLX:
@@ -689,7 +699,8 @@ class AppState: ObservableObject {
                     model: settings.localMLXModel,
                     language: settings.localMLXLanguage,
                     computeMode: settings.localMLXComputeMode,
-                    installedModelIDs: Set(settings.localMLXInstalledModels)
+                    installedModelIDs: Set(settings.localMLXInstalledModels),
+                    context: context
                 )
             }
 

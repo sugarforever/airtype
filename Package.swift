@@ -52,7 +52,7 @@ var targets: [Target] = [
 if !coreTestsOnly {
     packageDependencies.append(.package(
         url: "https://github.com/Blaizzy/mlx-audio-swift.git",
-        revision: "be7b8f60e9ea77b7fa80db81c3ae864dc4e8938c"
+        revision: "cae704f53bc32a3d0b606823828fbc5bedaaf388"
     ))
     products.append(.executable(name: "Airtype", targets: ["Airtype"]))
     targets.insert(

@@ -1,6 +1,9 @@
 import Foundation
 import MLXAudioCore
 import MLXAudioSTT
+#if SWIFT_PACKAGE
+import VocabularyCore
+#endif
 
 enum MLXAudioRunner {
     static func installModel(modelID: String) async throws {
@@ -23,7 +26,8 @@ enum MLXAudioRunner {
     static func transcribe(
         modelID: String,
         audioPath: String,
-        languageCode: String?
+        languageCode: String?,
+        context: TranscriptionContext = .empty
     ) async throws -> String {
         let audioURL = URL(fileURLWithPath: audioPath)
         let (_, audio) = try loadAudioArray(from: audioURL, sampleRate: 16_000)
@@ -33,7 +37,7 @@ enum MLXAudioRunner {
         do {
             if modelID.contains("Qwen3-ASR") {
                 let model = try await Qwen3ASRModel.fromPretrained(modelID)
-                let output = model.generate(audio: audio, language: language)
+                let output = model.generate(audio: audio, context: context.qwenContext, language: language)
                 let text = output.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if text.isEmpty {
                     throw LocalMLXTranscriptionError.emptyRecording

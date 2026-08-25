@@ -1,18 +1,21 @@
 import Foundation
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
+import VocabularyCore
 #endif
 
 /// Mistral Audio Transcription API service
 class MistralTranscriptionService {
     private let settings: Settings
+    private let session: URLSession
 
-    init(settings: Settings = .shared) {
+    init(settings: Settings = .shared, session: URLSession = .shared) {
         self.settings = settings
+        self.session = session
     }
 
     /// Transcribe audio file using Mistral audio transcription API
-    func transcribe(audioURL: URL) async throws -> String {
+    func transcribe(audioURL: URL, context: TranscriptionContext = .empty) async throws -> String {
         guard !settings.mistralTranscriptionApiKey.isEmpty else {
             throw MistralTranscriptionError.noAPIKey
         }
@@ -35,12 +38,13 @@ class MistralTranscriptionService {
             audioData: audioData,
             fileName: audioURL.lastPathComponent,
             model: model,
-            boundary: boundary
+            boundary: boundary,
+            context: context
         )
 
         debugLog("Mistral: Sending request with model \(model), file size: \(audioData.count) bytes")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw MistralTranscriptionError.invalidResponse
@@ -67,12 +71,14 @@ class MistralTranscriptionService {
         return text
     }
 
-    private func createMultipartBody(audioData: Data, fileName: String, model: String, boundary: String) -> Data {
+    func createMultipartBody(audioData: Data, fileName: String, model: String, boundary: String, context: TranscriptionContext = .empty) -> Data {
         var body = Data()
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(model)\r\n".data(using: .utf8)!)
+
+        body.append(context.multipartData(for: .mistral, model: model, boundary: boundary))
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)

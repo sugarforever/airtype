@@ -166,6 +166,24 @@ struct AirtypeSettingsView: View {
                 SettingsCardDivider()
 
                 transcriptionStatus
+
+                SettingsCardDivider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle("Use Vocabulary during transcription", isOn: $settings.transcriptionVocabularyEnabled)
+                        .font(.system(size: 12))
+                    Text("Uses a bounded selection of your proper nouns, even when Enhancement is off. MLX keeps terms on this Mac; cloud services receive selected terms with your audio.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                    if settings.transcriptionProvider == .elevenlabs {
+                        Text(settings.elevenlabsModel == "scribe_v2"
+                             ? "Scribe v2 keyterms add a 20% transcription surcharge."
+                             : "This model does not support vocabulary guidance. Select Scribe v2 to use it.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.statusOrange)
+                    }
+                }
+                .padding(12)
             }
         }
     }

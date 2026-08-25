@@ -1,4 +1,7 @@
 import Foundation
+#if SWIFT_PACKAGE
+import VocabularyCore
+#endif
 
 struct QwenASRAdapter: LocalASRAdapter {
     let model: LocalMLXModel
@@ -6,13 +9,15 @@ struct QwenASRAdapter: LocalASRAdapter {
     func transcribe(
         audioURL: URL,
         language: LocalMLXLanguage,
-        computeMode: LocalMLXComputeMode
+        computeMode: LocalMLXComputeMode,
+        context: TranscriptionContext
     ) async throws -> String {
         _ = computeMode // reserved for future runtime tuning flags
         return try await MLXAudioRunner.transcribe(
             modelID: modelID,
             audioPath: audioURL.path,
-            languageCode: languageCode(for: language)
+            languageCode: languageCode(for: language),
+            context: context
         )
     }
 

@@ -1,4 +1,7 @@
 import Foundation
+#if SWIFT_PACKAGE
+import VocabularyCore
+#endif
 
 final class MLXTranscriptionService {
     func transcribe(
@@ -6,7 +9,8 @@ final class MLXTranscriptionService {
         model: LocalMLXModel,
         language: LocalMLXLanguage,
         computeMode: LocalMLXComputeMode,
-        installedModelIDs: Set<String>
+        installedModelIDs: Set<String>,
+        context: TranscriptionContext = .empty
     ) async throws -> String {
         let startTime = Date()
 
@@ -30,7 +34,8 @@ final class MLXTranscriptionService {
         let text = try await adapter.transcribe(
             audioURL: audioURL,
             language: language,
-            computeMode: computeMode
+            computeMode: computeMode,
+            context: context
         )
         debugLog("MLX local transcription completed: model=\(model.rawValue), totalMs=\(Int(Date().timeIntervalSince(startTime) * 1000))")
         return text

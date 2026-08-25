@@ -2,6 +2,7 @@ import Foundation
 import Compression
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
+import VocabularyCore
 #endif
 
 actor DoubaoStreamingService: StreamingTranscriptionService {
@@ -58,8 +59,8 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
 
     /// Send the init message and start listening for responses.
     /// Call this when recording actually begins (right before sending audio).
-    func startSession() async throws {
-        try await sendInitMessage()
+    func startSession(context: TranscriptionContext = .empty) async throws {
+        try await sendInitMessage(context: context)
         debugLog("Doubao init message sent")
         startReceiveLoop()
     }
@@ -118,7 +119,15 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
         return frame
     }
 
-    private func sendInitMessage() async throws {
+    func makeInitPayload(context: TranscriptionContext = .empty) throws -> Data {
+        var recognitionRequest: [String: Any] = [
+            "model_name": "bigmodel",
+            "show_utterances": true,
+            "result_type": "single",
+        ]
+        if let hotwords = context.doubaoContext {
+            recognitionRequest["corpus"] = ["context": hotwords]
+        }
         let config: [String: Any] = [
             "user": ["uid": appId],
             "audio": [
@@ -128,14 +137,14 @@ actor DoubaoStreamingService: StreamingTranscriptionService {
                 "channel": 1,
                 "language": language,
             ],
-            "request": [
-                "model_name": "bigmodel",
-                "show_utterances": true,
-                "result_type": "single",
-            ],
+            "request": recognitionRequest,
         ]
 
-        let jsonData = try JSONSerialization.data(withJSONObject: config)
+        return try JSONSerialization.data(withJSONObject: config)
+    }
+
+    private func sendInitMessage(context: TranscriptionContext) async throws {
+        let jsonData = try makeInitPayload(context: context)
         debugLog("Doubao init payload \(jsonData.count) bytes")
         let compressed = try gzipCompress(jsonData)
 
