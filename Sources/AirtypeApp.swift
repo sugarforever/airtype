@@ -224,10 +224,8 @@ class AppState: ObservableObject {
     let mlxTranscriptionService = MLXTranscriptionService()
     let enhancementService: EnhancementService
     let textInserter: TextInserter
-    let textEditTracker: TextEditTracker
     private let correctionLearningService: CorrectionLearningService?
     let vocabularyRepository: VocabularyRepository?
-    let homePageModel: HomePageModel
     let vocabularyPageModel: VocabularyPageModel
     let hotkeyManager = HotkeyManager()
     let floatingWindowManager = FloatingWindowManager.shared
@@ -258,29 +256,18 @@ class AppState: ObservableObject {
         let vocabularyRepository = databaseURL.flatMap {
             try? VocabularyRepository(store: SQLiteVocabularyStore(url: $0))
         }
-        let accessibilityClient = AccessibilityTextClient()
         correctionLearningService = learningService
         self.vocabularyRepository = vocabularyRepository
-        homePageModel = HomePageModel(learningService: learningService)
         vocabularyPageModel = VocabularyPageModel(
-            repository: vocabularyRepository,
-            learningService: learningService
+            repository: vocabularyRepository
         )
         enhancementService = EnhancementService(
             learningService: learningService,
             vocabularyRepository: vocabularyRepository
         )
-        textInserter = TextInserter(accessibilityClient: accessibilityClient)
-        textEditTracker = TextEditTracker(client: accessibilityClient) { original, final, bundleID in
-            await learningService?.learn(
-                original: original,
-                final: final,
-                applicationBundleID: bundleID
-            )
-        }
+        textInserter = TextInserter()
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
-        MainWindowController.shared.homeModel = homePageModel
         MainWindowController.shared.vocabularyModel = vocabularyPageModel
         Task { @MainActor in
             if settings.hasCompletedSetup {
@@ -416,8 +403,6 @@ class AppState: ObservableObject {
             lastError = settings.configurationError ?? "Please configure API keys in Settings"
             return
         }
-        textEditTracker.finishForRecordingStart()
-
         do {
             if shouldUseStreaming {
                 try await startStreamingRecording()
@@ -560,7 +545,7 @@ class AppState: ObservableObject {
             try Task.checkCancellation()
             processingProgress = 0.95
             if !finalText.isEmpty {
-                try await insertAndTrack(text: finalText)
+                try await insertText(text: finalText)
                 debugLog("Inserted text (\(finalText.count) chars)")
             }
             streamOutput("Done!\n")
@@ -744,7 +729,7 @@ class AppState: ObservableObject {
             debugLog("Inserting text...")
             streamOutput("\n--- Inserting at cursor ---")
             processingProgress = 0.95
-            try await insertAndTrack(text: finalText)
+            try await insertText(text: finalText)
             debugLog("Text inserted successfully")
             streamOutput("Done!\n")
             processingProgress = 1.0
@@ -812,22 +797,9 @@ class AppState: ObservableObject {
         partialTranscription = ""
     }
 
-    private func insertAndTrack(text: String) async throws {
+    private func insertText(text: String) async throws {
         do {
-            let outcome = try await textInserter.insert(
-                text: text,
-                learningEnabled: settings.learnFromCorrections
-            )
-            if case .accessibility(let insertion) = outcome {
-                if let insertionToTrack = CorrectionLearningFlow.insertionToTrack(
-                    learningEnabled: settings.learnFromCorrections,
-                    outcome: outcome
-                ) {
-                    textEditTracker.begin(insertionToTrack)
-                } else {
-                    textEditTracker.discard(insertion)
-                }
-            }
+            try await textInserter.insert(text: text)
             TranscriptionHistory.shared.save(text: text, inserted: true)
         } catch {
             TranscriptionHistory.shared.save(text: text, inserted: false)

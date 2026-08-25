@@ -5,7 +5,6 @@ import DashboardCore
 
 struct HomeView: View {
     @ObservedObject var settings: Settings
-    @Bindable var model: HomePageModel
     let historyEntries: [TranscriptionHistory.Entry]
 
     private var recentEntries: [TranscriptionHistory.Entry] {
@@ -34,9 +33,6 @@ struct HomeView: View {
             .padding(28)
             .frame(maxWidth: 760, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .task {
-            await model.observeCorrectionUpdates()
         }
     }
 
@@ -88,18 +84,11 @@ struct HomeView: View {
     }
 
     private var metrics: some View {
-        HStack(spacing: 12) {
-            HomeMetricCard(
-                title: "Transcriptions today",
-                value: todayTranscriptionCount,
-                systemImage: "waveform"
-            )
-            HomeMetricCard(
-                title: "Learned corrections today",
-                value: model.todayLearnedCorrectionCount,
-                systemImage: "wand.and.stars"
-            )
-        }
+        HomeMetricCard(
+            title: "Transcriptions today",
+            value: todayTranscriptionCount,
+            systemImage: "waveform"
+        )
     }
 
     private var recentSection: some View {

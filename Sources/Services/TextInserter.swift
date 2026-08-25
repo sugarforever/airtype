@@ -1,48 +1,44 @@
 import AppKit
 import Carbon.HIToolbox
 import ApplicationServices
-#if SWIFT_PACKAGE
-import CorrectionLearningCore
-#endif
 
-/// Inserts text at the current cursor position, preferring direct Accessibility insertion.
+/// Inserts text at the current cursor position through the system pasteboard.
 @MainActor
 final class TextInserter {
-    private let coordinator: TextInsertionCoordinator
+    typealias PasteHandler = @MainActor (String) async throws -> Void
 
-    var hasAccessibilityPermission: Bool {
-        AXIsProcessTrusted()
-    }
+    private let isAccessibilityTrusted: () -> Bool
+    private let requestAccessibilityTrust: () -> Bool
+    private let paste: PasteHandler
 
-    init(accessibilityClient: (any AccessibilityTextClientProtocol)? = nil) {
-        let client = accessibilityClient ?? AccessibilityTextClient()
-        coordinator = TextInsertionCoordinator(client: client) { text in
-            try await Self.insertByPaste(text: text)
+    init() {
+        isAccessibilityTrusted = { AXIsProcessTrusted() }
+        requestAccessibilityTrust = {
+            let options = [
+                kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+            ] as CFDictionary
+            return AXIsProcessTrustedWithOptions(options)
         }
+        paste = Self.insertByPaste
     }
 
-    @discardableResult
-    func insert(
-        text: String,
-        learningEnabled: Bool
-    ) async throws -> TextInsertionOutcome {
-        do {
-            do {
-                return try await coordinator.insert(text: text, learningEnabled: learningEnabled)
-            } catch AccessibilityTextError.permissionDenied {
-                let options = [
-                    kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
-                ] as CFDictionary
-                guard AXIsProcessTrustedWithOptions(options) else {
-                    throw TextInsertionError.noAccessibilityPermission
-                }
-                return try await coordinator.insert(text: text, learningEnabled: learningEnabled)
+    init(
+        isAccessibilityTrusted: @escaping () -> Bool,
+        requestAccessibilityTrust: @escaping () -> Bool,
+        paste: @escaping PasteHandler
+    ) {
+        self.isAccessibilityTrusted = isAccessibilityTrusted
+        self.requestAccessibilityTrust = requestAccessibilityTrust
+        self.paste = paste
+    }
+
+    func insert(text: String) async throws {
+        if !isAccessibilityTrusted() {
+            guard requestAccessibilityTrust() else {
+                throw TextInsertionError.noAccessibilityPermission
             }
-        } catch AccessibilityTextError.insertionFailed {
-            throw TextInsertionError.ambiguousAccessibilityFailure
-        } catch AccessibilityTextError.permissionDenied {
-            throw TextInsertionError.noAccessibilityPermission
         }
+        try await paste(text)
     }
 
     private static func insertByPaste(text: String) async throws {
@@ -84,11 +80,10 @@ final class TextInserter {
     }
 }
 
-enum TextInsertionError: LocalizedError {
+enum TextInsertionError: LocalizedError, Equatable {
     case noAccessibilityPermission
     case pasteboardUnavailable
     case eventCreationFailed
-    case ambiguousAccessibilityFailure
 
     var errorDescription: String? {
         switch self {
@@ -98,8 +93,6 @@ enum TextInsertionError: LocalizedError {
             return "The system pasteboard is unavailable"
         case .eventCreationFailed:
             return "Unable to create a system paste event"
-        case .ambiguousAccessibilityFailure:
-            return "Accessibility insertion could not be confirmed. Text was not pasted to avoid duplication."
         }
     }
 }

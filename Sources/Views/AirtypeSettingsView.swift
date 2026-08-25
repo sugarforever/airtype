@@ -527,22 +527,6 @@ struct AirtypeSettingsView: View {
                 }
             }
 
-            SettingsCard {
-                Toggle(isOn: $settings.learnFromCorrections) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Learn from my corrections")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("Insert text immediately and learn subsequent edits locally")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Theme.textSecondary)
-                        Text("Relevant examples are sent only to your configured Enhancement provider")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.switch)
-            }
         }
     }
 

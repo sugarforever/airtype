@@ -27,12 +27,14 @@ var targets: [Target] = [
     ),
     .target(
         name: "DashboardCore",
-        dependencies: ["VocabularyCore", "CorrectionLearningCore"],
+        dependencies: ["VocabularyCore"],
         path: "Sources/DashboardCore"
     ),
     .testTarget(
         name: "AirtypeTests",
-        dependencies: ["CorrectionLearningCore"],
+        dependencies: coreTestsOnly
+            ? ["CorrectionLearningCore"]
+            : ["CorrectionLearningCore", "Airtype"],
         path: "Tests/AirtypeTests"
     ),
     .testTarget(
@@ -42,7 +44,7 @@ var targets: [Target] = [
     ),
     .testTarget(
         name: "DashboardCoreTests",
-        dependencies: ["DashboardCore", "VocabularyCore", "CorrectionLearningCore"],
+        dependencies: ["DashboardCore", "VocabularyCore"],
         path: "Tests/DashboardCoreTests"
     )
 ]

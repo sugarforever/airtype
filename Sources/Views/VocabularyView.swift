@@ -17,21 +17,6 @@ struct VocabularyView: View {
                 VocabularyErrorState(message: localErrorText)
             }
 
-            tabContent
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task {
-            await model.load()
-        }
-        .task {
-            await model.observeCorrectionUpdates()
-        }
-    }
-
-    @ViewBuilder
-    private var tabContent: some View {
-        switch model.selectedTab {
-        case .properNouns:
             ProperNounTagWall(
                 terms: model.visibleTerms,
                 totalTermCount: model.terms.count,
@@ -42,14 +27,10 @@ struct VocabularyView: View {
                 onAdd: addTerm,
                 onDelete: deleteTerm
             )
-        case .learnedCorrections:
-            LearnedCorrectionsView(
-                corrections: model.visibleCorrections,
-                totalCorrectionCount: model.corrections.count,
-                isSearching: !model.query.isEmpty,
-                isBusy: model.isLoading,
-                onDelete: deleteCorrection
-            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            await model.load()
         }
     }
 
@@ -59,10 +40,6 @@ struct VocabularyView: View {
 
     private func deleteTerm(id: UUID) async {
         await model.deleteTerm(id: id)
-    }
-
-    private func deleteCorrection(id: UUID) async {
-        await model.deleteCorrection(id: id)
     }
 }
 
@@ -76,7 +53,7 @@ private struct VocabularyHeader: View {
                     Text("Vocabulary")
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Names and corrections Airtype uses to improve your text")
+                    Text("Proper nouns Airtype uses to improve your text")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -92,19 +69,13 @@ private struct VocabularyHeader: View {
             }
 
             HStack(spacing: 12) {
-                Picker("Vocabulary section", selection: $model.selectedTab) {
-                    ForEach(VocabularyTab.allCases) { tab in
-                        Text(tab.title)
-                            .tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 320)
+                Text("Proper Nouns")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
 
                 Spacer(minLength: 0)
 
-                TextField(model.selectedTab.searchPrompt, text: $model.query)
+                TextField("Search proper nouns", text: $model.query)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 220)
 
@@ -138,21 +109,5 @@ private struct VocabularyErrorState: View {
         .background(Theme.statusOrange.opacity(0.1), in: .rect(cornerRadius: 8))
         .padding(.horizontal, 28)
         .padding(.top, 16)
-    }
-}
-
-private extension VocabularyTab {
-    var title: String {
-        switch self {
-        case .properNouns: "Proper Nouns"
-        case .learnedCorrections: "Learned Corrections"
-        }
-    }
-
-    var searchPrompt: String {
-        switch self {
-        case .properNouns: "Search proper nouns"
-        case .learnedCorrections: "Search corrections"
-        }
     }
 }

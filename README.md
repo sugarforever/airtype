@@ -36,8 +36,7 @@ The main window organizes Airtype into four pages: **Home**, **History**, **Voca
 
 - Fully local transcription with no API key required
 - Push-to-talk and toggle-recording shortcuts
-- Direct text insertion at the active cursor through macOS Accessibility, with paste fallback
-- Optional local learning from subsequent word and phrase corrections
+- Text insertion at the active cursor through the system pasteboard and Command-V
 - A floating panel for recording and transcription status
 - Up to 50 recent transcriptions stored locally
 - Optional AI cleanup for grammar, punctuation, and formatting
@@ -54,7 +53,7 @@ Local transcription is the simplest private setup, but Airtype also supports clo
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
 
-Proper nouns and learned corrections are stored in a local SQLite database. When **Learn from my corrections** is enabled, Airtype records compact before/after correction samples; retrieval and diffing happen off the insertion path. Only bounded prompt guidance—a token-limited selection of proper nouns and a small set of relevant correction examples—is sent with a later transcription to the configured Enhancement provider. The local databases themselves never leave the Mac.
+Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Only bounded prompt guidance—a token-limited selection of proper nouns and relevant correction examples—is sent with a later transcription to the configured Enhancement provider. The local databases themselves never leave the Mac.
 
 ## Development
 

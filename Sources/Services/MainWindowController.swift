@@ -14,7 +14,6 @@ final class MainWindowController {
     private let dashboardModel = DashboardModel()
     private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
     var hotkeyManager: HotkeyManager?
-    var homeModel: HomePageModel?
     var vocabularyModel: VocabularyPageModel?
 
     func show(destination: DashboardDestination? = nil) {
@@ -43,17 +42,11 @@ final class MainWindowController {
             return
         }
 
-        guard let homeModel else {
-            debugLog("ERROR: homeModel not set on MainWindowController")
-            return
-        }
-
         let mainView = MainView(
             settings: Settings.shared,
             hotkeyManager: hotkeyManager,
             dashboardModel: dashboardModel,
             historyModel: historyModel,
-            homeModel: homeModel,
             vocabularyModel: vocabularyModel
         )
 
