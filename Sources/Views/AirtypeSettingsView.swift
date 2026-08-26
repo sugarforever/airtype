@@ -411,7 +411,8 @@ struct AirtypeSettingsView: View {
                 .toggleStyle(.switch)
             }
 
-            if settings.enhancementEnabled {
+            // Keep configuration controls mounted so toggling only changes the setting.
+            Group {
                 SettingsCard {
                     SettingsCardRow(label: "Provider") {
                         Picker("", selection: $settings.enhancementProvider) {
@@ -561,7 +562,12 @@ struct AirtypeSettingsView: View {
 
     private var enhancementStatus: some View {
         HStack(spacing: 6) {
-            if settings.enhancementProvider.requiresApiKey && settings.currentEnhancementApiKey.isEmpty {
+            if !settings.enhancementEnabled {
+                Image(systemName: "pause.circle.fill")
+                    .foregroundStyle(Theme.textSecondary)
+                Text("Enhancement is off; configuration is saved")
+                    .foregroundStyle(Theme.textSecondary)
+            } else if settings.enhancementProvider.requiresApiKey && settings.currentEnhancementApiKey.isEmpty {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(Theme.statusOrange)
                 Text("\(settings.enhancementProvider.rawValue) API key required")
