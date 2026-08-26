@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- Enhancement settings can send a small real request to test the configured API key, Base URL, model, and OpenAI chat-completions compatibility
+
+### Changed
+- Enhancement failures now distinguish authentication, endpoint/model, malformed configuration, empty completion, and incompatible response errors
+
 ## [v0.14.1] - 2026-08-26
 
 ### Added
