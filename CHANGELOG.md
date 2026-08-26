@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.14.1] - 2026-08-26
+
+### Added
+- Signed automatic updates powered by Sparkle, including background checks, downloads, installation, and relaunch
+- Manual “Check for Updates” actions in the menu bar and Settings
+
+### Changed
+- GitHub Release publishing now generates and uploads a signed Sparkle appcast alongside the notarized DMG
+
 ## [v0.14.0] - 2026-08-26
 
 ### Added

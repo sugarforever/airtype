@@ -40,7 +40,7 @@ The main window organizes Airtype into four pages: **Home**, **History**, **Voca
 - A floating panel for recording and transcription status
 - Up to 50 recent transcriptions stored locally
 - Optional AI cleanup for grammar, punctuation, and formatting
-- Automatic update checks
+- Signed automatic updates with in-app installation and relaunch
 
 | Action | Default shortcut |
 |---|---|
@@ -83,6 +83,12 @@ open Airtype.xcodeproj
 ```
 
 Run the `Airtype` scheme with **Command + R**. Swift Package Manager resolves the project dependencies.
+
+### Releasing
+
+Tagged releases continue to publish a notarized DMG through GitHub Releases. The release workflow also generates a signed Sparkle `appcast.xml`, which lets installed copies of Airtype check for, download, and install updates.
+
+Sparkle's private EdDSA key is stored in the repository's `SPARKLE_PRIVATE_KEY` Actions secret. Its matching public key is committed as `SUPublicEDKey` in `Info.plist`. Do not rotate either key independently; existing installations reject updates signed with a different key.
 
 ## License
 

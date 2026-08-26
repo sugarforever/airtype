@@ -63,7 +63,11 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Info.plist
 
       - name: Resolve packages
-        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -clonedSourcePackagesDirPath build/SourcePackages
 
       - name: Archive
         run: |
@@ -72,6 +76,7 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -archivePath "$ARCHIVE_PATH" \
+            -clonedSourcePackagesDirPath build/SourcePackages \
             OTHER_CODE_SIGN_FLAGS="--keychain $RUNNER_TEMP/build.keychain-db"
 
       - name: Export app
@@ -123,14 +128,20 @@ jobs:
             "build/Airtype-${GITHUB_REF_NAME}.dmg"
           rm -rf "$DMG_DIR"
 
-      - name: Create GitHub Release
+      - name: Create signed Sparkle appcast
         env:
-          GH_TOKEN: ${{ github.token }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::error::SPARKLE_PRIVATE_KEY is not configured"
+            exit 1
+          fi
+
           TAG="${GITHUB_REF_NAME}"
           DMG="build/Airtype-${TAG}.dmg"
+          UPDATE_DIR="build/sparkle-update"
+          SPARKLE_BIN="build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
 
-          # Extract this version's section from CHANGELOG.md.
           awk -v tag="$TAG" '
             $0 ~ "^## \\[" tag "\\]" { capture = 1; next }
             capture && /^## \[/ { exit }
@@ -142,7 +153,33 @@ jobs:
             exit 1
           fi
 
-          gh release create "$TAG" "$DMG" \
+          if [ ! -x "$SPARKLE_BIN" ]; then
+            echo "::error::Sparkle generate_appcast tool was not found at $SPARKLE_BIN"
+            exit 1
+          fi
+
+          mkdir -p "$UPDATE_DIR"
+          cp "$DMG" "$UPDATE_DIR/"
+          cp release-notes.md "$UPDATE_DIR/Airtype-${TAG}.md"
+
+          echo "$SPARKLE_PRIVATE_KEY" | "$SPARKLE_BIN" \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/sugarforever/airtype/releases/download/${TAG}/" \
+            --embed-release-notes \
+            --maximum-deltas 0 \
+            -o "$UPDATE_DIR/appcast.xml" \
+            "$UPDATE_DIR"
+
+          test -s "$UPDATE_DIR/appcast.xml"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          DMG="build/Airtype-${TAG}.dmg"
+
+          gh release create "$TAG" "$DMG" "build/sparkle-update/appcast.xml" \
             --title "Airtype $TAG" \
             --notes-file release-notes.md
 

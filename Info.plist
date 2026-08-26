@@ -22,6 +22,18 @@
     <false/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/sugarforever/airtype/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>VoL5WxgvCOPYm+0PYC9xaknHpQLumuhC5XTv3u0ROmA=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUAllowsAutomaticUpdates</key>
+    <true/>
+    <key>SUAutomaticallyUpdate</key>
+    <true/>
+    <key>SUEnableInstallerLauncherService</key>
+    <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Airtype needs microphone access to record your voice for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>

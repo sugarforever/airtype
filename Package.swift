@@ -5,7 +5,8 @@ import Foundation
 let coreTestsOnly = ProcessInfo.processInfo.environment["AIRTYPE_CORE_TESTS"] == "1"
 
 var packageDependencies: [Package.Dependency] = [
-    .package(url: "https://github.com/soffes/HotKey.git", from: "0.2.0")
+    .package(url: "https://github.com/soffes/HotKey.git", from: "0.2.0"),
+    .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.9.6")
 ]
 
 var products: [Product] = [
@@ -64,6 +65,7 @@ if !coreTestsOnly {
             name: "Airtype",
             dependencies: [
                 "HotKey",
+                .product(name: "Sparkle", package: "Sparkle"),
                 "CorrectionLearningCore",
                 "VocabularyCore",
                 "DashboardCore",

@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var floatingWindowManager: FloatingWindowManager
+    @ObservedObject private var updater = AppUpdater.shared
     @State private var isPulsing = false
 
     var body: some View {
@@ -216,6 +217,11 @@ struct MenuBarView: View {
             MenuButton(title: "Settings...", shortcut: "⌘,") {
                 MainWindowController.shared.showSettings()
             }
+
+            MenuButton(title: "Check for Updates...", shortcut: nil) {
+                updater.checkForUpdates()
+            }
+            .disabled(!updater.canCheckForUpdates)
 
             MenuButton(title: "Quit Airtype", shortcut: "⌘Q") {
                 NSApplication.shared.terminate(nil)

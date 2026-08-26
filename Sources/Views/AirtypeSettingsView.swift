@@ -12,7 +12,7 @@ struct AirtypeSettingsView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     let readiness: DashboardReadiness
     let hasAccessibility: Bool
-    @StateObject private var updateChecker = UpdateChecker()
+    @ObservedObject private var updater = AppUpdater.shared
     @ObservedObject private var localModelManager = LocalModelManager.shared
 
     var body: some View {
@@ -21,9 +21,7 @@ struct AirtypeSettingsView: View {
             Divider().overlay(Theme.border)
             ScrollView {
                 VStack(spacing: 16) {
-                    if updateChecker.updateAvailable {
-                        updateBanner
-                    }
+                    updateSection
                     if !hasAccessibility {
                         accessibilityBanner
                     }
@@ -42,7 +40,6 @@ struct AirtypeSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
         .tint(Theme.brand)
-        .onAppear { updateChecker.check() }
     }
 
     // MARK: - Header
@@ -112,22 +109,26 @@ struct AirtypeSettingsView: View {
         .clipShape(.rect(cornerRadius: 8))
     }
 
-    // MARK: - Update Banner
+    // MARK: - Updates
 
-    private var updateBanner: some View {
+    private var updateSection: some View {
         HStack(spacing: 8) {
             Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.brand)
-            Text("Airtype \(updateChecker.latestVersion) available")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            Button("Download") {
-                if let url = updateChecker.downloadURL {
-                    NSWorkspace.shared.open(url)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Automatic Updates")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Airtype checks for signed updates and installs them securely.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textSecondary)
             }
+            Spacer()
+            Button("Check Now") {
+                updater.checkForUpdates()
+            }
+            .disabled(!updater.canCheckForUpdates)
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
         }

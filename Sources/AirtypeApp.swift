@@ -41,6 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct AirtypeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
+    // Own the updater at application scope so Sparkle starts before any menu
+    // or settings surface is opened.
+    @StateObject private var appUpdater = AppUpdater.shared
 
     var body: some Scene {
         MenuBarExtra {
