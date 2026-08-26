@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.14.0] - 2026-08-26
+
+### Added
+- Resizable dashboard with Home, History, Vocabulary, and Settings navigation
+- Home page with setup guidance, recording shortcuts, today's transcription count, and recent transcriptions
+- Searchable transcription history with full text, copy feedback, and confirmation before clearing
+- Local proper-noun vocabulary with search, add, and delete controls
+- Vocabulary hints for local Qwen3-ASR and supported OpenAI, ElevenLabs, Mistral, and Doubao transcription models, as well as optional text enhancement
+- Shared local-model installation progress across setup and settings, including live download percentages and a separate model-loading phase
+
+### Changed
+- New installations default to MLX Local transcription; existing provider selections are preserved
+- Saved vocabulary is applied automatically, including when text enhancement is disabled
+- Simplified recording flow by removing the editable preview-before-insert mode; completed transcriptions are inserted directly
+- Improved dashboard spacing, settings layout, and vocabulary tag presentation
+
+### Fixed
+- Sidebar navigation now responds across the entire row, including blank padding, with consistently aligned icons and labels
+- Local-model download progress updates during file transfer instead of appearing stalled
+- Removing a local model now clears its installed snapshot and associated Hugging Face cache; removal failures are reported without incorrectly marking the model uninstalled
+- Clipboard and paste-event failures are surfaced instead of silently reporting successful text insertion
+- Release notes are extracted from the matching CHANGELOG section and must be non-empty before a GitHub Release is created
+
+### Privacy
+- Vocabulary is stored locally. When using cloud transcription or optional cloud text enhancement, selected terms are sent to the configured provider; vocabulary hints for local Qwen3-ASR stay on-device
+- Removed transcript and clipboard contents from routine text-insertion diagnostics and stopped writing the legacy temporary debug log
+
 ## [v0.13.0] - 2026-08-12
 
 ### Added
