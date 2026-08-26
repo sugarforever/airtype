@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B12700000000000000000001 /* LocalModelInstallStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22700000000000000000001 /* LocalModelInstallStatusView.swift */; };
+		B12700000000000000000002 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000004 /* HuggingFace */; };
 		B12600000000000000000001 /* TranscriptionContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22600000000000000000001 /* TranscriptionContext.swift */; };
 		42A2B0E72F3AC06100283808 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000001 /* HotKey */; };
 		42A2B0E82F3AC06100283808 /* MLXAudioCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* MLXAudioCore */; };
@@ -63,6 +65,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B22700000000000000000001 /* LocalModelInstallStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelInstallStatusView.swift; sourceTree = "<group>"; };
 		B22600000000000000000001 /* TranscriptionContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionContext.swift; sourceTree = "<group>"; };
 		A20001000000000000000001 /* AirtypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirtypeApp.swift; sourceTree = "<group>"; };
 		A20002000000000000000002 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
@@ -126,6 +129,7 @@
 				42A2B0E72F3AC06100283808 /* HotKey in Frameworks */,
 				42A2B0E82F3AC06100283808 /* MLXAudioCore in Frameworks */,
 				42A2B0E92F3AC06100283808 /* MLXAudioSTT in Frameworks */,
+				B12700000000000000000002 /* HuggingFace in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,6 +176,7 @@
 				A200310000000000000000031 /* DashboardSidebar.swift */,
 				A200320000000000000000032 /* HomeView.swift */,
 				A200330000000000000000033 /* AirtypeSettingsView.swift */,
+				B22700000000000000000001 /* LocalModelInstallStatusView.swift */,
 				A200340000000000000000034 /* VocabularyView.swift */,
 				A200350000000000000000035 /* ProperNounTagWall.swift */,
 				A20004000000000000000004 /* MenuBarView.swift */,
@@ -283,6 +288,7 @@
 				A90000000000000000000001 /* HotKey */,
 				A90000000000000000000002 /* MLXAudioCore */,
 				A90000000000000000000003 /* MLXAudioSTT */,
+				A90000000000000000000004 /* HuggingFace */,
 			);
 			productName = Airtype;
 			productReference = A30000000000000000000001 /* Airtype.app */;
@@ -315,6 +321,7 @@
 			packageReferences = (
 				AA0000000000000000000001 /* XCRemoteSwiftPackageReference "HotKey" */,
 				AA0000000000000000000002 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
+				AA0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 			);
 			productRefGroup = A50000000000000000000006 /* Products */;
 			projectDirPath = "";
@@ -347,6 +354,7 @@
 				A100310000000000000000031 /* DashboardSidebar.swift in Sources */,
 				A100320000000000000000032 /* HomeView.swift in Sources */,
 				A100330000000000000000033 /* AirtypeSettingsView.swift in Sources */,
+				B12700000000000000000001 /* LocalModelInstallStatusView.swift in Sources */,
 				A100340000000000000000034 /* VocabularyView.swift in Sources */,
 				A100350000000000000000035 /* ProperNounTagWall.swift in Sources */,
 				A10004000000000000000004 /* MenuBarView.swift in Sources */,
@@ -539,6 +547,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		AA0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.0;
+			};
+		};
 		AA0000000000000000000001 /* XCRemoteSwiftPackageReference "HotKey" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/soffes/HotKey.git";
@@ -558,6 +574,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A90000000000000000000004 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
 		A90000000000000000000001 /* HotKey */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000001 /* XCRemoteSwiftPackageReference "HotKey" */;

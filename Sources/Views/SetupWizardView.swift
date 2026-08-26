@@ -6,7 +6,7 @@ struct SetupWizardView: View {
     let onComplete: () -> Void
 
     @ObservedObject private var settings = Settings.shared
-    @StateObject private var localModelManager = LocalModelManager()
+    @ObservedObject private var localModelManager = LocalModelManager.shared
     @State private var currentStep = 0
     @State private var showSkipWarning = false
 
@@ -130,7 +130,7 @@ struct SetupWizardView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(settings.selectedLocalModelInstalled ? Theme.brand : Theme.textSecondary)
                             Spacer()
-                            Button("Install") {
+                            Button(localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
                                 Task { await localModelManager.installSelectedModel(settings: settings) }
                             }
                             .buttonStyle(.borderedProminent)
@@ -138,6 +138,7 @@ struct SetupWizardView: View {
                             .disabled(settings.selectedLocalModelInstalled || localModelManager.isInstalling)
                         }
                     }
+                    LocalModelInstallStatusView(manager: localModelManager, selectedModel: settings.localMLXModel)
                 }
 
                 SettingsCardDivider()
@@ -190,6 +191,7 @@ struct SetupWizardView: View {
             Picker("", selection: $settings.localMLXModel) {
                 ForEach(LocalMLXModel.allCases) { Text($0.rawValue).tag($0) }
             }
+            .disabled(localModelManager.isInstalling)
             .labelsHidden()
             .font(.system(size: 12, design: .monospaced))
         }

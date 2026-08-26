@@ -13,7 +13,7 @@ struct AirtypeSettingsView: View {
     let readiness: DashboardReadiness
     let hasAccessibility: Bool
     @StateObject private var updateChecker = UpdateChecker()
-    @StateObject private var localModelManager = LocalModelManager()
+    @ObservedObject private var localModelManager = LocalModelManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -308,6 +308,7 @@ struct AirtypeSettingsView: View {
                         Text(model.rawValue).tag(model)
                     }
                 }
+                .disabled(localModelManager.isInstalling)
                 .labelsHidden()
                 .font(.system(size: 12, design: .monospaced))
             }
@@ -349,7 +350,7 @@ struct AirtypeSettingsView: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
-                    Button("Install") {
+                    Button(localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
                         Task { await localModelManager.installSelectedModel(settings: settings) }
                     }
                     .disabled(settings.selectedLocalModelInstalled || localModelManager.isInstalling)
@@ -359,27 +360,12 @@ struct AirtypeSettingsView: View {
                     Button("Remove") {
                         localModelManager.removeSelectedModel(settings: settings)
                     }
-                    .disabled(!settings.selectedLocalModelInstalled || localModelManager.isRemoving)
+                    .disabled(!settings.selectedLocalModelInstalled || localModelManager.isRemoving || localModelManager.isInstalling)
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
             }
-            if let status = localModelManager.statusMessage {
-                SettingsCardDivider()
-                SettingsCardRow(label: "Install Status") {
-                    Text(status)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            if let error = localModelManager.lastError {
-                SettingsCardDivider()
-                SettingsCardRow(label: "Install Error") {
-                    Text(error)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.statusRed)
-                }
-            }
+            LocalModelInstallStatusView(manager: localModelManager, selectedModel: settings.localMLXModel)
             SettingsCardDivider()
             SettingsCardRow(label: "Local Path") {
                 HStack(spacing: 8) {

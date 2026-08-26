@@ -1,0 +1,64 @@
+# Local Model Download Progress Implementation Plan
+
+> Execute inline in this task, with test-first implementation and verification before completion.
+
+**Goal:** Show real model download progress in Settings and Setup, followed by a separate loading phase and actionable failures.
+
+**Architecture:** Keep one app-owned `LocalModelManager.shared`. Inject the installer for deterministic tests. Split the runner into `ModelUtils.resolveOrDownloadModel(client:…progressHandler:)` and `Qwen3ASRModel.fromModelDirectory`. Publish value snapshots on the main actor, never the mutable Foundation `Progress` itself.
+
+**Tech Stack:** Swift, SwiftUI, existing pinned MLXAudio and HuggingFace dependencies, XCTest.
+
+**Spec:** User-approved research in this task: real percentage, preparation/loading states, retry, shared task, fixed target model. No speed estimates, cancellation, or resume promises in this increment.
+
+## Constraints
+
+- Work on `codex/local-model-download-progress`; preserve unrelated untracked files.
+- Retain macOS 14 minimum and current dependency revisions.
+- Retain existing English UI copy conventions and ObservableObject integration.
+- Never mark installed until model loading succeeds; do not download real large models in unit tests.
+
+## Task 1: Installation state and download integration
+
+**Files:** `Tests/AirtypeTests/LocalModelManagerTests.swift`, `Sources/Services/LocalModelManager.swift`, `Sources/Services/MLXAudioRunner.swift`, `Package.swift`, `Airtype.xcodeproj/project.pbxproj`.
+
+- [x] Verify baseline with `swift test`.
+- [x] Write failing tests for preparation/download/loading transitions, retry clearing stale state, duplicate install prevention, stable model identity, invalid progress, and late callbacks.
+- [x] Run `swift test --filter LocalModelManagerTests` and confirm missing-feature failure.
+- [x] Add `LocalModelInstallPhase` (`preparing`, `downloading(Double?)`, `loading`), injectable installer, shared manager, guarded progress updates and fixed model capture.
+- [x] Replace `fromPretrained` during installation with explicit download then load. Use `Progress.fractionCompleted`, not `completedUnitCount / totalUnitCount`: parent Progress includes weighted children. Preserve token and cache configuration.
+- [x] Declare HuggingFace directly in both SwiftPM and Xcode because the runner now constructs its public client and repository types. Keep version 0.9.0.
+- [x] Run focused tests and confirm success.
+
+## Task 2: Shared UI
+
+**Files:** `Sources/Views/LocalModelInstallStatusView.swift`, `Sources/Views/AirtypeSettingsView.swift`, `Sources/Views/SetupWizardView.swift`, `Airtype.xcodeproj/project.pbxproj`.
+
+- [x] Observe `LocalModelManager.shared` in both screens.
+- [x] Render a labeled linear progress bar for known progress and an indeterminate indicator for preparation, unknown progress, and loading.
+- [x] Render model-specific success/error text, and use the existing install action as Retry after failure.
+- [x] Disable model selection, duplicate installs and removal while an installation is active; show the active model if selection changes elsewhere.
+- [x] Register the shared view in the Xcode project.
+
+## Task 3: Verification
+
+- [x] Run full `swift test` and `git diff --check`.
+- [x] Build the app with `xcodebuild -project Airtype.xcodeproj -scheme Airtype -configuration Debug -derivedDataPath .build/vocabulary-xcode CODE_SIGNING_ALLOWED=NO build`.
+- [x] Review state lifetime, accessibility, cache hits, and failure behavior. Record actual verification and limitations here.
+
+
+## Verification results
+
+- Baseline: `swift test` passed 106 tests.
+- Red: new installation tests failed to compile because the phase and injectable installer APIs were absent. The later weighted-progress test failed because the Progress conversion overload was absent.
+- Final: `swift test` passed 114 tests, including 8 new installation/progress tests, with zero failures.
+- Xcode Debug app build succeeded with signing disabled. Existing dependency resource, deprecated API, module-cache and minimum-version warnings remain; no new warnings in changed source files were observed.
+- `git diff --check` passed. Both dependency lockfiles retained their original revisions.
+- Independent read-only review found no actionable regressions.
+- No real large model download or interactive close/reopen UI validation was performed. Manager behavior was exercised with injected installers; weighted progress used real Foundation Progress parent/child objects.
+
+## Manual follow-up
+
+1. Install an uncached local model in Settings: preparation, moving percentage, loading, installed.
+2. Close/reopen Settings during download and confirm progress remains visible; open Setup and confirm the same task is observed.
+3. Interrupt network connectivity, verify error and Retry, then restore connectivity and retry.
+4. Confirm a cached model reaches loading without requiring a visible download phase.

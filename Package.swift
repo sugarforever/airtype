@@ -51,6 +51,10 @@ var targets: [Target] = [
 
 if !coreTestsOnly {
     packageDependencies.append(.package(
+        url: "https://github.com/huggingface/swift-huggingface.git",
+        exact: "0.9.0"
+    ))
+    packageDependencies.append(.package(
         url: "https://github.com/Blaizzy/mlx-audio-swift.git",
         revision: "cae704f53bc32a3d0b606823828fbc5bedaaf388"
     ))
@@ -64,7 +68,8 @@ if !coreTestsOnly {
                 "VocabularyCore",
                 "DashboardCore",
                 .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
-                .product(name: "MLXAudioSTT", package: "mlx-audio-swift")
+                .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
+                .product(name: "HuggingFace", package: "swift-huggingface")
             ],
             path: "Sources",
             exclude: [

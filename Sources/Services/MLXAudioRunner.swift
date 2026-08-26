@@ -1,4 +1,5 @@
 import Foundation
+import HuggingFace
 import MLXAudioCore
 import MLXAudioSTT
 #if SWIFT_PACKAGE
@@ -28,12 +29,39 @@ enum LocalASRDiagnostics {
 #endif
 
 enum MLXAudioRunner {
-    static func installModel(modelID: String) async throws {
-        if modelID.contains("Qwen3-ASR") {
-            _ = try await Qwen3ASRModel.fromPretrained(modelID)
-            return
+    static func installModel(
+        modelID: String,
+        onProgress: @escaping @MainActor @Sendable (LocalModelInstallPhase) -> Void
+    ) async throws {
+        guard modelID.contains("Qwen3-ASR") else {
+            throw LocalMLXTranscriptionError.runtimeExecutionFailed("Unsupported model: \(modelID)")
         }
-        throw LocalMLXTranscriptionError.runtimeExecutionFailed("Unsupported model: \(modelID)")
+        guard let repoID = Repo.ID(rawValue: modelID) else {
+            throw LocalModelInstallError.generic("Invalid repository ID: \(modelID)")
+        }
+
+        // Match fromPretrained's authentication and cache behavior while exposing
+        // download progress separately from the potentially slow model load.
+        let token = ProcessInfo.processInfo.environment["HF_TOKEN"]
+            ?? Bundle.main.object(forInfoDictionaryKey: "HF_TOKEN") as? String
+        let cache = HubCache.default
+        let client: HubClient
+        if let token, !token.isEmpty {
+            client = HubClient(host: HubClient.defaultHost, bearerToken: token, cache: cache)
+        } else {
+            client = HubClient(cache: cache)
+        }
+        let directory = try await ModelUtils.resolveOrDownloadModel(
+            client: client,
+            cache: client.cache ?? cache,
+            repoID: repoID,
+            requiredExtension: "safetensors",
+            progressHandler: { progress in
+                onProgress(.downloading(progress))
+            }
+        )
+        await onProgress(.loading)
+        _ = try await Qwen3ASRModel.fromModelDirectory(directory)
     }
 
     static func removeModel(modelID: String) {
