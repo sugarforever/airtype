@@ -62,3 +62,13 @@
 2. Close/reopen Settings during download and confirm progress remains visible; open Setup and confirm the same task is observed.
 3. Interrupt network connectivity, verify error and Retry, then restore connectivity and retry.
 4. Confirm a cached model reaches loading without requiring a visible download phase.
+
+## Follow-up: Remove appeared to do nothing
+
+User testing found that Remove followed by Install completed immediately. Read-only inspection confirmed both model snapshots and Hub repository caches existed under `~/.cache/huggingface/hub`, while the old removal code targeted the absent `~/Library/Caches/huggingface/hub` path. It also swallowed filesystem errors and always removed the installed record.
+
+- Removal now resolves the same `HubCache.default.cacheDirectory` as installation, including configured Hugging Face cache locations.
+- It deletes only the selected repository's Hub cache, metadata and installed snapshot, not the cache root or other models. The UI help notes this repository cache may also be used by other applications.
+- Only missing paths are treated as success. Other errors are shown and the installed record is retained. The installed snapshot is removed last so earlier failures leave it usable.
+- Four regression tests cover temporary on-disk caches, other-model preservation, repeated removal, real filesystem permission errors, and manager success/failure state.
+- Full `swift test`: 118 tests passed, zero failures. Xcode Debug build succeeded. No actual user model files were removed during automated validation.

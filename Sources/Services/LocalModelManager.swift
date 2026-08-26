@@ -29,12 +29,16 @@ final class LocalModelManager: ObservableObject {
     var isInstalling: Bool { phase != nil }
 
     private let installer: Installer
+    private let remover: (String) throws -> Void
     private var installationID: UUID?
 
     init(installer: @escaping Installer = { modelID, report in
         try await MLXAudioRunner.installModel(modelID: modelID, onProgress: report)
+    }, remover: @escaping (String) throws -> Void = { modelID in
+        try MLXAudioRunner.removeModel(modelID: modelID)
     }) {
         self.installer = installer
+        self.remover = remover
     }
 
     func installSelectedModel(settings: Settings = .shared) async {
@@ -82,10 +86,15 @@ final class LocalModelManager: ObservableObject {
         isRemoving = true
         defer { isRemoving = false }
 
-        MLXAudioRunner.removeModel(modelID: settings.localMLXModel.repoID)
-        settings.localMLXInstalledModels.removeAll { $0 == settings.localMLXModel.rawValue }
-        statusMessage = "Removed \(settings.localMLXModel.rawValue)"
+        statusMessage = nil
         lastError = nil
+        do {
+            try remover(settings.localMLXModel.repoID)
+            settings.localMLXInstalledModels.removeAll { $0 == settings.localMLXModel.rawValue }
+            statusMessage = "Removed \(settings.localMLXModel.rawValue)"
+        } catch {
+            lastError = "Failed to remove local model files: \(error.localizedDescription)"
+        }
     }
 }
 

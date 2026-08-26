@@ -44,7 +44,7 @@ struct LocalModelInstallStatusView: View {
                 }
             } else if let error = manager.lastError {
                 SettingsCardDivider()
-                SettingsCardRow(label: "Install Error") {
+                SettingsCardRow(label: "Model Error") {
                     Text(error)
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.statusRed)

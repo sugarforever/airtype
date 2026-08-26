@@ -350,7 +350,7 @@ struct AirtypeSettingsView: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
-                    Button(localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
+                    Button(!settings.selectedLocalModelInstalled && localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
                         Task { await localModelManager.installSelectedModel(settings: settings) }
                     }
                     .disabled(settings.selectedLocalModelInstalled || localModelManager.isInstalling)
@@ -361,6 +361,7 @@ struct AirtypeSettingsView: View {
                         localModelManager.removeSelectedModel(settings: settings)
                     }
                     .disabled(!settings.selectedLocalModelInstalled || localModelManager.isRemoving || localModelManager.isInstalling)
+                    .help("Delete this model's files and Hugging Face download cache. Other apps using the same cache may need to download this model again.")
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }

@@ -130,7 +130,7 @@ struct SetupWizardView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(settings.selectedLocalModelInstalled ? Theme.brand : Theme.textSecondary)
                             Spacer()
-                            Button(localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
+                            Button(!settings.selectedLocalModelInstalled && localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
                                 Task { await localModelManager.installSelectedModel(settings: settings) }
                             }
                             .buttonStyle(.borderedProminent)

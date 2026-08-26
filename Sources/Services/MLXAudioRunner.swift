@@ -64,12 +64,32 @@ enum MLXAudioRunner {
         _ = try await Qwen3ASRModel.fromModelDirectory(directory)
     }
 
-    static func removeModel(modelID: String) {
-        let cacheRoot = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("huggingface/hub/mlx-audio", isDirectory: true)
-        let modelDir = cacheRoot?.appendingPathComponent(modelID.replacingOccurrences(of: "/", with: "_"), isDirectory: true)
-        if let modelDir {
-            try? FileManager.default.removeItem(at: modelDir)
+    static func removeModel(
+        modelID: String,
+        cacheDirectory: URL = HubCache.default.cacheDirectory
+    ) throws {
+        guard let repoID = Repo.ID(rawValue: modelID) else {
+            throw LocalModelInstallError.generic("Invalid repository ID: \(modelID)")
+        }
+        let cache = HubCache(cacheDirectory: cacheDirectory)
+        let modelDirectory = cacheDirectory
+            .appendingPathComponent("mlx-audio", isDirectory: true)
+            .appendingPathComponent(modelID.replacingOccurrences(of: "/", with: "_"), isDirectory: true)
+
+        // The installed snapshot and the Hub's source blobs are separate copies.
+        // Remove only this repository, never the shared Hub cache root. Clear the
+        // installed copy last so an earlier failure leaves it usable for retry.
+        for directory in [
+            cache.repoDirectory(repo: repoID, kind: .model),
+            cache.metadataDirectory(repo: repoID, kind: .model),
+            modelDirectory
+        ] {
+            do {
+                try FileManager.default.removeItem(at: directory)
+            } catch let error as CocoaError where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile {
+                // An already absent directory is the desired end state.
+                continue
+            }
         }
     }
 

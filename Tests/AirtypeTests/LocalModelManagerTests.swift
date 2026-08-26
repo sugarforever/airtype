@@ -169,5 +169,86 @@ final class LocalModelManagerTests: XCTestCase {
         await manager.installSelectedModel(settings: settings)
         XCTAssertEqual(settings.localMLXInstalledModels, ["Qwen3-ASR-0.6B-4bit", "Qwen3-ASR-1.7B"])
     }
+
+    func testRemovalClearsModelAndHubCacheWithoutTouchingOtherModels() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let paths = [
+            "mlx-audio/mlx-community_Qwen3-ASR-0.6B-4bit/model.safetensors",
+            "models--mlx-community--Qwen3-ASR-0.6B-4bit/blobs/weights",
+            ".metadata/models--mlx-community--Qwen3-ASR-0.6B-4bit/file.json",
+            "mlx-audio/mlx-community_Qwen3-ASR-1.7B-4bit/model.safetensors",
+            "models--mlx-community--Qwen3-ASR-1.7B-4bit/blobs/weights"
+        ]
+        for path in paths {
+            let file = root.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data("fixture".utf8).write(to: file)
+        }
+
+        try MLXAudioRunner.removeModel(modelID: "mlx-community/Qwen3-ASR-0.6B-4bit", cacheDirectory: root)
+
+        for path in paths.prefix(3) {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(path).path))
+        }
+        for path in paths.suffix(2) {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent(path).path))
+        }
+        // Removing an already absent model is safe.
+        XCTAssertNoThrow(try MLXAudioRunner.removeModel(modelID: "mlx-community/Qwen3-ASR-0.6B-4bit", cacheDirectory: root))
+    }
+
+    func testRemovalFailureKeepsInstalledRecordAndReportsError() {
+        let installedSettings = InstalledModelSettings(defaults: defaults)
+        installedSettings.localMLXModel = .qwen3ASR06B4bit
+        installedSettings.localMLXInstalledModels = ["Qwen3-ASR-0.6B-4bit"]
+        let manager = LocalModelManager(remover: { _ in
+            throw CocoaError(.fileWriteNoPermission)
+        })
+
+        manager.removeSelectedModel(settings: installedSettings)
+
+        XCTAssertEqual(installedSettings.localMLXInstalledModels, ["Qwen3-ASR-0.6B-4bit"])
+        XCTAssertNotNil(manager.lastError)
+        XCTAssertNil(manager.statusMessage)
+        XCTAssertFalse(manager.isRemoving)
+    }
+
+    func testFilesystemRemovalErrorIsNotSwallowed() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let repository = root.appendingPathComponent("models--mlx-community--Qwen3-ASR-0.6B-4bit")
+        try FileManager.default.createDirectory(at: repository, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: root.path)
+
+        XCTAssertThrowsError(try MLXAudioRunner.removeModel(
+            modelID: "mlx-community/Qwen3-ASR-0.6B-4bit", cacheDirectory: root
+        ))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: repository.path))
+    }
+
+    func testSuccessfulRemovalClearsInstalledRecord() {
+        let installedSettings = InstalledModelSettings(defaults: defaults)
+        installedSettings.localMLXModel = .qwen3ASR06B4bit
+        installedSettings.localMLXInstalledModels = ["Qwen3-ASR-0.6B-4bit"]
+        let manager = LocalModelManager(remover: { modelID in
+            XCTAssertEqual(modelID, "mlx-community/Qwen3-ASR-0.6B-4bit")
+        })
+
+        manager.removeSelectedModel(settings: installedSettings)
+
+        XCTAssertTrue(installedSettings.localMLXInstalledModels.isEmpty)
+        XCTAssertNil(manager.lastError)
+        XCTAssertNotNil(manager.statusMessage)
+    }
+}
+
+private final class InstalledModelSettings: Settings {
+    override var selectedLocalModelInstalled: Bool {
+        localMLXInstalledModels.contains(localMLXModel.rawValue)
+    }
 }
 #endif
