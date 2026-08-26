@@ -14,6 +14,8 @@ struct AirtypeSettingsView: View {
     let hasAccessibility: Bool
     @ObservedObject private var updater = AppUpdater.shared
     @ObservedObject private var localModelManager = LocalModelManager.shared
+    @State private var isTestingEnhancementConfiguration = false
+    @State private var enhancementTestResult: EnhancementTestResult?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -418,6 +420,10 @@ struct AirtypeSettingsView: View {
                             }
                         }
                         .labelsHidden()
+                        .disabled(isTestingEnhancementConfiguration)
+                        .onChange(of: settings.enhancementProvider) {
+                            enhancementTestResult = nil
+                        }
                     }
 
                     if settings.enhancementProvider.requiresApiKey {
@@ -426,10 +432,14 @@ struct AirtypeSettingsView: View {
                             HStack(spacing: 6) {
                                 SecureField(settings.enhancementProvider.apiKeyPlaceholder, text: Binding(
                                     get: { settings.currentEnhancementApiKey },
-                                    set: { settings.currentEnhancementApiKey = $0 }
+                                    set: {
+                                        settings.currentEnhancementApiKey = $0
+                                        enhancementTestResult = nil
+                                    }
                                 ))
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 12, design: .monospaced))
+                                .disabled(isTestingEnhancementConfiguration)
                                 apiKeyLink(url: settings.enhancementProvider.apiKeyURL)
                             }
                         }
@@ -440,10 +450,14 @@ struct AirtypeSettingsView: View {
                         SettingsCardRow(label: "Base URL") {
                             TextField(settings.enhancementProvider.baseURL, text: Binding(
                                 get: { settings.currentEnhancementBaseURL },
-                                set: { settings.currentEnhancementBaseURL = $0 }
+                                set: {
+                                    settings.currentEnhancementBaseURL = $0
+                                    enhancementTestResult = nil
+                                }
                             ))
                             .textFieldStyle(.roundedBorder)
                             .font(.system(size: 11, design: .monospaced))
+                            .disabled(isTestingEnhancementConfiguration)
                         }
                     }
 
@@ -452,17 +466,96 @@ struct AirtypeSettingsView: View {
                     SettingsCardRow(label: "Model") {
                         TextField(settings.enhancementProvider.defaultModel, text: Binding(
                             get: { settings.currentEnhancementModel },
-                            set: { settings.currentEnhancementModel = $0 }
+                            set: {
+                                settings.currentEnhancementModel = $0
+                                enhancementTestResult = nil
+                            }
                         ))
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 11, design: .monospaced))
+                        .disabled(isTestingEnhancementConfiguration)
                     }
+
+                    SettingsCardDivider()
+
+                    enhancementConfigurationTest
 
                     SettingsCardDivider()
 
                     enhancementStatus
                 }
             }
+        }
+    }
+
+    private var enhancementConfigurationTest: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Test API Configuration")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Sends a small request using the same format as Enhancement")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Button(action: testEnhancementConfiguration) {
+                    if isTestingEnhancementConfiguration {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Test")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(!canTestEnhancementConfiguration || isTestingEnhancementConfiguration)
+            }
+
+            if let result = enhancementTestResult {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: result.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(result.isSuccess ? Theme.statusGreen : .red)
+                    Text(result.message)
+                        .foregroundStyle(Theme.textSecondary)
+                        .textSelection(.enabled)
+                }
+                .font(.system(size: 11))
+            }
+        }
+    }
+
+    private var canTestEnhancementConfiguration: Bool {
+        let hasKey = !settings.enhancementProvider.requiresApiKey
+            || !settings.currentEnhancementApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasBaseURL = !settings.currentEnhancementBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasModel = !settings.currentEnhancementModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return hasKey && hasBaseURL && hasModel
+    }
+
+    private func testEnhancementConfiguration() {
+        isTestingEnhancementConfiguration = true
+        enhancementTestResult = nil
+
+        Task {
+            do {
+                _ = try await EnhancementService(settings: settings).testConfiguration()
+                enhancementTestResult = EnhancementTestResult(
+                    isSuccess: true,
+                    message: "Connected to \(settings.enhancementProvider.rawValue) with model “\(settings.currentEnhancementModel)”."
+                )
+            } catch is CancellationError {
+                enhancementTestResult = nil
+            } catch {
+                enhancementTestResult = EnhancementTestResult(
+                    isSuccess: false,
+                    message: error.localizedDescription
+                )
+            }
+            isTestingEnhancementConfiguration = false
         }
     }
 
@@ -635,6 +728,11 @@ struct AirtypeSettingsView: View {
             NSWorkspace.shared.open(url)
         }
     }
+}
+
+private struct EnhancementTestResult {
+    let isSuccess: Bool
+    let message: String
 }
 
 // MARK: - Components
