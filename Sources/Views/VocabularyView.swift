@@ -61,7 +61,7 @@ private struct VocabularyHeader: View {
                 Spacer()
 
                 Label(
-                    "Stored locally; enabled cloud transcription and Enhancement receive selected terms.",
+                    "Stored locally; cloud transcription and enabled Enhancement receive selected terms.",
                     systemImage: "lock.fill"
                 )
                     .font(.system(size: 10))

@@ -53,11 +53,11 @@ Local transcription is the simplest private setup, but Airtype also supports clo
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
 
-Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Enhancement receives only bounded vocabulary guidance and relevant correction examples. When recognition-time vocabulary is enabled, a bounded selection of proper nouns is also sent to the selected transcription backend. The local databases themselves never leave the Mac.
+Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Enhancement receives only bounded vocabulary guidance and relevant correction examples. A bounded selection of proper nouns is automatically sent to supported transcription backends. The local databases themselves never leave the Mac.
 
 ### Vocabulary during transcription
 
-Turn on **Settings > Voice Input > Use Vocabulary during transcription** to guide recognition with your existing proper nouns, even when Enhancement is off. This is opt-in and disabled by default. With MLX Local the vocabulary stays on your Mac; cloud transcription sends the selected terms along with your audio.
+Airtype automatically uses your existing proper nouns to guide recognition, even when Enhancement is off. Manage terms in **Vocabulary**; there is no separate Settings toggle. With MLX Local the vocabulary stays on your Mac; cloud transcription sends the selected terms along with your audio.
 
 | Backend | Recognition-time guidance |
 | --- | --- |

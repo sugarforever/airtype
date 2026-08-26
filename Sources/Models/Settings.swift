@@ -257,7 +257,6 @@ class Settings: ObservableObject {
     private enum Keys {
         // Transcription
         static let transcriptionProvider = "transcription_provider"
-        static let transcriptionVocabularyEnabled = "transcription_vocabulary_enabled"
         static let openaiTranscriptionApiKey = "openai_transcription_api_key"
         static let openaiTranscriptionModel = "openai_transcription_model"
         static let elevenlabsApiKey = "elevenlabs_api_key"
@@ -327,9 +326,8 @@ class Settings: ObservableObject {
         didSet { defaults.set(transcriptionProvider.rawValue, forKey: Keys.transcriptionProvider) }
     }
 
-    @Published var transcriptionVocabularyEnabled: Bool {
-        didSet { defaults.set(transcriptionVocabularyEnabled, forKey: Keys.transcriptionVocabularyEnabled) }
-    }
+    // Vocabulary is an app-wide capability, independent of Enhancement and legacy opt-out settings.
+    let transcriptionVocabularyEnabled = true
 
     @Published var openaiTranscriptionApiKey: String {
         didSet { defaults.set(openaiTranscriptionApiKey, forKey: Keys.openaiTranscriptionApiKey) }
@@ -661,7 +659,6 @@ class Settings: ObservableObject {
         // Transcription settings
         let providerRaw = defaults.string(forKey: Keys.transcriptionProvider) ?? TranscriptionProvider.localMLX.rawValue
         self.transcriptionProvider = TranscriptionProvider(rawValue: providerRaw) ?? .localMLX
-        self.transcriptionVocabularyEnabled = defaults.bool(forKey: Keys.transcriptionVocabularyEnabled)
 
         self.openaiTranscriptionApiKey = defaults.string(forKey: Keys.openaiTranscriptionApiKey) ?? ""
         self.openaiTranscriptionModel = defaults.string(forKey: Keys.openaiTranscriptionModel) ?? "gpt-4o-transcribe"

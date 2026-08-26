@@ -34,13 +34,20 @@ final class TranscriptionRequestTests: XCTestCase {
         XCTAssertTrue(TranscriptionCaptureProtocol.body.contains("name=\"context_bias\"\r\n\r\n小木头\r\n"))
     }
 
-    func testTranscriptionVocabularyIsOptInAndPersistsIndependentlyOfEnhancement() throws {
+    func testTranscriptionVocabularyIsEnabledWithoutSetup() throws {
         let suiteName = "airtype-transcription-tests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let settings = Settings(defaults: defaults)
-        XCTAssertFalse(settings.transcriptionVocabularyEnabled)
-        settings.transcriptionVocabularyEnabled = true
+        XCTAssertTrue(settings.transcriptionVocabularyEnabled)
+    }
+
+    func testLegacyOptOutDoesNotDisableVocabularyWhenEnhancementIsOff() throws {
+        let suiteName = "airtype-transcription-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(false, forKey: "transcription_vocabulary_enabled")
+        let settings = Settings(defaults: defaults)
         settings.enhancementEnabled = false
         let reloaded = Settings(defaults: defaults)
         XCTAssertTrue(reloaded.transcriptionVocabularyEnabled)
