@@ -45,11 +45,13 @@ enum MLXAudioRunner {
         let token = ProcessInfo.processInfo.environment["HF_TOKEN"]
             ?? Bundle.main.object(forInfoDictionaryKey: "HF_TOKEN") as? String
         let cache = HubCache.default
+        let session = ModelDownloadProgressDelegate.makeSession()
+        defer { session.invalidateAndCancel() }
         let client: HubClient
         if let token, !token.isEmpty {
-            client = HubClient(host: HubClient.defaultHost, bearerToken: token, cache: cache)
+            client = HubClient(session: session, host: HubClient.defaultHost, bearerToken: token, cache: cache)
         } else {
-            client = HubClient(cache: cache)
+            client = HubClient(session: session, cache: cache)
         }
         let directory = try await ModelUtils.resolveOrDownloadModel(
             client: client,

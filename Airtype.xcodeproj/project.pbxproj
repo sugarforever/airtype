@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B12800000000000000000001 /* ModelDownloadProgressDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */; };
 		B12700000000000000000001 /* LocalModelInstallStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22700000000000000000001 /* LocalModelInstallStatusView.swift */; };
 		B12700000000000000000002 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000004 /* HuggingFace */; };
 		B12600000000000000000001 /* TranscriptionContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22600000000000000000001 /* TranscriptionContext.swift */; };
@@ -65,6 +66,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadProgressDelegate.swift; sourceTree = "<group>"; };
 		B22700000000000000000001 /* LocalModelInstallStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelInstallStatusView.swift; sourceTree = "<group>"; };
 		B22600000000000000000001 /* TranscriptionContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionContext.swift; sourceTree = "<group>"; };
 		A20001000000000000000001 /* AirtypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirtypeApp.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				A20011000000000000000011 /* TextInserter.swift */,
 				A2001B00000000000000001B /* MLXTranscriptionService.swift */,
 				A2001C00000000000000001C /* LocalModelManager.swift */,
+				B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */,
 				A2001D00000000000000001D /* LocalASRAdapter.swift */,
 				A2001E00000000000000001E /* QwenASRAdapter.swift */,
 				A20020000000000000000020 /* MLXAudioRunner.swift */,
@@ -377,6 +380,7 @@
 				A10019000000000000000019 /* TranscriptionHistory.swift in Sources */,
 				A1001B00000000000000001B /* MLXTranscriptionService.swift in Sources */,
 				A1001C00000000000000001C /* LocalModelManager.swift in Sources */,
+				B12800000000000000000001 /* ModelDownloadProgressDelegate.swift in Sources */,
 				A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */,
 				A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */,
 				A10020000000000000000020 /* MLXAudioRunner.swift in Sources */,

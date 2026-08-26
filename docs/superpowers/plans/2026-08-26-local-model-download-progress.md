@@ -72,3 +72,14 @@ User testing found that Remove followed by Install completed immediately. Read-o
 - Only missing paths are treated as success. Other errors are shown and the installed record is retained. The installed snapshot is removed last so earlier failures leave it usable.
 - Four regression tests cover temporary on-disk caches, other-model preservation, repeated removal, real filesystem permission errors, and manager success/failure state.
 - Full `swift test`: 118 tests passed, zero failures. Xcode Debug build succeeded. No actual user model files were removed during automated validation.
+
+## Follow-up: Progress stayed near 1% until completion
+
+User testing exposed a gap not covered by the original injected-state tests. A slow loopback HTTP probe on macOS showed that `URLSession.download(for:delegate:)` delivered no `didWriteData` callbacks, although KVO observations of `countOfBytesReceived` changed throughout the transfer. The pinned HuggingFace client's private download delegate depends on that missing callback, so its snapshot sampler repeatedly reports the same fraction until each entire file finishes.
+
+- Added an installation-scoped URLSession delegate that observes real download byte counts and forwards them to the existing per-task download delegate. This retains the library's absolute counters, resume-offset handling and weighted snapshot aggregation.
+- The bridge ignores non-download tasks, protects observation storage with a lock, captures the session weakly and releases observations on session invalidation. The runner invalidates its session on success and failure.
+- Added a real loopback HTTP integration test with HEAD metadata, a redirect, and a 4 MiB response sent in delayed chunks. It uses the actual pinned `ModelUtils` and `HubClient`, and requires at least three distinct percentages between 5% and 95% while the transfer is unfinished.
+- Red: the unmodified URLSession path completed the download but produced **zero** intermediate percentages, failing the test. Green: the bridged session passed the same assertion.
+- Full `swift test`: 119 tests passed, zero failures. Xcode Debug app build succeeded. Read-only review found no actionable issues.
+- Actual Hugging Face large-file download/UI interaction remains a manual check; the regression test performs real HTTP transfer only on loopback and does not touch user models. HTTP 206 resume and concurrent weight-file transfers remain additional integration coverage opportunities.
