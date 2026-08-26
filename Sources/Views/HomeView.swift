@@ -6,6 +6,9 @@ import DashboardCore
 struct HomeView: View {
     @ObservedObject var settings: Settings
     let historyEntries: [TranscriptionHistory.Entry]
+    let readiness: DashboardReadiness
+    let onCompleteSetup: () -> Void
+    let onShowHistory: () -> Void
 
     private var recentEntries: [TranscriptionHistory.Entry] {
         Array(historyEntries.prefix(2))
@@ -48,32 +51,41 @@ struct HomeView: View {
     }
 
     private var readyCard: some View {
-        HStack(spacing: 14) {
-            Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: readiness == .ready ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.system(size: 26))
-                .foregroundStyle(settings.isConfigured ? Theme.statusGreen : Theme.statusOrange)
+                .foregroundStyle(readiness == .ready ? Theme.statusGreen : Theme.statusOrange)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(settings.isConfigured ? "Ready" : "Setup required")
+                Text(readiness.title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Text(settings.isConfigured ? "Hold \(primaryShortcut) to record, then release to transcribe." : "Complete your provider setup in Settings to start transcribing.")
+                Text(readiness == .ready ? "Hold \(primaryShortcut) to record, then release to transcribe." : readiness.guidance)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if readiness != .ready {
+                    Button(readiness.actionTitle, action: onCompleteSetup)
+                        .buttonStyle(.bordered)
+                        .padding(.top, 8)
+                }
             }
 
             Spacer()
 
-            Text(primaryShortcut)
-                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Theme.bg, in: .rect(cornerRadius: 6))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Theme.border, lineWidth: 1)
-                }
+            if readiness == .ready {
+                Text(primaryShortcut)
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.bg, in: .rect(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Theme.border, lineWidth: 1)
+                    }
+            }
         }
         .padding(18)
         .background(Theme.cardBg, in: .rect(cornerRadius: 10))
@@ -93,9 +105,14 @@ struct HomeView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent transcriptions")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
+            HStack {
+                Text("Recent transcriptions")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Button("View history", action: onShowHistory)
+                    .buttonStyle(.borderless)
+            }
 
             if recentEntries.isEmpty {
                 Text("Your latest transcriptions will appear here.")

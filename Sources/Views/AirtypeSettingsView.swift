@@ -1,13 +1,17 @@
 import ApplicationServices
 import HotKey
 import SwiftUI
+#if SWIFT_PACKAGE
+import DashboardCore
+#endif
 
 // MARK: - Settings View
 
 struct AirtypeSettingsView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var hotkeyManager: HotkeyManager
-    @State private var hasAccessibility = AXIsProcessTrusted()
+    let readiness: DashboardReadiness
+    let hasAccessibility: Bool
     @StateObject private var updateChecker = UpdateChecker()
     @StateObject private var localModelManager = LocalModelManager()
 
@@ -47,7 +51,7 @@ struct AirtypeSettingsView: View {
         HStack(spacing: 12) {
             Image(systemName: "mic.circle.fill")
                 .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(settings.isConfigured ? Theme.statusGreen : Theme.statusOrange)
+                .foregroundStyle(readiness == .ready ? Theme.statusGreen : Theme.statusOrange)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Airtype")
@@ -55,9 +59,9 @@ struct AirtypeSettingsView: View {
                     .foregroundStyle(Theme.textPrimary)
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(settings.isConfigured ? Theme.statusGreen : Theme.statusOrange)
+                        .fill(readiness == .ready ? Theme.statusGreen : Theme.statusOrange)
                         .frame(width: 6, height: 6)
-                    Text(settings.isConfigured ? "Ready" : "Setup required")
+                    Text(readiness.title)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -106,9 +110,6 @@ struct AirtypeSettingsView: View {
         .padding(12)
         .background(Theme.statusOrange.opacity(0.1))
         .clipShape(.rect(cornerRadius: 8))
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            hasAccessibility = AXIsProcessTrusted()
-        }
     }
 
     // MARK: - Update Banner

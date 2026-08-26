@@ -11,7 +11,7 @@ struct FloatingView: View {
     @ObservedObject var audioRecorder: AudioRecorder
     @StateObject private var appearanceObserver = GlassAppearanceObserver()
     @State private var isExpanded = false
-    @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(appState: AppState) {
         self.appState = appState
@@ -55,13 +55,11 @@ struct FloatingView: View {
         .frame(width: currentContentSize.width, height: currentContentSize.height)
         .contentShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .ignoresSafeArea()
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
-        .onTapGesture {
-            toggleExpanded()
-        }
-        .onHover { hovering in
-            isHovering = hovering
-        }
+        .animation(expansionAnimation, value: isExpanded)
+    }
+
+    private var expansionAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)
     }
 
     private func toggleExpanded() {
@@ -71,7 +69,7 @@ struct FloatingView: View {
         // Resize the window first, then animate the content
         appState.floatingWindowManager.resize(to: NSSize(width: newSize.width, height: newSize.height))
 
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(expansionAnimation) {
             isExpanded = newExpanded
         }
     }
@@ -105,13 +103,17 @@ struct FloatingView: View {
 
             Spacer()
 
-            // Expand indicator
-            Image(systemName: "chevron.down")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(secondaryLabelColor)
-                .rotationEffect(.degrees(isHovering ? 0 : -90))
-                .animation(.easeInOut(duration: 0.2), value: isHovering)
-                .padding(.trailing, 4)
+            Button(action: toggleExpanded) {
+                Label("Expand recording panel", systemImage: "chevron.down")
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(labelColor)
+                    .frame(width: 28, height: 28)
+                    .background(quaternaryLabelColor, in: .rect(cornerRadius: 7))
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .help("Expand recording panel")
         }
         .padding(.horizontal, 16)
     }
@@ -186,19 +188,22 @@ struct FloatingView: View {
 
             Spacer()
 
-            // Collapse button
-            Button(action: toggleExpanded) {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(secondaryLabelColor)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(quaternaryLabelColor)
-                    )
-            }
-            .buttonStyle(.plain)
+            collapseButton
         }
+    }
+
+    private var collapseButton: some View {
+        Button(action: toggleExpanded) {
+            Label("Collapse recording panel", systemImage: "chevron.up")
+                .labelStyle(.iconOnly)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(labelColor)
+                .frame(width: 28, height: 28)
+                .background(quaternaryLabelColor, in: .rect(cornerRadius: 7))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Collapse recording panel")
     }
 
     private var showStreamingText: Bool {
@@ -220,18 +225,7 @@ struct FloatingView: View {
 
                     Spacer()
 
-                    // Collapse button
-                    Button(action: toggleExpanded) {
-                        Image(systemName: "chevron.up")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(secondaryLabelColor)
-                            .frame(width: 24, height: 24)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(quaternaryLabelColor)
-                            )
-                    }
-                    .buttonStyle(.plain)
+                    collapseButton
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -248,8 +242,8 @@ struct FloatingView: View {
                             .padding(.vertical, 12)
                             .id("streamingText")
                     }
-                    .onChange(of: appState.partialTranscription) { _ in
-                        withAnimation(.easeOut(duration: 0.15)) {
+                    .onChange(of: appState.partialTranscription) { _, _ in
+                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) {
                             proxy.scrollTo("streamingText", anchor: .bottom)
                         }
                     }
@@ -258,10 +252,19 @@ struct FloatingView: View {
                 // No streaming text yet: waveform + duration centered
                 Spacer()
 
-                LiveWaveformView(
-                    audioLevel: audioRecorder.audioLevel,
-                    isActive: appState.isRecording
-                )
+                Group {
+                    if reduceMotion {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(labelColor)
+                    } else {
+                        LiveWaveformView(
+                            audioLevel: audioRecorder.audioLevel,
+                            isActive: appState.isRecording
+                        )
+                    }
+                }
+                .accessibilityHidden(true)
                 .frame(height: 60)
                 .padding(.horizontal, 20)
 
@@ -408,10 +411,15 @@ struct FloatingView: View {
     private var statusIndicator: some View {
         if appState.isRecording {
             // Recording - show waveform
-            WaveformView(
-                audioLevel: audioRecorder.audioLevel,
-                isAnimating: true
-            )
+            if reduceMotion {
+                Image(systemName: "record.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.red)
+                    .accessibilityHidden(true)
+            } else {
+                WaveformView(audioLevel: audioRecorder.audioLevel, isAnimating: true)
+                    .accessibilityHidden(true)
+            }
         } else if appState.isProcessing {
             // Processing - show spinner
             ProgressView()
@@ -455,7 +463,7 @@ struct FloatingView: View {
         } else if appState.isProcessing {
             return "\(Int(appState.processingProgress * 100))%"
         } else if appState.lastError != nil || appState.lastNotice != nil {
-            return "Tap to see details"
+            return isExpanded ? "Details below" : "Expand for details"
         } else {
             return "Hold \u{2325} Space"
         }
@@ -497,15 +505,18 @@ struct RecordingTimer: View {
 // MARK: - Pulsing Recording Dot
 
 struct PulsingDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
 
     var body: some View {
         Circle()
             .fill(Color.red)
             .frame(width: 8, height: 8)
-            .opacity(isPulsing ? 0.4 : 1.0)
-            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPulsing)
-            .onAppear { isPulsing = true }
+            .opacity(!reduceMotion && isPulsing ? 0.4 : 1.0)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPulsing)
+            .onAppear { isPulsing = !reduceMotion }
+            .onChange(of: reduceMotion) { _, reduced in isPulsing = !reduced }
+            .accessibilityHidden(true)
     }
 }
 

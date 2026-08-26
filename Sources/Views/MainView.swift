@@ -1,4 +1,6 @@
 import SwiftUI
+import AVFoundation
+import ApplicationServices
 #if SWIFT_PACKAGE
 import DashboardCore
 #endif
@@ -24,12 +26,20 @@ struct MainView: View {
     @Bindable var dashboardModel: DashboardModel
     let historyModel: HistoryPageModel
     let vocabularyModel: VocabularyPageModel
+    @State private var hasMicrophone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+    @State private var hasAccessibility = AXIsProcessTrusted()
+
+    private var readiness: DashboardReadiness {
+        DashboardReadiness(isConfigured: settings.isConfigured,
+                           hasMicrophone: hasMicrophone,
+                           hasAccessibility: hasAccessibility)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
             DashboardSidebar(
                 selection: $dashboardModel.destination,
-                isConfigured: settings.isConfigured
+                readiness: readiness
             )
             .frame(width: 168)
 
@@ -43,6 +53,42 @@ struct MainView: View {
         .frame(minWidth: 760, minHeight: 560)
         .background(Theme.bg)
         .tint(Theme.brand)
+        .onAppear(perform: refreshPermissions)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissions()
+        }
+    }
+
+    private func refreshPermissions() {
+        hasMicrophone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        hasAccessibility = AXIsProcessTrusted()
+    }
+
+    private func resolveReadiness() {
+        switch readiness {
+        case .providerRequired:
+            dashboardModel.showSettings()
+        case .microphoneRequired:
+            if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
+                Task { @MainActor in
+                    _ = await AVCaptureDevice.requestAccess(for: .audio)
+                    refreshPermissions()
+                }
+            } else {
+                openPrivacySettings("Privacy_Microphone")
+            }
+        case .accessibilityRequired:
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+            openPrivacySettings("Privacy_Accessibility")
+        case .ready:
+            break
+        }
+    }
+
+    private func openPrivacySettings(_ pane: String) {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @ViewBuilder
@@ -51,7 +97,10 @@ struct MainView: View {
         case .home:
             HomeView(
                 settings: settings,
-                historyEntries: historyModel.entries
+                historyEntries: historyModel.entries,
+                readiness: readiness,
+                onCompleteSetup: resolveReadiness,
+                onShowHistory: { dashboardModel.destination = .history }
             )
         case .history:
             TranscriptionHistoryView(model: historyModel)
@@ -60,7 +109,9 @@ struct MainView: View {
         case .settings:
             AirtypeSettingsView(
                 settings: settings,
-                hotkeyManager: hotkeyManager
+                hotkeyManager: hotkeyManager,
+                readiness: readiness,
+                hasAccessibility: hasAccessibility
             )
         }
     }

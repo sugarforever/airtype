@@ -111,6 +111,12 @@ class FloatingPanel: NSPanel {
 
         let newFrame = NSRect(origin: newOrigin, size: newSize)
 
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            setFrame(newFrame, display: true)
+            applyRoundedMask(for: newSize)
+            return
+        }
+
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)

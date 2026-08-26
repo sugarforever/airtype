@@ -249,6 +249,12 @@ class AppState: ObservableObject {
     private var providerObserver: AnyCancellable?
 
     init() {
+#if DEBUG
+        LocalASRDiagnostics.log(event: "session_start", fields: [
+            "sensitive_content": "enabled for this process only",
+            "pid": String(ProcessInfo.processInfo.processIdentifier)
+        ])
+#endif
         let databaseURL = try? Self.applicationSupportDatabaseURL()
         let learningService = databaseURL.flatMap {
             try? CorrectionLearningService(store: SQLiteCorrectionStore(url: $0))
@@ -694,6 +700,13 @@ class AppState: ObservableObject {
             case .doubao:
                 throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
             case .localMLX:
+#if DEBUG
+                LocalASRDiagnostics.log(event: "local_pipeline", fields: [
+                    "enhancement_enabled": String(settings.enhancementEnabled),
+                    "vocabulary_enabled": String(settings.transcriptionVocabularyEnabled),
+                    "repository_available": String(vocabularyRepository != nil)
+                ])
+#endif
                 transcription = try await mlxTranscriptionService.transcribe(
                     audioURL: audioURL,
                     model: settings.localMLXModel,

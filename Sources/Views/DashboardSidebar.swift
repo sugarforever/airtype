@@ -5,7 +5,7 @@ import DashboardCore
 
 struct DashboardSidebar: View {
     @Binding var selection: DashboardDestination
-    let isConfigured: Bool
+    let readiness: DashboardReadiness
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -28,13 +28,13 @@ struct DashboardSidebar: View {
         HStack(spacing: 10) {
             Image(systemName: "mic.circle.fill")
                 .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(isConfigured ? Theme.statusGreen : Theme.statusOrange)
+                .foregroundStyle(readiness == .ready ? Theme.statusGreen : Theme.statusOrange)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Airtype")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Text(isConfigured ? "Ready" : "Setup required")
+                Text(readiness == .ready ? "Ready" : "Setup required")
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -42,6 +42,9 @@ struct DashboardSidebar: View {
         .padding(.horizontal, 16)
         .padding(.top, 18)
         .padding(.bottom, 20)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Airtype, \(readiness.title)")
+        .help(readiness.title)
     }
 
     private func sidebarButton(for destination: DashboardDestination) -> some View {

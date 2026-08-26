@@ -48,7 +48,7 @@ private struct VocabularyHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Vocabulary")
                         .font(.system(size: 24, weight: .semibold))
@@ -58,14 +58,14 @@ private struct VocabularyHeader: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
 
-                Spacer()
-
                 Label(
                     "Stored locally; cloud transcription and enabled Enhancement receive selected terms.",
                     systemImage: "lock.fill"
                 )
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.textTertiary)
+                    .font(.callout)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             HStack(spacing: 12) {
