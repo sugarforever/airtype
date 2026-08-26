@@ -51,18 +51,24 @@ struct DashboardSidebar: View {
         Button {
             selection = destination
         } label: {
-            Label(destination.title, systemImage: destination.systemImage)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(
-                    selection == destination ? Theme.textPrimary : Theme.textSecondary
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    selection == destination ? Theme.brand.opacity(0.14) : .clear,
-                    in: .rect(cornerRadius: 6)
-                )
+            HStack(spacing: 8) {
+                Image(systemName: destination.systemImage)
+                    .frame(width: 16, height: 16)
+                    .accessibilityHidden(true)
+                Text(destination.title)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(
+                selection == destination ? Theme.textPrimary : Theme.textSecondary
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                selection == destination ? Theme.brand.opacity(0.14) : .clear,
+                in: .rect(cornerRadius: 6)
+            )
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selection == destination ? .isSelected : [])
