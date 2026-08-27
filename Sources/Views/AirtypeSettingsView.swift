@@ -351,6 +351,8 @@ struct AirtypeSettingsView: View {
                         Text("(\(ByteCountFormatter.string(fromByteCount: settings.selectedLocalModelFileSizeBytes, countStyle: .file)))")
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.textSecondary)
+                    } else {
+                        LocalModelDownloadSizeView(model: settings.localMLXModel)
                     }
                     Spacer()
                     Button(!settings.selectedLocalModelInstalled && localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
