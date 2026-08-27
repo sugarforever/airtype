@@ -4,6 +4,16 @@ import XCTest
 
 @MainActor
 final class AppUpdaterTests: XCTestCase {
+    func testUpdaterDoesNotStartWithoutAFeedURL() {
+        XCTAssertFalse(AppUpdaterConfiguration.shouldStartUpdater(infoDictionary: [:]))
+    }
+
+    func testUpdaterStartsWithAValidHTTPSFeedURL() {
+        XCTAssertTrue(AppUpdaterConfiguration.shouldStartUpdater(infoDictionary: [
+            "SUFeedURL": "https://example.com/appcast.xml"
+        ]))
+    }
+
     func testSharedUpdaterHasApplicationLifetimeIdentity() {
         XCTAssertTrue(AppUpdater.shared === AppUpdater.shared)
     }
