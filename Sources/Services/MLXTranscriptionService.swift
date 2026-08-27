@@ -42,10 +42,7 @@ final class MLXTranscriptionService {
     }
 
     private func adapter(for model: LocalMLXModel) -> any LocalASRAdapter {
-        switch model {
-        case .qwen3ASR06B4bit, .qwen3ASR17B:
-            return QwenASRAdapter(model: model)
-        }
+        QwenASRAdapter(model: model)
     }
 }
 
