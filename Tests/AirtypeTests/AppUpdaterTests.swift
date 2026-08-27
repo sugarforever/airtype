@@ -29,5 +29,31 @@ final class AppUpdaterTests: XCTestCase {
         XCTAssertFalse(coordinator.checkForUpdates())
         XCTAssertEqual(checkCount, 0)
     }
+
+    func testLaunchChecksForUpdatesInBackgroundWhenAutomaticChecksAreEnabled() {
+        var backgroundCheckCount = 0
+        let coordinator = UpdateCheckCoordinator(
+            canCheckForUpdates: { true },
+            performCheck: {},
+            automaticallyChecksForUpdates: { true },
+            performBackgroundCheck: { backgroundCheckCount += 1 }
+        )
+
+        XCTAssertTrue(coordinator.checkForUpdatesInBackgroundAtLaunch())
+        XCTAssertEqual(backgroundCheckCount, 1)
+    }
+
+    func testLaunchDoesNotCheckForUpdatesWhenAutomaticChecksAreDisabled() {
+        var backgroundCheckCount = 0
+        let coordinator = UpdateCheckCoordinator(
+            canCheckForUpdates: { true },
+            performCheck: {},
+            automaticallyChecksForUpdates: { false },
+            performBackgroundCheck: { backgroundCheckCount += 1 }
+        )
+
+        XCTAssertFalse(coordinator.checkForUpdatesInBackgroundAtLaunch())
+        XCTAssertEqual(backgroundCheckCount, 0)
+    }
 }
 #endif

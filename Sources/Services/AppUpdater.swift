@@ -6,19 +6,32 @@ import Sparkle
 final class UpdateCheckCoordinator {
     private let canCheckForUpdates: () -> Bool
     private let performCheck: () -> Void
+    private let automaticallyChecksForUpdates: () -> Bool
+    private let performBackgroundCheck: () -> Void
 
     init(
         canCheckForUpdates: @escaping () -> Bool,
-        performCheck: @escaping () -> Void
+        performCheck: @escaping () -> Void,
+        automaticallyChecksForUpdates: @escaping () -> Bool = { false },
+        performBackgroundCheck: @escaping () -> Void = {}
     ) {
         self.canCheckForUpdates = canCheckForUpdates
         self.performCheck = performCheck
+        self.automaticallyChecksForUpdates = automaticallyChecksForUpdates
+        self.performBackgroundCheck = performBackgroundCheck
     }
 
     @discardableResult
     func checkForUpdates() -> Bool {
         guard canCheckForUpdates() else { return false }
         performCheck()
+        return true
+    }
+
+    @discardableResult
+    func checkForUpdatesInBackgroundAtLaunch() -> Bool {
+        guard automaticallyChecksForUpdates() else { return false }
+        performBackgroundCheck()
         return true
     }
 }
@@ -32,7 +45,13 @@ final class AppUpdater: ObservableObject {
     private let updaterController: SPUStandardUpdaterController
     private lazy var checkCoordinator = UpdateCheckCoordinator(
         canCheckForUpdates: { [weak self] in self?.canCheckForUpdates == true },
-        performCheck: { [weak self] in self?.updaterController.checkForUpdates(nil) }
+        performCheck: { [weak self] in self?.updaterController.checkForUpdates(nil) },
+        automaticallyChecksForUpdates: { [weak self] in
+            self?.updaterController.updater.automaticallyChecksForUpdates == true
+        },
+        performBackgroundCheck: { [weak self] in
+            self?.updaterController.updater.checkForUpdatesInBackground()
+        }
     )
 
     private init() {
@@ -46,6 +65,8 @@ final class AppUpdater: ObservableObject {
             .publisher(for: \.canCheckForUpdates)
             .receive(on: RunLoop.main)
             .assign(to: &$canCheckForUpdates)
+
+        checkCoordinator.checkForUpdatesInBackgroundAtLaunch()
     }
 
     func checkForUpdates() {
