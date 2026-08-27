@@ -116,6 +116,39 @@ final class TranscriptionRequestTests: XCTestCase {
         XCTAssertEqual(inputAudio["format"], "m4a")
     }
 
+    func testOpenRouterReturnsUsageAndGenerationMetadata() async throws {
+        let suiteName = "airtype-openrouter-metadata-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.openrouterTranscriptionApiKey = "sk-or-test"
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [TranscriptionCaptureProtocol.self]
+        let session = URLSession(configuration: config)
+        defer {
+            TranscriptionCaptureProtocol.setResponse()
+            session.invalidateAndCancel()
+        }
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("airtype-openrouter-metadata-\(UUID().uuidString).m4a")
+        try Data([1, 2, 3]).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        TranscriptionCaptureProtocol.setResponse(
+            body: #"{"text":"recognized","usage":{"seconds":9.2,"input_tokens":83,"output_tokens":30,"total_tokens":113,"cost":0.000508}}"#,
+            headers: ["X-Generation-Id": "gen-airtype-123"]
+        )
+
+        let result = try await OpenRouterTranscriptionService(settings: settings, session: session)
+            .transcribeWithMetadata(audioURL: file)
+
+        XCTAssertEqual(result.text, "recognized")
+        XCTAssertEqual(result.usage?.seconds, 9.2)
+        XCTAssertEqual(result.usage?.inputTokens, 83)
+        XCTAssertEqual(result.usage?.outputTokens, 30)
+        XCTAssertEqual(result.usage?.totalTokens, 113)
+        XCTAssertEqual(result.usage?.cost, 0.000508)
+        XCTAssertEqual(result.generationID, "gen-airtype-123")
+    }
+
     func testOpenRouterRejectsUnsupportedRuntimeModelBeforeSending() async throws {
         let suiteName = "airtype-openrouter-invalid-model-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -269,6 +302,7 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
     private static var capturedRequest: URLRequest?
     private static var responseStatusCode = 200
     private static var responseBody = Data("{\"text\":\"recognized\"}".utf8)
+    private static var responseHeaders: [String: String] = ["Content-Type": "application/json"]
     private static var failureCode: URLError.Code?
     static var body: String {
         lock.lock()
@@ -285,10 +319,15 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
         defer { lock.unlock() }
         return capturedRequest
     }
-    static func setResponse(statusCode: Int = 200, body: String = "{\"text\":\"recognized\"}") {
+    static func setResponse(
+        statusCode: Int = 200,
+        body: String = "{\"text\":\"recognized\"}",
+        headers: [String: String] = ["Content-Type": "application/json"]
+    ) {
         lock.lock()
         responseStatusCode = statusCode
         responseBody = Data(body.utf8)
+        responseHeaders = headers
         lock.unlock()
     }
     static func setFailure(_ code: URLError.Code?) {
@@ -318,13 +357,14 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
         Self.lock.lock()
         let statusCode = Self.responseStatusCode
         let responseData = Self.responseBody
+        let responseHeaders = Self.responseHeaders
         let failureCode = Self.failureCode
         Self.lock.unlock()
         if let failureCode {
             client?.urlProtocol(self, didFailWithError: URLError(failureCode))
             return
         }
-        let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+        let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: responseHeaders)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: responseData)
         client?.urlProtocolDidFinishLoading(self)

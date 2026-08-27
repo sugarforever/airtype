@@ -10,6 +10,10 @@ final class OpenRouterTranscriptionService {
     }
 
     func transcribe(audioURL: URL) async throws -> String {
+        try await transcribeWithMetadata(audioURL: audioURL).text
+    }
+
+    func transcribeWithMetadata(audioURL: URL) async throws -> OpenRouterTranscriptionResult {
         let apiKey = settings.openrouterTranscriptionApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !apiKey.isEmpty else {
             throw OpenRouterTranscriptionError.noAPIKey
@@ -63,7 +67,33 @@ final class OpenRouterTranscriptionService {
         guard !text.isEmpty else {
             throw OpenRouterTranscriptionError.emptyTranscription
         }
-        return text
+        return OpenRouterTranscriptionResult(
+            text: text,
+            usage: response.usage,
+            generationID: httpResponse.value(forHTTPHeaderField: "X-Generation-Id")
+        )
+    }
+}
+
+struct OpenRouterTranscriptionResult: Equatable, Sendable {
+    let text: String
+    let usage: OpenRouterTranscriptionUsage?
+    let generationID: String?
+}
+
+struct OpenRouterTranscriptionUsage: Decodable, Equatable, Sendable {
+    let seconds: Double?
+    let inputTokens: Int?
+    let outputTokens: Int?
+    let totalTokens: Int?
+    let cost: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case seconds
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+        case totalTokens = "total_tokens"
+        case cost
     }
 }
 
@@ -84,6 +114,7 @@ private struct OpenRouterTranscriptionRequest: Encodable {
 
 private struct OpenRouterTranscriptionResponse: Decodable {
     let text: String
+    let usage: OpenRouterTranscriptionUsage?
 }
 
 private struct OpenRouterErrorResponse: Decodable {
