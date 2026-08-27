@@ -20,13 +20,19 @@ final class ModelDownloadSizeProviderTests: XCTestCase {
     }
 
     func testMissingRemoteMetadataFallsBackToCatalogEstimate() async {
+        let counter = RequestCounter()
         let provider = ModelDownloadSizeProvider { _ in
+            await counter.increment()
             throw URLError(.notConnectedToInternet)
         }
 
-        let estimate = await provider.estimate(for: .qwen3ASR06B4bit)
+        let first = await provider.estimate(for: .qwen3ASR06B4bit)
+        let second = await provider.estimate(for: .qwen3ASR06B4bit)
 
-        XCTAssertEqual(estimate, .init(bytes: 710_000_000, source: .catalogFallback))
+        let requestCount = await counter.value
+        XCTAssertEqual(first, .init(bytes: 710_000_000, source: .catalogFallback))
+        XCTAssertEqual(second, first)
+        XCTAssertEqual(requestCount, 1)
     }
 
     func testPartiallyMissingRemoteMetadataFallsBackInsteadOfUnderreporting() async {

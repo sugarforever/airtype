@@ -60,9 +60,7 @@ actor ModelDownloadSizeProvider {
         inFlight[model] = task
         let estimate = await task.value
         inFlight[model] = nil
-        if estimate.source == .remote {
-            cache[model] = estimate
-        }
+        cache[model] = estimate
         return estimate
     }
 
