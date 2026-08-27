@@ -1,4 +1,7 @@
 import SwiftUI
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 struct MenuBarView: View {
     @ObservedObject var appState: AppState
@@ -143,6 +146,7 @@ struct MenuBarView: View {
             VStack(alignment: .leading, spacing: 6) {
                 configRow(label: "Service", value: appState.settings.transcriptionProvider.rawValue)
                 configRow(label: "Model", value: currentModel)
+                configRow(label: "Writing", value: appState.settings.enhancementMode.rawValue)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -161,8 +165,30 @@ struct MenuBarView: View {
 
                 shortcutRow(action: "Push-to-talk", keys: "⌥ Space")
                 shortcutRow(action: "Toggle mode", keys: "⌥⇧ Space")
+                shortcutRow(action: "Switch writing", keys: appState.hotkeyManager.enhancementModeDisplay)
             }
             .padding(.vertical, 6)
+
+            Divider()
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Writing mode")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary.opacity(0.7))
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 2)
+
+                ForEach(EnhancementMode.allCases) { mode in
+                    EnhancementModeMenuButton(
+                        mode: mode,
+                        isSelected: appState.settings.enhancementMode == mode,
+                        action: { appState.selectEnhancementMode(mode) }
+                    )
+                }
+            }
+            .padding(.vertical, 4)
 
             // Error display
             if let error = appState.lastError {
@@ -245,7 +271,7 @@ struct MenuBarView: View {
             return "mic.fill"
         } else if appState.isProcessing {
             return "arrow.trianglehead.2.clockwise"
-        } else if !appState.settings.isConfigured {
+        } else if !appState.settings.isConfigured || requiresEnhancementSetup {
             return "exclamationmark.circle.fill"
         } else {
             return "checkmark.circle.fill"
@@ -257,7 +283,7 @@ struct MenuBarView: View {
             return .red
         } else if appState.isProcessing {
             return .orange
-        } else if !appState.settings.isConfigured {
+        } else if !appState.settings.isConfigured || requiresEnhancementSetup {
             return .yellow
         } else {
             return .green
@@ -269,11 +295,18 @@ struct MenuBarView: View {
             return "Recording..."
         } else if appState.isProcessing {
             return "Processing..."
+        } else if requiresEnhancementSetup {
+            return "Smart Rewrite setup required"
         } else if !appState.settings.isConfigured {
             return "Setup required"
         } else {
             return "Ready"
         }
+    }
+
+    private var requiresEnhancementSetup: Bool {
+        appState.settings.enhancementMode == .smartRewrite
+            && !appState.settings.isEnhancementConfigured
     }
 
     // MARK: - Subviews
@@ -301,6 +334,33 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 3)
+    }
+}
+
+private struct EnhancementModeMenuButton: View {
+    let mode: EnhancementMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(mode.rawValue)
+                        .font(.system(size: 12, weight: .medium))
+                    Text(mode == .proofread ? "Preserve exact wording" : "Keep final intent")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
     }
 }
 

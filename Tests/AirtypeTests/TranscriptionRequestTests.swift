@@ -54,6 +54,112 @@ final class TranscriptionRequestTests: XCTestCase {
         XCTAssertFalse(reloaded.enhancementEnabled)
     }
 
+    func testSmartRewriteModePersistsAcrossSettingsInstances() throws {
+        let suiteName = "airtype-enhancement-mode-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = Settings(defaults: defaults)
+        settings.enhancementMode = .smartRewrite
+
+        XCTAssertEqual(Settings(defaults: defaults).enhancementMode, .smartRewrite)
+    }
+
+    func testEnhancementReadinessRequiresEnabledProviderModelEndpointAndKey() throws {
+        let suiteName = "airtype-enhancement-readiness-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.enhancementProvider = .custom
+
+        settings.enhancementEnabled = false
+        XCTAssertEqual(settings.enhancementConfigurationError, "Enable Enhancement to use Smart Rewrite.")
+
+        settings.enhancementEnabled = true
+        settings.currentEnhancementBaseURL = ""
+        settings.currentEnhancementModel = ""
+        settings.currentEnhancementApiKey = ""
+        XCTAssertEqual(settings.enhancementConfigurationError, "Enter an Enhancement Base URL.")
+
+        settings.currentEnhancementBaseURL = "not a url"
+        XCTAssertEqual(settings.enhancementConfigurationError, "Enter a valid HTTP or HTTPS Enhancement Base URL.")
+
+        settings.currentEnhancementBaseURL = "https://example.test/v1"
+        XCTAssertEqual(settings.enhancementConfigurationError, "Choose an Enhancement model.")
+
+        settings.currentEnhancementModel = "test-model"
+        XCTAssertEqual(settings.enhancementConfigurationError, "Add the Custom API key for Enhancement.")
+
+        settings.currentEnhancementApiKey = "test-key"
+        XCTAssertTrue(settings.isEnhancementConfigured)
+        XCTAssertNil(settings.enhancementConfigurationError)
+    }
+
+    func testEnhancementModeShortcutPersistsAcrossSettingsInstances() throws {
+        let suiteName = "airtype-enhancement-shortcut-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+
+        settings.enhancementModeKeyCode = 12
+        settings.enhancementModeModifiers = 768
+
+        let reloaded = Settings(defaults: defaults)
+        XCTAssertEqual(reloaded.enhancementModeKeyCode, 12)
+        XCTAssertEqual(reloaded.enhancementModeModifiers, 768)
+    }
+
+    func testUnconfiguredSmartRewriteSelectionKeepsProofreadActive() throws {
+        let suiteName = "airtype-enhancement-selection-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.enhancementProvider = .custom
+        settings.currentEnhancementBaseURL = ""
+
+        let error = settings.selectEnhancementMode(.smartRewrite)
+
+        XCTAssertEqual(error, "Enter an Enhancement Base URL.")
+        XCTAssertEqual(settings.enhancementMode, .proofread)
+    }
+
+    func testConfiguredSmartRewriteSelectionBecomesActive() throws {
+        let suiteName = "airtype-enhancement-selection-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.enhancementProvider = .custom
+        settings.currentEnhancementBaseURL = "https://example.test/v1"
+        settings.currentEnhancementModel = "test-model"
+        settings.currentEnhancementApiKey = "test-key"
+
+        XCTAssertNil(settings.selectEnhancementMode(.smartRewrite))
+        XCTAssertEqual(settings.enhancementMode, .smartRewrite)
+    }
+
+    func testShortcutConflictNamesTheExistingAirtypeAction() throws {
+        let suiteName = "airtype-shortcut-conflict-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+
+        XCTAssertEqual(
+            settings.shortcutConflict(
+                keyCode: settings.pushToTalkKeyCode,
+                modifiers: settings.pushToTalkModifiers,
+                excluding: .enhancementMode
+            ),
+            "Already used by Push-to-talk."
+        )
+        XCTAssertNil(
+            settings.shortcutConflict(
+                keyCode: settings.enhancementModeKeyCode,
+                modifiers: settings.enhancementModeModifiers,
+                excluding: .enhancementMode
+            )
+        )
+    }
+
     func testOpenAIActualMultipartIncludesPromptAndAudio() {
         let body = WhisperService().createMultipartBody(audioData: Data("audio-bytes".utf8), fileName: "voice.m4a", model: "whisper-1", boundary: "b", context: TranscriptionContext(terms: ["Airtype"]))
         let text = String(decoding: body, as: UTF8.self)

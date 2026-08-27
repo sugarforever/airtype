@@ -10,13 +10,16 @@ class HotkeyManager: ObservableObject {
 
     @Published var pushToTalkDisplay: String = ""
     @Published var toggleModeDisplay: String = ""
+    @Published var enhancementModeDisplay: String = ""
 
     private var pushToTalkHotKey: HotKey?
     private var toggleModeHotKey: HotKey?
+    private var enhancementModeHotKey: HotKey?
 
     var onPushToTalkStart: (() -> Void)?
     var onPushToTalkEnd: (() -> Void)?
     var onToggle: (() -> Void)?
+    var onEnhancementModeToggle: (() -> Void)?
 
     init() {
         setupHotkeys()
@@ -55,23 +58,36 @@ class HotkeyManager: ObservableObject {
             }
         }
 
+        enhancementModeHotKey = HotKey(
+            carbonKeyCode: settings.enhancementModeKeyCode,
+            carbonModifiers: settings.enhancementModeModifiers
+        )
+        enhancementModeHotKey?.keyDownHandler = { [weak self] in
+            Task { @MainActor in
+                self?.onEnhancementModeToggle?()
+            }
+        }
+
         updateDisplayStrings()
     }
 
     func rebindHotkeys() {
         pushToTalkHotKey = nil
         toggleModeHotKey = nil
+        enhancementModeHotKey = nil
         setupHotkeys()
     }
 
     func disable() {
         pushToTalkHotKey?.isPaused = true
         toggleModeHotKey?.isPaused = true
+        enhancementModeHotKey?.isPaused = true
     }
 
     func enable() {
         pushToTalkHotKey?.isPaused = false
         toggleModeHotKey?.isPaused = false
+        enhancementModeHotKey?.isPaused = false
     }
 
     private func updateDisplayStrings() {
@@ -83,6 +99,10 @@ class HotkeyManager: ObservableObject {
         toggleModeDisplay = Settings.shortcutDisplayString(
             keyCode: settings.toggleModeKeyCode,
             modifiers: settings.toggleModeModifiers
+        )
+        enhancementModeDisplay = Settings.shortcutDisplayString(
+            keyCode: settings.enhancementModeKeyCode,
+            modifiers: settings.enhancementModeModifiers
         )
     }
 }

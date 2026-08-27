@@ -52,17 +52,27 @@ public enum DashboardDestination: String, CaseIterable, Identifiable, Sendable {
     public var id: Self { self }
 }
 
+public enum DashboardSettingsSection: String, Sendable {
+    case enhancement
+}
+
 @MainActor
 @Observable
 @available(macOS 14.0, *)
 public final class DashboardModel {
     public var destination: DashboardDestination
+    public var settingsSection: DashboardSettingsSection?
+    public var settingsSectionRevision: Int
 
     public init(destination: DashboardDestination = .home) {
         self.destination = destination
+        self.settingsSection = nil
+        self.settingsSectionRevision = 0
     }
 
-    public func showSettings() {
+    public func showSettings(section: DashboardSettingsSection? = nil) {
+        settingsSection = section
+        settingsSectionRevision &+= 1
         if destination != .settings {
             destination = .settings
         }

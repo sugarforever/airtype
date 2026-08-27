@@ -131,6 +131,33 @@ final class EnhancementServiceTests: XCTestCase {
         }
     }
 
+    func testSmartRewriteSelectionChangesOutgoingEnhancementInstructions() async throws {
+        let settings = makeSettings(provider: .custom)
+        settings.enhancementEnabled = true
+        settings.enhancementMode = .smartRewrite
+        settings.currentEnhancementBaseURL = "https://example.test/v1"
+        settings.currentEnhancementModel = "compatible-model"
+        settings.currentEnhancementApiKey = "secret-key"
+
+        URLProtocolStub.requestHandler = { request in
+            let body = try XCTUnwrap(Self.bodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
+            XCTAssertTrue(messages[0]["content"]?.contains("Keep only the speaker's final decision") == true)
+            return Self.response(
+                statusCode: 200,
+                body: #"{"choices":[{"message":{"role":"assistant","content":"Friday at 3 PM."}}]}"#,
+                for: request
+            )
+        }
+
+        let output = try await EnhancementService(settings: settings, session: makeSession()).enhance(
+            text: "Thursday, no, Friday at 3 PM."
+        )
+
+        XCTAssertEqual(output, "Friday at 3 PM.")
+    }
+
     private func makeSettings(provider: EnhancementProvider) -> Settings {
         let settings = Settings(defaults: defaults)
         settings.enhancementProvider = provider

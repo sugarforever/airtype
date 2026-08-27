@@ -40,18 +40,22 @@ The main window organizes Airtype into four pages: **Home**, **History**, **Voca
 - A floating panel for recording and transcription status
 - Up to 50 recent transcriptions stored locally
 - Optional AI cleanup for grammar, punctuation, and formatting
+- Two Enhancement writing modes: conservative Proofread and thought-aware Smart Rewrite
 - Signed automatic updates with in-app installation and relaunch
 
 | Action | Default shortcut |
 |---|---|
 | Push to talk | **Option + Space** |
 | Toggle recording | **Option + Shift + Space** |
+| Switch writing mode | **Control + Option + Space** |
 
 ## Cloud transcription and enhancement
 
 Local transcription is the simplest private setup, but Airtype also supports cloud transcription through **OpenAI**, **ElevenLabs**, **Mistral**, and **Doubao**. These providers require their own credentials and send audio to the selected service.
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
+
+Enhancement offers two writing modes. **Proofread** fixes recognition, punctuation, casing, and formatting while preserving the speaker's wording. **Smart Rewrite** removes filler and false starts, keeps the final version of spoken revisions, follows spoken editing instructions, and organizes out-of-order thoughts without inventing details. Choose the mode in Settings or the menu bar, or switch with the configurable global shortcut. Smart Rewrite requires a complete Enhancement provider, model, endpoint, and API-key configuration; Airtype links directly to those settings when setup is incomplete. LM Studio can keep this step local when a compatible local model is running.
 
 Proper nouns and previously stored correction samples are kept in a local SQLite database. Airtype no longer observes edits in external input fields. The learned-corrections interface is currently removed; existing samples are preserved locally and may still provide a small set of relevant examples during Enhancement. Enhancement receives only bounded vocabulary guidance and relevant correction examples. A bounded selection of proper nouns is automatically sent to supported transcription backends. The local databases themselves never leave the Mac.
 

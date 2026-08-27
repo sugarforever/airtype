@@ -278,6 +278,9 @@ class AppState: ObservableObject {
         setupHotkeyCallbacks()
         MainWindowController.shared.hotkeyManager = hotkeyManager
         MainWindowController.shared.vocabularyModel = vocabularyPageModel
+        MainWindowController.shared.enhancementModeSelector = { [weak self] mode in
+            self?.selectEnhancementMode(mode)
+        }
         Task { @MainActor in
             if settings.hasCompletedSetup {
                 MainWindowController.shared.show()
@@ -344,6 +347,14 @@ class AppState: ObservableObject {
                 }
             }
         }
+
+        hotkeyManager.onEnhancementModeToggle = { [weak self] in
+            guard let self else { return }
+            let nextMode: EnhancementMode = self.settings.enhancementMode == .proofread
+                ? .smartRewrite
+                : .proofread
+            self.selectEnhancementMode(nextMode)
+        }
     }
 
     // MARK: - Streaming Pre-connect
@@ -407,6 +418,10 @@ class AppState: ObservableObject {
             debugLog("Already recording or processing, skipping")
             return
         }
+        guard canUseSelectedEnhancementMode else {
+            promptForEnhancementConfiguration()
+            return
+        }
         guard settings.isConfigured else {
             debugLog("API key not configured")
             lastError = settings.configurationError ?? "Please configure API keys in Settings"
@@ -436,6 +451,35 @@ class AppState: ObservableObject {
                 error: error
             ))
             lastError = error.localizedDescription
+        }
+    }
+
+    func selectEnhancementMode(_ mode: EnhancementMode) {
+        guard settings.selectEnhancementMode(mode) == nil else {
+            promptForEnhancementConfiguration()
+            return
+        }
+        lastError = nil
+        lastNotice = "Enhancement mode: \(mode.rawValue)"
+    }
+
+    private var canUseSelectedEnhancementMode: Bool {
+        settings.enhancementMode != .smartRewrite || settings.isEnhancementConfigured
+    }
+
+    private func promptForEnhancementConfiguration() {
+        let message = settings.enhancementConfigurationError ?? "Configure an Enhancement model to use Smart Rewrite."
+        lastError = nil
+        lastNotice = message
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Smart Rewrite needs an Enhancement model"
+        alert.informativeText = message
+        alert.addButton(withTitle: "Open Enhancement Settings")
+        alert.addButton(withTitle: "Not Now")
+        if alert.runModal() == .alertFirstButtonReturn {
+            MainWindowController.shared.showSettings(section: .enhancement)
         }
     }
 

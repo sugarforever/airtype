@@ -2,6 +2,30 @@ import XCTest
 @testable import CorrectionLearningCore
 
 final class EnhancementPromptTests: XCTestCase {
+    func testSmartRewritePromptTreatsSpeechCorrectionsAsInstructionsInsteadOfOutput() {
+        let prompt = EnhancementPromptBuilder().prompt(
+            mode: .smartRewrite,
+            examples: [],
+            vocabularySection: ""
+        )
+
+        XCTAssertTrue(prompt.contains("Keep only the speaker's final decision"))
+        XCTAssertTrue(prompt.contains("Remove filler words"))
+        XCTAssertTrue(prompt.contains("Reorganize out-of-order thoughts"))
+        XCTAssertTrue(prompt.contains("Do not invent facts"))
+        XCTAssertFalse(prompt.contains("keep \"Monday, no wait, Tuesday\" exactly as spoken"))
+    }
+
+    func testProofreadPromptRemainsConservative() {
+        let prompt = EnhancementPromptBuilder().prompt(
+            mode: .proofread,
+            examples: [],
+            vocabularySection: ""
+        )
+
+        XCTAssertEqual(prompt, EnhancementPromptBuilder.basePrompt)
+    }
+
     func testNoTermsAndNoExamplesPreserveExactBasePrompt() {
         XCTAssertEqual(
             EnhancementPromptBuilder().prompt(examples: [], vocabularySection: ""),

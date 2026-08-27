@@ -2,6 +2,7 @@ import ApplicationServices
 import HotKey
 import SwiftUI
 #if SWIFT_PACKAGE
+import CorrectionLearningCore
 import DashboardCore
 #endif
 
@@ -12,6 +13,9 @@ struct AirtypeSettingsView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     let readiness: DashboardReadiness
     let hasAccessibility: Bool
+    let requestedSection: DashboardSettingsSection?
+    let sectionRequestRevision: Int
+    let onSelectEnhancementMode: (EnhancementMode) -> Void
     @ObservedObject private var updater = AppUpdater.shared
     @ObservedObject private var localModelManager = LocalModelManager.shared
     @State private var isTestingEnhancementConfiguration = false
@@ -21,27 +25,41 @@ struct AirtypeSettingsView: View {
         VStack(spacing: 0) {
             dashboardHeader
             Divider().overlay(Theme.border)
-            ScrollView {
-                VStack(spacing: 16) {
-                    updateSection
-                    if !hasAccessibility {
-                        accessibilityBanner
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 16) {
+                        updateSection
+                        if !hasAccessibility {
+                            accessibilityBanner
+                        }
+                        if let error = settings.configurationError {
+                            statusBanner(message: error)
+                        }
+                        voiceInputSection
+                        enhancementSection
+                            .id(DashboardSettingsSection.enhancement)
+                        floatingWindowSection
+                        shortcutsSection
+                        permissionsSection
                     }
-                    if let error = settings.configurationError {
-                        statusBanner(message: error)
-                    }
-                    voiceInputSection
-                    enhancementSection
-                    floatingWindowSection
-                    shortcutsSection
-                    permissionsSection
+                    .padding(24)
                 }
-                .padding(24)
+                .onAppear { scrollToRequestedSection(using: proxy) }
+                .onChange(of: sectionRequestRevision) {
+                    scrollToRequestedSection(using: proxy)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
         .tint(Theme.brand)
+    }
+
+    private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
+        guard let requestedSection else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            proxy.scrollTo(requestedSection, anchor: .top)
+        }
     }
 
     // MARK: - Header
@@ -409,6 +427,31 @@ struct AirtypeSettingsView: View {
                     }
                 }
                 .toggleStyle(.switch)
+
+                SettingsCardDivider()
+
+                SettingsCardRow(label: "Writing mode") {
+                    Picker("", selection: Binding(
+                        get: { settings.enhancementMode },
+                        set: onSelectEnhancementMode
+                    )) {
+                        ForEach(EnhancementMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+
+                    Text(settings.enhancementMode.explanation)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if settings.enhancementMode == .smartRewrite,
+               let error = settings.enhancementConfigurationError {
+                statusBanner(message: error)
             }
 
             // Keep configuration controls mounted so toggling only changes the setting.
@@ -631,6 +674,13 @@ struct AirtypeSettingsView: View {
                     defaultKeyCode: Settings.defaultPushToTalkKeyCode,
                     defaultModifiers: Settings.defaultPushToTalkModifiers,
                     hotkeyManager: hotkeyManager,
+                    validate: { keyCode, modifiers in
+                        settings.shortcutConflict(
+                            keyCode: keyCode,
+                            modifiers: modifiers,
+                            excluding: .pushToTalk
+                        )
+                    },
                     onSave: { keyCode, modifiers in
                         settings.pushToTalkKeyCode = keyCode
                         settings.pushToTalkModifiers = modifiers
@@ -648,9 +698,40 @@ struct AirtypeSettingsView: View {
                     defaultKeyCode: Settings.defaultToggleModeKeyCode,
                     defaultModifiers: Settings.defaultToggleModeModifiers,
                     hotkeyManager: hotkeyManager,
+                    validate: { keyCode, modifiers in
+                        settings.shortcutConflict(
+                            keyCode: keyCode,
+                            modifiers: modifiers,
+                            excluding: .toggleRecording
+                        )
+                    },
                     onSave: { keyCode, modifiers in
                         settings.toggleModeKeyCode = keyCode
                         settings.toggleModeModifiers = modifiers
+                        hotkeyManager.rebindHotkeys()
+                    }
+                )
+
+                SettingsCardDivider()
+
+                ShortcutRecorderRow(
+                    name: "Switch writing mode",
+                    description: "Switch between Proofread and Smart Rewrite",
+                    currentKeyCode: settings.enhancementModeKeyCode,
+                    currentModifiers: settings.enhancementModeModifiers,
+                    defaultKeyCode: Settings.defaultEnhancementModeKeyCode,
+                    defaultModifiers: Settings.defaultEnhancementModeModifiers,
+                    hotkeyManager: hotkeyManager,
+                    validate: { keyCode, modifiers in
+                        settings.shortcutConflict(
+                            keyCode: keyCode,
+                            modifiers: modifiers,
+                            excluding: .enhancementMode
+                        )
+                    },
+                    onSave: { keyCode, modifiers in
+                        settings.enhancementModeKeyCode = keyCode
+                        settings.enhancementModeModifiers = modifiers
                         hotkeyManager.rebindHotkeys()
                     }
                 )
@@ -817,10 +898,12 @@ struct ShortcutRecorderRow: View {
     let defaultKeyCode: UInt32
     let defaultModifiers: UInt32
     let hotkeyManager: HotkeyManager
+    let validate: (UInt32, UInt32) -> String?
     let onSave: (UInt32, UInt32) -> Void
 
     @State private var isRecording = false
     @State private var eventMonitor: Any?
+    @State private var conflictMessage: String?
 
     private var displayString: String {
         Settings.shortcutDisplayString(keyCode: currentKeyCode, modifiers: currentModifiers)
@@ -831,43 +914,58 @@ struct ShortcutRecorderRow: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(description)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-            if !isDefault {
-                Button("Reset") {
-                    onSave(defaultKeyCode, defaultModifiers)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(description)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textSecondary)
                 }
-                .buttonStyle(.borderless)
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.textTertiary)
+                Spacer()
+                if !isDefault {
+                    Button("Reset") {
+                        if let conflict = validate(defaultKeyCode, defaultModifiers) {
+                            conflictMessage = conflict
+                        } else {
+                            conflictMessage = nil
+                            onSave(defaultKeyCode, defaultModifiers)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textTertiary)
+                }
+                Button(action: { startRecording() }) {
+                    Text(isRecording ? "Press shortcut..." : displayString)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.textPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(isRecording ? Color.accentColor.opacity(0.2) : Theme.bg)
+                        .clipShape(.rect(cornerRadius: 4))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(isRecording ? Color.accentColor : Theme.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            Button(action: { startRecording() }) {
-                Text(isRecording ? "Press shortcut..." : displayString)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(isRecording ? Color.accentColor.opacity(0.2) : Theme.bg)
-                    .clipShape(.rect(cornerRadius: 4))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(isRecording ? Color.accentColor : Theme.border, lineWidth: 1)
-                    )
+
+            if let conflictMessage {
+                Label(conflictMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.statusOrange)
             }
-            .buttonStyle(.plain)
         }
+        .onDisappear(perform: stopRecording)
     }
 
     @MainActor private func startRecording() {
         guard !isRecording else { return }
+        conflictMessage = nil
         isRecording = true
         hotkeyManager.disable()
 
@@ -887,6 +985,12 @@ struct ShortcutRecorderRow: View {
 
             let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
             if modifierKeyCodes.contains(event.keyCode) {
+                return nil
+            }
+
+            if let conflict = validate(keyCode, carbonMods) {
+                conflictMessage = conflict
+                stopRecording()
                 return nil
             }
 

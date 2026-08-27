@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 #if SWIFT_PACKAGE
+import CorrectionLearningCore
 import DashboardCore
 #endif
 
@@ -15,6 +16,7 @@ final class MainWindowController {
     private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
     var hotkeyManager: HotkeyManager?
     var vocabularyModel: VocabularyPageModel?
+    var enhancementModeSelector: ((EnhancementMode) -> Void)?
 
     func show(destination: DashboardDestination? = nil) {
         debugLog("MainWindowController.show() called")
@@ -47,7 +49,8 @@ final class MainWindowController {
             hotkeyManager: hotkeyManager,
             dashboardModel: dashboardModel,
             historyModel: historyModel,
-            vocabularyModel: vocabularyModel
+            vocabularyModel: vocabularyModel,
+            onSelectEnhancementMode: enhancementModeSelector ?? { _ = Settings.shared.selectEnhancementMode($0) }
         )
 
         let hostingView = NSHostingView(rootView: mainView)
@@ -89,8 +92,8 @@ final class MainWindowController {
         window = nil
     }
 
-    func showSettings() {
-        dashboardModel.showSettings()
+    func showSettings(section: DashboardSettingsSection? = nil) {
+        dashboardModel.showSettings(section: section)
         show()
     }
 

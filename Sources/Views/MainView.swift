@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import ApplicationServices
 #if SWIFT_PACKAGE
+import CorrectionLearningCore
 import DashboardCore
 #endif
 
@@ -26,6 +27,7 @@ struct MainView: View {
     @Bindable var dashboardModel: DashboardModel
     let historyModel: HistoryPageModel
     let vocabularyModel: VocabularyPageModel
+    let onSelectEnhancementMode: (EnhancementMode) -> Void
     @State private var hasMicrophone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @State private var hasAccessibility = AXIsProcessTrusted()
 
@@ -111,7 +113,10 @@ struct MainView: View {
                 settings: settings,
                 hotkeyManager: hotkeyManager,
                 readiness: readiness,
-                hasAccessibility: hasAccessibility
+                hasAccessibility: hasAccessibility,
+                requestedSection: dashboardModel.settingsSection,
+                sectionRequestRevision: dashboardModel.settingsSectionRevision,
+                onSelectEnhancementMode: onSelectEnhancementMode
             )
         }
     }

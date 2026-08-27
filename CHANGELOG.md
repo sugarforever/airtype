@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- Smart Rewrite Enhancement mode removes speech noise, applies spoken revisions and editing instructions, and organizes thoughts while preserving factual fidelity
+- Visible Proofread and Smart Rewrite controls in Settings and the menu bar, plus a configurable global shortcut for switching modes
+- Smart Rewrite configuration checks with a direct shortcut to the Enhancement settings section when the provider or model is incomplete
+
+### Changed
+- Proofread remains the default Enhancement mode and preserves the existing conservative correction behavior
+
 ## [v0.14.2] - 2026-08-27
 
 ### Added

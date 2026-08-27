@@ -53,6 +53,7 @@ class EnhancementService {
         return try await performCompletion(
             text: text,
             systemPrompt: promptBuilder.prompt(
+                mode: settings.enhancementMode,
                 examples: correctionExamples,
                 vocabularySection: vocabularySection
             ),
@@ -66,7 +67,11 @@ class EnhancementService {
         try validateConfiguration()
         return try await performCompletion(
             text: "Airtype works well.",
-            systemPrompt: promptBuilder.prompt(examples: [], vocabularySection: ""),
+            systemPrompt: promptBuilder.prompt(
+                mode: settings.enhancementMode,
+                examples: [],
+                vocabularySection: ""
+            ),
             fallbackToOriginalOnEmpty: false
         )
     }

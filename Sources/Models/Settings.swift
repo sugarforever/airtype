@@ -2,6 +2,9 @@ import Carbon.HIToolbox
 import Foundation
 import HotKey
 import SwiftUI
+#if SWIFT_PACKAGE
+import CorrectionLearningCore
+#endif
 
 // MARK: - Transcription Provider
 
@@ -179,6 +182,12 @@ enum FloatingWindowPosition: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum AirtypeShortcutAction: String, CaseIterable {
+    case pushToTalk = "Push-to-talk"
+    case toggleRecording = "Toggle recording"
+    case enhancementMode = "Switch writing mode"
+}
+
 // MARK: - Settings
 
 class Settings: ObservableObject {
@@ -277,6 +286,7 @@ class Settings: ObservableObject {
         // Enhancement
         static let enhancementEnabled = "enhancement_enabled"
         static let enhancementProvider = "enhancement_provider"
+        static let enhancementMode = "enhancement_mode"
 
         // Per-provider enhancement API keys
         static let enhancementApiKey_openai = "enhancement_api_key_openai"
@@ -313,6 +323,8 @@ class Settings: ObservableObject {
         static let pushToTalkModifiers = "push_to_talk_modifiers"
         static let toggleModeKeyCode = "toggle_mode_key_code"
         static let toggleModeModifiers = "toggle_mode_modifiers"
+        static let enhancementModeKeyCode = "enhancement_mode_key_code"
+        static let enhancementModeModifiers = "enhancement_mode_modifiers"
 
         // Floating window
         static let showFloatingWindow = "show_floating_window"
@@ -403,6 +415,10 @@ class Settings: ObservableObject {
         didSet { defaults.set(enhancementProvider.rawValue, forKey: Keys.enhancementProvider) }
     }
 
+    @Published var enhancementMode: EnhancementMode {
+        didSet { defaults.set(enhancementMode.rawValue, forKey: Keys.enhancementMode) }
+    }
+
     // Per-provider API keys for enhancement
     @Published var enhancementApiKeys: [EnhancementProvider: String] = [:] {
         didSet { saveEnhancementApiKeys() }
@@ -438,6 +454,8 @@ class Settings: ObservableObject {
     static let defaultPushToTalkModifiers = NSEvent.ModifierFlags.option.carbonFlags
     static let defaultToggleModeKeyCode = UInt32(kVK_Space)
     static let defaultToggleModeModifiers = NSEvent.ModifierFlags([.option, .shift]).carbonFlags
+    static let defaultEnhancementModeKeyCode = UInt32(kVK_Space)
+    static let defaultEnhancementModeModifiers = NSEvent.ModifierFlags([.control, .option]).carbonFlags
 
     @Published var pushToTalkKeyCode: UInt32 {
         didSet { defaults.set(Int(pushToTalkKeyCode), forKey: Keys.pushToTalkKeyCode) }
@@ -453,6 +471,14 @@ class Settings: ObservableObject {
 
     @Published var toggleModeModifiers: UInt32 {
         didSet { defaults.set(Int(toggleModeModifiers), forKey: Keys.toggleModeModifiers) }
+    }
+
+    @Published var enhancementModeKeyCode: UInt32 {
+        didSet { defaults.set(Int(enhancementModeKeyCode), forKey: Keys.enhancementModeKeyCode) }
+    }
+
+    @Published var enhancementModeModifiers: UInt32 {
+        didSet { defaults.set(Int(enhancementModeModifiers), forKey: Keys.enhancementModeModifiers) }
     }
 
     /// Format a key combo as a human-readable string (e.g. "⌥ Space")
@@ -604,6 +630,63 @@ class Settings: ObservableObject {
         }
     }
 
+    var isEnhancementConfigured: Bool {
+        enhancementConfigurationError == nil
+    }
+
+    var enhancementConfigurationError: String? {
+        guard enhancementEnabled else {
+            return "Enable Enhancement to use Smart Rewrite."
+        }
+        let baseURL = currentEnhancementBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !baseURL.isEmpty else {
+            return "Enter an Enhancement Base URL."
+        }
+        guard let url = URL(string: baseURL),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil else {
+            return "Enter a valid HTTP or HTTPS Enhancement Base URL."
+        }
+        guard !currentEnhancementModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return "Choose an Enhancement model."
+        }
+        if enhancementProvider.requiresApiKey,
+           currentEnhancementApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Add the \(enhancementProvider.rawValue) API key for Enhancement."
+        }
+        return nil
+    }
+
+    @discardableResult
+    func selectEnhancementMode(_ mode: EnhancementMode) -> String? {
+        if mode == .smartRewrite, let error = enhancementConfigurationError {
+            return error
+        }
+        enhancementMode = mode
+        return nil
+    }
+
+    func shortcutConflict(
+        keyCode: UInt32,
+        modifiers: UInt32,
+        excluding excludedAction: AirtypeShortcutAction
+    ) -> String? {
+        let shortcuts: [(AirtypeShortcutAction, UInt32, UInt32)] = [
+            (.pushToTalk, pushToTalkKeyCode, pushToTalkModifiers),
+            (.toggleRecording, toggleModeKeyCode, toggleModeModifiers),
+            (.enhancementMode, enhancementModeKeyCode, enhancementModeModifiers)
+        ]
+        guard let conflict = shortcuts.first(where: { action, existingKeyCode, existingModifiers in
+            action != excludedAction
+                && existingKeyCode == keyCode
+                && existingModifiers == modifiers
+        }) else {
+            return nil
+        }
+        return "Already used by \(conflict.0.rawValue)."
+    }
+
     // MARK: - Validation
 
     var isConfigured: Bool {
@@ -685,6 +768,8 @@ class Settings: ObservableObject {
 
         let enhancementProviderRaw = defaults.string(forKey: Keys.enhancementProvider) ?? EnhancementProvider.openai.rawValue
         self.enhancementProvider = EnhancementProvider(rawValue: enhancementProviderRaw) ?? .openai
+        let enhancementModeRaw = defaults.string(forKey: Keys.enhancementMode) ?? EnhancementMode.proofread.rawValue
+        self.enhancementMode = EnhancementMode(rawValue: enhancementModeRaw) ?? .proofread
 
         // Initialize per-provider enhancement API keys
         var apiKeys: [EnhancementProvider: String] = [:]
@@ -735,6 +820,16 @@ class Settings: ObservableObject {
             self.toggleModeModifiers = UInt32(val)
         } else {
             self.toggleModeModifiers = Settings.defaultToggleModeModifiers
+        }
+        if let val = defaults.object(forKey: Keys.enhancementModeKeyCode) as? Int {
+            self.enhancementModeKeyCode = UInt32(val)
+        } else {
+            self.enhancementModeKeyCode = Settings.defaultEnhancementModeKeyCode
+        }
+        if let val = defaults.object(forKey: Keys.enhancementModeModifiers) as? Int {
+            self.enhancementModeModifiers = UInt32(val)
+        } else {
+            self.enhancementModeModifiers = Settings.defaultEnhancementModeModifiers
         }
 
         // Floating window settings

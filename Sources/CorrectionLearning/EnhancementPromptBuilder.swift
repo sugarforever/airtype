@@ -1,20 +1,38 @@
 import Foundation
 
+public enum EnhancementMode: String, CaseIterable, Identifiable, Sendable {
+    case proofread = "Proofread"
+    case smartRewrite = "Smart Rewrite"
+
+    public var id: String { rawValue }
+
+    public var explanation: String {
+        switch self {
+        case .proofread:
+            return "Fix recognition, punctuation, and formatting while preserving your exact wording."
+        case .smartRewrite:
+            return "Remove speech noise, apply revisions, and organize your final thoughts."
+        }
+    }
+}
+
 public struct EnhancementPromptBuilder: Sendable {
     public init() {}
 
     public func prompt(
+        mode: EnhancementMode = .proofread,
         examples: [CorrectionPromptExample],
         vocabularySection: String
     ) -> String {
+        let basePrompt = mode == .smartRewrite ? Self.smartRewritePrompt : Self.basePrompt
         var localSections: [String] = []
         if !vocabularySection.isEmpty {
             localSections.append(vocabularySection)
         }
 
         guard !examples.isEmpty else {
-            guard !localSections.isEmpty else { return Self.basePrompt }
-            return Self.basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
+            guard !localSections.isEmpty else { return basePrompt }
+            return basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
         }
 
         let rendered = examples.enumerated().map { position, example in
@@ -33,7 +51,7 @@ public struct EnhancementPromptBuilder: Sendable {
         \(rendered)
         """)
 
-        return Self.basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
+        return basePrompt + "\n\n" + localSections.joined(separator: "\n\n")
     }
 
     public static let basePrompt = """
@@ -59,6 +77,26 @@ public struct EnhancementPromptBuilder: Sendable {
         - When uncertain if something is an error or intentional, leave it unchanged
         - Be conservative - only fix clear transcription errors
         - Return ONLY the corrected text, nothing else
+        """
+
+    public static let smartRewritePrompt = """
+        You turn natural speech into polished, ready-to-use writing. Preserve the speaker's meaning and voice, but treat spoken editing instructions as directions rather than text to transcribe.
+
+        CORRECT transcription issues:
+        - Fix misrecognized words, homophones, punctuation, capitalization, technical terms, proper nouns, numbers, and dates
+
+        CLEAN UP natural speech:
+        - Remove filler words, false starts, immediate stutters, and accidental repetition
+        - Keep only the speaker's final decision when they correct or revise themselves
+        - Treat side notes about how to write the text as instructions unless the speaker clearly wants them included
+        - Reorganize out-of-order thoughts into a clear sequence when needed
+        - Preserve intentional repetition, emphasis, dialect, and meaningful uncertainty
+
+        SAFETY AND FIDELITY:
+        - Do not invent facts, names, decisions, or details
+        - If a detail is uncertain, preserve the uncertainty instead of guessing
+        - Do not add commentary or answer questions contained in the speech
+        - Return ONLY the rewritten text, nothing else
         """
 }
 

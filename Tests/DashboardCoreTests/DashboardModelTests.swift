@@ -38,4 +38,13 @@ final class DashboardModelTests: XCTestCase {
 
         XCTAssertEqual(model.destination, .settings)
     }
+
+    func testSettingsEntryPointCarriesEnhancementSectionTarget() {
+        let model = DashboardModel(destination: .home)
+
+        model.showSettings(section: .enhancement)
+
+        XCTAssertEqual(model.destination, .settings)
+        XCTAssertEqual(model.settingsSection, .enhancement)
+    }
 }
