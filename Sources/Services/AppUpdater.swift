@@ -2,18 +2,6 @@ import Combine
 import Foundation
 import Sparkle
 
-enum AppUpdaterConfiguration {
-    static func shouldStartUpdater(
-        infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]
-    ) -> Bool {
-        guard let feed = infoDictionary["SUFeedURL"] as? String,
-              let url = URL(string: feed),
-              url.scheme?.lowercased() == "https",
-              url.host != nil else { return false }
-        return true
-    }
-}
-
 @MainActor
 final class UpdateCheckCoordinator {
     private let canCheckForUpdates: () -> Bool
@@ -67,9 +55,8 @@ final class AppUpdater: ObservableObject {
     )
 
     private init() {
-        let shouldStartUpdater = AppUpdaterConfiguration.shouldStartUpdater()
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: shouldStartUpdater,
+            startingUpdater: true,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
@@ -79,9 +66,7 @@ final class AppUpdater: ObservableObject {
             .receive(on: RunLoop.main)
             .assign(to: &$canCheckForUpdates)
 
-        if shouldStartUpdater {
-            checkCoordinator.checkForUpdatesInBackgroundAtLaunch()
-        }
+        checkCoordinator.checkForUpdatesInBackgroundAtLaunch()
     }
 
     func checkForUpdates() {
