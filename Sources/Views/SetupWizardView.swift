@@ -129,6 +129,9 @@ struct SetupWizardView: View {
                             Text(settings.selectedLocalModelInstalled ? "Installed" : "Not installed")
                                 .font(.system(size: 11))
                                 .foregroundStyle(settings.selectedLocalModelInstalled ? Theme.brand : Theme.textSecondary)
+                            if !settings.selectedLocalModelInstalled {
+                                LocalModelDownloadSizeView(model: settings.localMLXModel)
+                            }
                             Spacer()
                             Button(!settings.selectedLocalModelInstalled && localModelManager.model == settings.localMLXModel && localModelManager.lastError != nil ? "Retry" : "Install") {
                                 Task { await localModelManager.installSelectedModel(settings: settings) }

@@ -67,6 +67,21 @@ enum LocalMLXModel: String, CaseIterable, Identifiable {
         "https://huggingface.co/\(repoID)/resolve/main/model.safetensors"
     }
 
+    var catalogDownloadSizeBytes: Int64 {
+        switch self {
+        case .qwen3ASR06B4bit: 710_000_000
+        case .qwen3ASR06B5bit: 790_000_000
+        case .qwen3ASR06B6bit: 860_000_000
+        case .qwen3ASR06B8bit: 1_010_000_000
+        case .qwen3ASR06Bbf16: 1_570_000_000
+        case .qwen3ASR17B4bit: 1_610_000_000
+        case .qwen3ASR17B5bit: 1_820_000_000
+        case .qwen3ASR17B6bit: 2_040_000_000
+        case .qwen3ASR17B8bit: 2_470_000_000
+        case .qwen3ASR17Bbf16: 4_080_000_000
+        }
+    }
+
     static func model(forPersistedRawValue rawValue: String) -> Self? {
         if rawValue == legacy17BName {
             return .qwen3ASR17B4bit
