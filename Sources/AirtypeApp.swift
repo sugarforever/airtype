@@ -28,10 +28,33 @@ func streamOutput(_ text: String, newline: Bool = true) {
     fflush(stdout)
 }
 
+enum ApplicationReopenDestination: Equatable {
+    case setupWizard
+    case mainWindow
+}
+
+enum ApplicationReopenRouter {
+    static func destination(
+        hasVisibleWindows: Bool,
+        hasCompletedSetup: Bool
+    ) -> ApplicationReopenDestination? {
+        guard !hasVisibleWindows else { return nil }
+        return hasCompletedSetup ? .mainWindow : .setupWizard
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
+        switch ApplicationReopenRouter.destination(
+            hasVisibleWindows: flag,
+            hasCompletedSetup: Settings.shared.hasCompletedSetup
+        ) {
+        case .setupWizard:
+            MainWindowController.shared.showWizard()
+        case .mainWindow:
             MainWindowController.shared.show()
+        case nil:
+            break
         }
         return true
     }

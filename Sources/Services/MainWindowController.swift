@@ -4,6 +4,27 @@ import SwiftUI
 import DashboardCore
 #endif
 
+@MainActor
+struct WindowActivationCoordinator {
+    let makeRegular: () -> Void
+    let orderWindowFront: () -> Void
+    let activateApplication: () -> Void
+
+    func present() {
+        makeRegular()
+        orderWindowFront()
+        activateApplication()
+    }
+
+    static func present(_ window: NSWindow) {
+        Self(
+            makeRegular: { _ = NSApp.setActivationPolicy(.regular) },
+            orderWindowFront: { window.makeKeyAndOrderFront(nil) },
+            activateApplication: { NSApp.activate(ignoringOtherApps: true) }
+        ).present()
+    }
+}
+
 /// Manages the main dashboard window as a separate NSWindow
 @MainActor
 final class MainWindowController {
@@ -25,8 +46,7 @@ final class MainWindowController {
 
         if let existingWindow = window {
             debugLog("Showing existing main window")
-            existingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            WindowActivationCoordinator.present(existingWindow)
             return
         }
 
@@ -78,8 +98,7 @@ final class MainWindowController {
         self.window = newWindow
 
         // Show in Dock while window is open so user can switch back to it
-        newWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        WindowActivationCoordinator.present(newWindow)
 
         debugLog("Main window should now be visible")
     }
@@ -101,8 +120,7 @@ final class MainWindowController {
         debugLog("MainWindowController.showWizard() called")
 
         if let existing = wizardWindow {
-            existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            WindowActivationCoordinator.present(existing)
             return
         }
 
@@ -137,8 +155,7 @@ final class MainWindowController {
 
         self.wizardWindow = newWindow
 
-        newWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        WindowActivationCoordinator.present(newWindow)
     }
 
     func closeWizard() {
