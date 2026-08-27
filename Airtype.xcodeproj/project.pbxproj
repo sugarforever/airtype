@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		B12800000000000000000001 /* ModelDownloadProgressDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */; };
 		B12700000000000000000001 /* LocalModelInstallStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22700000000000000000001 /* LocalModelInstallStatusView.swift */; };
+		B12A00000000000000000001 /* LocalModelDownloadSizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22A00000000000000000001 /* LocalModelDownloadSizeView.swift */; };
+		B12A00000000000000000002 /* ModelDownloadSizeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22A00000000000000000002 /* ModelDownloadSizeProvider.swift */; };
 		B12700000000000000000002 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000004 /* HuggingFace */; };
 		B12600000000000000000001 /* TranscriptionContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22600000000000000000001 /* TranscriptionContext.swift */; };
 		42A2B0E72F3AC06100283808 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000001 /* HotKey */; };
@@ -69,6 +71,8 @@
 /* Begin PBXFileReference section */
 		B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadProgressDelegate.swift; sourceTree = "<group>"; };
 		B22700000000000000000001 /* LocalModelInstallStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelInstallStatusView.swift; sourceTree = "<group>"; };
+		B22A00000000000000000001 /* LocalModelDownloadSizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelDownloadSizeView.swift; sourceTree = "<group>"; };
+		B22A00000000000000000002 /* ModelDownloadSizeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadSizeProvider.swift; sourceTree = "<group>"; };
 		B22600000000000000000001 /* TranscriptionContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionContext.swift; sourceTree = "<group>"; };
 		B22900000000000000000001 /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 		A20001000000000000000001 /* AirtypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirtypeApp.swift; sourceTree = "<group>"; };
@@ -181,6 +185,7 @@
 				A200320000000000000000032 /* HomeView.swift */,
 				A200330000000000000000033 /* AirtypeSettingsView.swift */,
 				B22700000000000000000001 /* LocalModelInstallStatusView.swift */,
+				B22A00000000000000000001 /* LocalModelDownloadSizeView.swift */,
 				A200340000000000000000034 /* VocabularyView.swift */,
 				A200350000000000000000035 /* ProperNounTagWall.swift */,
 				A20004000000000000000004 /* MenuBarView.swift */,
@@ -210,6 +215,7 @@
 				A2001B00000000000000001B /* MLXTranscriptionService.swift */,
 				A2001C00000000000000001C /* LocalModelManager.swift */,
 				B22800000000000000000001 /* ModelDownloadProgressDelegate.swift */,
+				B22A00000000000000000002 /* ModelDownloadSizeProvider.swift */,
 				A2001D00000000000000001D /* LocalASRAdapter.swift */,
 				A2001E00000000000000001E /* QwenASRAdapter.swift */,
 				A20020000000000000000020 /* MLXAudioRunner.swift */,
@@ -362,6 +368,7 @@
 				A100320000000000000000032 /* HomeView.swift in Sources */,
 				A100330000000000000000033 /* AirtypeSettingsView.swift in Sources */,
 				B12700000000000000000001 /* LocalModelInstallStatusView.swift in Sources */,
+				B12A00000000000000000001 /* LocalModelDownloadSizeView.swift in Sources */,
 				A100340000000000000000034 /* VocabularyView.swift in Sources */,
 				A100350000000000000000035 /* ProperNounTagWall.swift in Sources */,
 				A10004000000000000000004 /* MenuBarView.swift in Sources */,
@@ -385,6 +392,7 @@
 				A1001B00000000000000001B /* MLXTranscriptionService.swift in Sources */,
 				A1001C00000000000000001C /* LocalModelManager.swift in Sources */,
 				B12800000000000000000001 /* ModelDownloadProgressDelegate.swift in Sources */,
+				B12A00000000000000000002 /* ModelDownloadSizeProvider.swift in Sources */,
 				A1001D00000000000000001D /* LocalASRAdapter.swift in Sources */,
 				A1001E00000000000000001E /* QwenASRAdapter.swift in Sources */,
 				A10020000000000000000020 /* MLXAudioRunner.swift in Sources */,
