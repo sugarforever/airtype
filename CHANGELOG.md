@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.14.3] - 2026-08-27
+
+### Added
+- Support for the complete Qwen3-ASR 0.6B and 1.7B model series across 4-bit, 5-bit, 6-bit, 8-bit, and bf16 variants
+- Estimated model download sizes in setup and Voice Input settings, using Hugging Face metadata with catalog fallbacks
+
+### Fixed
+- Existing Qwen3-ASR 1.7B installations and saved settings migrate to the explicit 1.7B 4-bit model identity
+- Xcode app builds include the model download-size provider and view
+
 ## [v0.14.2] - 2026-08-27
 
 ### Added
