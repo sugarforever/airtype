@@ -38,4 +38,10 @@ final class DashboardModelTests: XCTestCase {
 
         XCTAssertEqual(model.destination, .settings)
     }
+
+    func testAnalyticsIsAFirstClassDashboardDestination() {
+        XCTAssertTrue(DashboardDestination.allCases.contains(.analytics))
+        XCTAssertEqual(DashboardDestination.analytics.title, "Analytics")
+        XCTAssertEqual(DashboardDestination.analytics.systemImage, "chart.xyaxis.line")
+    }
 }

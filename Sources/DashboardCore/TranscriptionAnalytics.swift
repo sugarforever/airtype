@@ -63,7 +63,7 @@ public final class TranscriptionAnalyticsStore: @unchecked Sendable {
     private let userDefaults: UserDefaults
     private let key: String
     private let maxEntries: Int
-    private let notificationCenter: NotificationCenter
+    let notificationCenter: NotificationCenter
     private let lock = NSLock()
 
     public init(

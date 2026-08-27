@@ -13,6 +13,18 @@ final class MainWindowController {
     private var windowDelegate: NSWindowDelegate?
     private let dashboardModel = DashboardModel()
     private lazy var historyModel = HistoryPageModel(copyText: Self.copyToPasteboard)
+    private lazy var analyticsModel = AnalyticsPageModel {
+        let usage = try await OpenRouterKeyUsageService().fetch()
+        return OpenRouterKeyUsageSnapshot(
+            total: usage.total,
+            daily: usage.daily,
+            weekly: usage.weekly,
+            monthly: usage.monthly,
+            limit: usage.limit,
+            limitRemaining: usage.limitRemaining,
+            limitReset: usage.limitReset
+        )
+    }
     var hotkeyManager: HotkeyManager?
     var vocabularyModel: VocabularyPageModel?
 
@@ -47,6 +59,7 @@ final class MainWindowController {
             hotkeyManager: hotkeyManager,
             dashboardModel: dashboardModel,
             historyModel: historyModel,
+            analyticsModel: analyticsModel,
             vocabularyModel: vocabularyModel
         )
 

@@ -74,23 +74,3 @@ struct DashboardSidebar: View {
         .accessibilityAddTraits(selection == destination ? .isSelected : [])
     }
 }
-
-private extension DashboardDestination {
-    var title: String {
-        switch self {
-        case .home: "Home"
-        case .history: "History"
-        case .vocabulary: "Vocabulary"
-        case .settings: "Settings"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .home: "house"
-        case .history: "clock.arrow.circlepath"
-        case .vocabulary: "text.book.closed"
-        case .settings: "gearshape"
-        }
-    }
-}

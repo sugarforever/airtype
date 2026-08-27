@@ -25,6 +25,7 @@ struct MainView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     @Bindable var dashboardModel: DashboardModel
     let historyModel: HistoryPageModel
+    let analyticsModel: AnalyticsPageModel
     let vocabularyModel: VocabularyPageModel
     @State private var hasMicrophone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @State private var hasAccessibility = AXIsProcessTrusted()
@@ -104,6 +105,8 @@ struct MainView: View {
             )
         case .history:
             TranscriptionHistoryView(model: historyModel)
+        case .analytics:
+            AnalyticsView(model: analyticsModel)
         case .vocabulary:
             VocabularyView(model: vocabularyModel)
         case .settings:

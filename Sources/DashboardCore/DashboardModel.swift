@@ -46,10 +46,31 @@ public enum DashboardReadiness: Equatable, Sendable {
 public enum DashboardDestination: String, CaseIterable, Identifiable, Sendable {
     case home
     case history
+    case analytics
     case vocabulary
     case settings
 
     public var id: Self { self }
+
+    public var title: String {
+        switch self {
+        case .home: "Home"
+        case .history: "History"
+        case .analytics: "Analytics"
+        case .vocabulary: "Vocabulary"
+        case .settings: "Settings"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .home: "house"
+        case .history: "clock.arrow.circlepath"
+        case .analytics: "chart.xyaxis.line"
+        case .vocabulary: "text.book.closed"
+        case .settings: "gearshape"
+        }
+    }
 }
 
 @MainActor
