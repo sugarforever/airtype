@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AVFoundation
 #if SWIFT_PACKAGE
 import CorrectionLearningCore
 import DashboardCore
@@ -672,55 +673,78 @@ class AppState: ObservableObject {
                 enabled: settings.transcriptionVocabularyEnabled
             )
 
-            switch settings.transcriptionProvider {
-            case .openai:
-                transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL, context: context) { [weak self] progress in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        self.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
-                        self.partialTranscription = progress.partialText
+            let provider = settings.transcriptionProvider
+            let audioDuration = await Self.audioDurationSeconds(at: audioURL)
+            let analyticsAttempt = TranscriptionAttempt(
+                provider: provider.rawValue,
+                model: settings.currentTranscriptionModel,
+                audioDurationSeconds: audioDuration
+            )
+            do {
+                var usageMetadata: TranscriptionUsageMetadata?
+                switch provider {
+                case .openai:
+                    transcription = try await whisperService.transcribeWithProgress(audioURL: audioURL, context: context) { [weak self] progress in
+                        Task { @MainActor in
+                            guard let self = self else { return }
+                            self.processingProgress = progress.progress * 0.7  // Transcription is 70% of total
+                            self.partialTranscription = progress.partialText
 
-                        // Stream partial results to terminal (chunk by chunk)
-                        if progress.totalChunks > 1 && !progress.partialText.isEmpty {
-                            let currentLength = progress.partialText.count
-                            if currentLength > self.lastStreamedLength {
-                                let startIndex = progress.partialText.index(progress.partialText.startIndex, offsetBy: self.lastStreamedLength)
-                                let newText = String(progress.partialText[startIndex...])
-                                streamOutput(newText, newline: false)
-                                self.lastStreamedLength = currentLength
+                            // Stream partial results to terminal (chunk by chunk)
+                            if progress.totalChunks > 1 && !progress.partialText.isEmpty {
+                                let currentLength = progress.partialText.count
+                                if currentLength > self.lastStreamedLength {
+                                    let startIndex = progress.partialText.index(progress.partialText.startIndex, offsetBy: self.lastStreamedLength)
+                                    let newText = String(progress.partialText[startIndex...])
+                                    streamOutput(newText, newline: false)
+                                    self.lastStreamedLength = currentLength
+                                }
+                            }
+
+                            // Track chunk info internally for debugging
+                            if progress.totalChunks > 1 {
+                                self.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
                             }
                         }
-
-                        // Track chunk info internally for debugging
-                        if progress.totalChunks > 1 {
-                            self.transcriptionChunkInfo = "(\(progress.currentChunk)/\(progress.totalChunks))"
-                        }
                     }
-                }
-            case .elevenlabs:
-                transcription = try await elevenlabsService.transcribe(audioURL: audioURL, context: context)
-            case .openrouter:
-                transcription = try await openrouterTranscriptionService.transcribe(audioURL: audioURL)
-            case .mistral:
-                transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL, context: context)
-            case .doubao:
-                throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
-            case .localMLX:
+                case .elevenlabs:
+                    transcription = try await elevenlabsService.transcribe(audioURL: audioURL, context: context)
+                case .openrouter:
+                    let result = try await openrouterTranscriptionService.transcribeWithMetadata(audioURL: audioURL)
+                    transcription = result.text
+                    usageMetadata = TranscriptionUsageMetadata(
+                        audioDurationSeconds: result.usage?.seconds,
+                        inputTokens: result.usage?.inputTokens,
+                        outputTokens: result.usage?.outputTokens,
+                        totalTokens: result.usage?.totalTokens,
+                        costUSD: result.usage?.cost,
+                        generationID: result.generationID
+                    )
+                case .mistral:
+                    transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL, context: context)
+                case .doubao:
+                    throw WhisperError.emptyRecording // Doubao is streaming-only; non-streaming path shouldn't reach here
+                case .localMLX:
 #if DEBUG
-                LocalASRDiagnostics.log(event: "local_pipeline", fields: [
-                    "enhancement_enabled": String(settings.enhancementEnabled),
-                    "vocabulary_enabled": String(settings.transcriptionVocabularyEnabled),
-                    "repository_available": String(vocabularyRepository != nil)
-                ])
+                    LocalASRDiagnostics.log(event: "local_pipeline", fields: [
+                        "enhancement_enabled": String(settings.enhancementEnabled),
+                        "vocabulary_enabled": String(settings.transcriptionVocabularyEnabled),
+                        "repository_available": String(vocabularyRepository != nil)
+                    ])
 #endif
-                transcription = try await mlxTranscriptionService.transcribe(
-                    audioURL: audioURL,
-                    model: settings.localMLXModel,
-                    language: settings.localMLXLanguage,
-                    computeMode: settings.localMLXComputeMode,
-                    installedModelIDs: Set(settings.localMLXInstalledModels),
-                    context: context
-                )
+                    transcription = try await mlxTranscriptionService.transcribe(
+                        audioURL: audioURL,
+                        model: settings.localMLXModel,
+                        language: settings.localMLXLanguage,
+                        computeMode: settings.localMLXComputeMode,
+                        installedModelIDs: Set(settings.localMLXInstalledModels),
+                        context: context
+                    )
+                }
+                analyticsAttempt.succeed(metadata: usageMetadata)
+            } catch {
+                analyticsAttempt.fail(error)
+                throw error
             }
 
             debugLog(PrivacySafeDiagnostics.textEvent(
@@ -807,6 +831,13 @@ class AppState: ObservableObject {
         audioRecorder.cleanupRecording(at: audioURL)
         transcriptionChunkInfo = ""
         debugLog("Processing complete")
+    }
+
+    private static func audioDurationSeconds(at url: URL) async -> Double? {
+        let asset = AVURLAsset(url: url)
+        guard let duration = try? await asset.load(.duration) else { return nil }
+        let seconds = CMTimeGetSeconds(duration)
+        return seconds.isFinite && seconds >= 0 ? seconds : nil
     }
 
     func cancelRecording() {
