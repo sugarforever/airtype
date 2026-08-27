@@ -96,6 +96,14 @@ open Airtype.xcodeproj
 
 Run the `Airtype` scheme with **Command + R**. Swift Package Manager resolves the project dependencies.
 
+For command-line development builds, use the signed launcher instead of disabling code signing:
+
+```bash
+./scripts/run-debug-app.sh
+```
+
+The script uses the fixed Debug bundle identifier `com.airtype.app.debug`, requires a valid Apple Development signing identity, and installs the result at `~/Applications/Airtype Dev.app` before launching it. Keeping the signing identity, bundle identifier, and installation path stable lets macOS reuse the development app's privacy permissions across rebuilds more reliably.
+
 ### Releasing
 
 Tagged releases continue to publish a notarized DMG through GitHub Releases. The release workflow also generates a signed Sparkle `appcast.xml`, which lets installed copies of Airtype check for, download, and install updates.
