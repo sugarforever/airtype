@@ -26,6 +26,7 @@ final class OpenRouterTranscriptionService {
 
         var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/audio/transcriptions")!)
         request.httpMethod = "POST"
+        request.timeoutInterval = 120
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("https://www.airtype.space", forHTTPHeaderField: "HTTP-Referer")
@@ -35,11 +36,20 @@ final class OpenRouterTranscriptionService {
             inputAudio: .init(data: audioData.base64EncodedString(), format: format)
         ))
 
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw OpenRouterTranscriptionError.timeout
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw OpenRouterTranscriptionError.invalidResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 408 || httpResponse.statusCode == 504 {
+                throw OpenRouterTranscriptionError.timeout
+            }
             if let response = try? JSONDecoder().decode(OpenRouterErrorResponse.self, from: data) {
                 throw OpenRouterTranscriptionError.apiError(response.error.message)
             }
@@ -88,6 +98,7 @@ enum OpenRouterTranscriptionError: LocalizedError {
     case noAPIKey
     case unsupportedModel(String)
     case invalidResponse
+    case timeout
     case httpError(Int)
     case apiError(String)
     case emptyRecording
@@ -101,6 +112,8 @@ enum OpenRouterTranscriptionError: LocalizedError {
             return "Unsupported OpenRouter transcription model: \(model)"
         case .invalidResponse:
             return "Invalid response from OpenRouter API"
+        case .timeout:
+            return "OpenRouter transcription timed out. Please try again or use a shorter recording."
         case .httpError(let code):
             return "HTTP error: \(code)"
         case .apiError(let message):

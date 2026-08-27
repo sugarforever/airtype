@@ -104,6 +104,7 @@ final class TranscriptionRequestTests: XCTestCase {
         let request = try XCTUnwrap(TranscriptionCaptureProtocol.lastRequest)
         XCTAssertEqual(request.url?.absoluteString, "https://openrouter.ai/api/v1/audio/transcriptions")
         XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.timeoutInterval, 120)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer sk-or-test")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         XCTAssertEqual(request.value(forHTTPHeaderField: "HTTP-Referer"), "https://www.airtype.space")
@@ -148,6 +149,7 @@ final class TranscriptionRequestTests: XCTestCase {
         let session = URLSession(configuration: config)
         defer {
             TranscriptionCaptureProtocol.setResponse()
+            TranscriptionCaptureProtocol.setFailure(nil)
             session.invalidateAndCancel()
         }
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("airtype-openrouter-errors-\(UUID().uuidString).wav")
@@ -164,6 +166,13 @@ final class TranscriptionRequestTests: XCTestCase {
 
         TranscriptionCaptureProtocol.setResponse(statusCode: 503, body: "unavailable")
         await assertTranscriptionError(service, file: file, equals: "HTTP error: 503")
+
+        TranscriptionCaptureProtocol.setResponse(statusCode: 504, body: "gateway timeout")
+        await assertTranscriptionError(service, file: file, equals: "OpenRouter transcription timed out. Please try again or use a shorter recording.")
+
+        TranscriptionCaptureProtocol.setFailure(.timedOut)
+        await assertTranscriptionError(service, file: file, equals: "OpenRouter transcription timed out. Please try again or use a shorter recording.")
+        TranscriptionCaptureProtocol.setFailure(nil)
 
         TranscriptionCaptureProtocol.setResponse(body: "{}")
         await assertTranscriptionError(service, file: file, equals: "Invalid response from OpenRouter API")
@@ -260,6 +269,7 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
     private static var capturedRequest: URLRequest?
     private static var responseStatusCode = 200
     private static var responseBody = Data("{\"text\":\"recognized\"}".utf8)
+    private static var failureCode: URLError.Code?
     static var body: String {
         lock.lock()
         defer { lock.unlock() }
@@ -279,6 +289,11 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
         lock.lock()
         responseStatusCode = statusCode
         responseBody = Data(body.utf8)
+        lock.unlock()
+    }
+    static func setFailure(_ code: URLError.Code?) {
+        lock.lock()
+        failureCode = code
         lock.unlock()
     }
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -303,7 +318,12 @@ private final class TranscriptionCaptureProtocol: URLProtocol, @unchecked Sendab
         Self.lock.lock()
         let statusCode = Self.responseStatusCode
         let responseData = Self.responseBody
+        let failureCode = Self.failureCode
         Self.lock.unlock()
+        if let failureCode {
+            client?.urlProtocol(self, didFailWithError: URLError(failureCode))
+            return
+        }
         let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: responseData)
