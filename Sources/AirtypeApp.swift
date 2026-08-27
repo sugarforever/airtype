@@ -223,6 +223,7 @@ class AppState: ObservableObject {
     let audioRecorder = AudioRecorder()
     let whisperService = WhisperService()
     let elevenlabsService = ElevenLabsService()
+    let openrouterTranscriptionService = OpenRouterTranscriptionService()
     let mistralTranscriptionService = MistralTranscriptionService()
     let mlxTranscriptionService = MLXTranscriptionService()
     let enhancementService: EnhancementService
@@ -698,6 +699,8 @@ class AppState: ObservableObject {
                 }
             case .elevenlabs:
                 transcription = try await elevenlabsService.transcribe(audioURL: audioURL, context: context)
+            case .openrouter:
+                transcription = try await openrouterTranscriptionService.transcribe(audioURL: audioURL)
             case .mistral:
                 transcription = try await mistralTranscriptionService.transcribe(audioURL: audioURL, context: context)
             case .doubao:

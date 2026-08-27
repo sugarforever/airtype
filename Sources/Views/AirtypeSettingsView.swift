@@ -157,6 +157,8 @@ struct AirtypeSettingsView: View {
 
                 if settings.transcriptionProvider == .elevenlabs {
                     elevenlabsSettings
+                } else if settings.transcriptionProvider == .openrouter {
+                    openrouterTranscriptionSettings
                 } else if settings.transcriptionProvider == .mistral {
                     mistralTranscriptionSettings
                 } else if settings.transcriptionProvider == .doubao {
@@ -211,6 +213,29 @@ struct AirtypeSettingsView: View {
             SettingsCardRow(label: "Model") {
                 Picker("", selection: $settings.openaiTranscriptionModel) {
                     ForEach(Settings.openaiTranscriptionModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+                .labelsHidden()
+                .font(.system(size: 12, design: .monospaced))
+            }
+        }
+    }
+
+    private var openrouterTranscriptionSettings: some View {
+        Group {
+            SettingsCardRow(label: "API Key") {
+                HStack(spacing: 6) {
+                    SecureField("sk-or-...", text: $settings.openrouterTranscriptionApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    apiKeyLink(url: settings.transcriptionProvider.apiKeyURL)
+                }
+            }
+            SettingsCardDivider()
+            SettingsCardRow(label: "Model") {
+                Picker("", selection: $settings.openrouterTranscriptionModel) {
+                    ForEach(Settings.openrouterTranscriptionModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
                 }

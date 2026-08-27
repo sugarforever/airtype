@@ -9,6 +9,7 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case localMLX = "MLX Local"
     case elevenlabs = "ElevenLabs"
     case openai = "OpenAI"
+    case openrouter = "OpenRouter"
     case mistral = "Mistral"
     case doubao = "Doubao"
 
@@ -18,6 +19,7 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
         switch self {
         case .elevenlabs: return URL(string: "https://elevenlabs.io/app/settings/api-keys")
         case .openai: return URL(string: "https://platform.openai.com/api-keys")
+        case .openrouter: return URL(string: "https://openrouter.ai/keys")
         case .mistral: return URL(string: "https://console.mistral.ai/api-keys")
         case .doubao: return URL(string: "https://console.volcengine.com/speech/app")
         case .localMLX: return nil
@@ -27,14 +29,14 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     var requiresApiKey: Bool {
         switch self {
         case .localMLX: return false
-        case .elevenlabs, .openai, .mistral, .doubao: return true
+        case .elevenlabs, .openai, .openrouter, .mistral, .doubao: return true
         }
     }
 
     var supportsStreaming: Bool {
         switch self {
         case .doubao: return true
-        case .elevenlabs, .openai, .mistral, .localMLX: return false
+        case .elevenlabs, .openai, .openrouter, .mistral, .localMLX: return false
         }
     }
 }
@@ -303,6 +305,8 @@ class Settings: ObservableObject {
         static let transcriptionProvider = "transcription_provider"
         static let openaiTranscriptionApiKey = "openai_transcription_api_key"
         static let openaiTranscriptionModel = "openai_transcription_model"
+        static let openrouterTranscriptionApiKey = "openrouter_transcription_api_key"
+        static let openrouterTranscriptionModel = "openrouter_transcription_model"
         static let elevenlabsApiKey = "elevenlabs_api_key"
         static let elevenlabsModel = "elevenlabs_model"
         static let mistralTranscriptionApiKey = "mistral_transcription_api_key"
@@ -379,6 +383,14 @@ class Settings: ObservableObject {
 
     @Published var openaiTranscriptionModel: String {
         didSet { defaults.set(openaiTranscriptionModel, forKey: Keys.openaiTranscriptionModel) }
+    }
+
+    @Published var openrouterTranscriptionApiKey: String {
+        didSet { defaults.set(openrouterTranscriptionApiKey, forKey: Keys.openrouterTranscriptionApiKey) }
+    }
+
+    @Published var openrouterTranscriptionModel: String {
+        didSet { defaults.set(openrouterTranscriptionModel, forKey: Keys.openrouterTranscriptionModel) }
     }
 
     @Published var elevenlabsApiKey: String {
@@ -523,6 +535,11 @@ class Settings: ObservableObject {
         "scribe_v1"
     ]
 
+    static let openrouterTranscriptionModels = [
+        "qwen/qwen3-asr-0.6b",
+        "qwen/qwen3-asr-1.7b",
+    ]
+
     static let mistralTranscriptionModels = [
         "voxtral-mini-2602",
         "voxtral-mini-latest"
@@ -543,6 +560,7 @@ class Settings: ObservableObject {
     var currentTranscriptionApiKey: String {
         switch transcriptionProvider {
         case .openai: return openaiTranscriptionApiKey
+        case .openrouter: return openrouterTranscriptionApiKey
         case .elevenlabs: return elevenlabsApiKey
         case .mistral: return mistralTranscriptionApiKey
         case .doubao: return doubaoAccessKey
@@ -554,6 +572,7 @@ class Settings: ObservableObject {
     var currentTranscriptionModel: String {
         switch transcriptionProvider {
         case .openai: return openaiTranscriptionModel
+        case .openrouter: return openrouterTranscriptionModel
         case .elevenlabs: return elevenlabsModel
         case .mistral: return mistralTranscriptionModel
         case .doubao: return "bigmodel"
@@ -654,6 +673,8 @@ class Settings: ObservableObject {
         switch transcriptionProvider {
         case .openai:
             return !openaiTranscriptionApiKey.isEmpty
+        case .openrouter:
+            return !openrouterTranscriptionApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .elevenlabs:
             return !elevenlabsApiKey.isEmpty
         case .mistral:
@@ -670,6 +691,10 @@ class Settings: ObservableObject {
         case .openai:
             if openaiTranscriptionApiKey.isEmpty {
                 return "OpenAI API key required for voice input"
+            }
+        case .openrouter:
+            if openrouterTranscriptionApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "OpenRouter API key required for voice input"
             }
         case .elevenlabs:
             if elevenlabsApiKey.isEmpty {
@@ -706,6 +731,17 @@ class Settings: ObservableObject {
 
         self.openaiTranscriptionApiKey = defaults.string(forKey: Keys.openaiTranscriptionApiKey) ?? ""
         self.openaiTranscriptionModel = defaults.string(forKey: Keys.openaiTranscriptionModel) ?? "gpt-4o-transcribe"
+        self.openrouterTranscriptionApiKey = defaults.string(forKey: Keys.openrouterTranscriptionApiKey) ?? ""
+        let storedOpenRouterModel = defaults.string(forKey: Keys.openrouterTranscriptionModel)
+        let defaultOpenRouterModel = Settings.openrouterTranscriptionModels[0]
+        if let storedOpenRouterModel, Settings.openrouterTranscriptionModels.contains(storedOpenRouterModel) {
+            self.openrouterTranscriptionModel = storedOpenRouterModel
+        } else {
+            self.openrouterTranscriptionModel = defaultOpenRouterModel
+            if storedOpenRouterModel != nil {
+                defaults.set(defaultOpenRouterModel, forKey: Keys.openrouterTranscriptionModel)
+            }
+        }
         self.elevenlabsApiKey = defaults.string(forKey: Keys.elevenlabsApiKey) ?? ""
         self.elevenlabsModel = defaults.string(forKey: Keys.elevenlabsModel) ?? "scribe_v2"
         self.mistralTranscriptionApiKey = defaults.string(forKey: Keys.mistralTranscriptionApiKey) ?? ""

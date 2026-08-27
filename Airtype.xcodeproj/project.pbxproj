@@ -33,6 +33,7 @@
 		A1000D00000000000000000D /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000D00000000000000000D /* HotkeyManager.swift */; };
 		A1000E00000000000000000E /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E00000000000000000E /* MainWindowController.swift */; };
 		A1000F00000000000000000F /* MistralTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000F00000000000000000F /* MistralTranscriptionService.swift */; };
+		A10036000000000000000036 /* OpenRouterTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20036000000000000000036 /* OpenRouterTranscriptionService.swift */; };
 		A10010000000000000000010 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20010000000000000000010 /* SettingsWindowController.swift */; };
 		A10011000000000000000011 /* TextInserter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20011000000000000000011 /* TextInserter.swift */; };
 		A10012000000000000000012 /* WhisperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20012000000000000000012 /* WhisperService.swift */; };
@@ -91,6 +92,7 @@
 		A2000D00000000000000000D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		A2000E00000000000000000E /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		A2000F00000000000000000F /* MistralTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MistralTranscriptionService.swift; sourceTree = "<group>"; };
+		A20036000000000000000036 /* OpenRouterTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterTranscriptionService.swift; sourceTree = "<group>"; };
 		A20010000000000000000010 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		A20011000000000000000011 /* TextInserter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInserter.swift; sourceTree = "<group>"; };
 		A20019000000000000000019 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				A2000D00000000000000000D /* HotkeyManager.swift */,
 				A2000E00000000000000000E /* MainWindowController.swift */,
 				A2000F00000000000000000F /* MistralTranscriptionService.swift */,
+				A20036000000000000000036 /* OpenRouterTranscriptionService.swift */,
 				A20010000000000000000010 /* SettingsWindowController.swift */,
 				A20011000000000000000011 /* TextInserter.swift */,
 				A2001B00000000000000001B /* MLXTranscriptionService.swift */,
@@ -386,6 +389,7 @@
 				A1000D00000000000000000D /* HotkeyManager.swift in Sources */,
 				A1000E00000000000000000E /* MainWindowController.swift in Sources */,
 				A1000F00000000000000000F /* MistralTranscriptionService.swift in Sources */,
+				A10036000000000000000036 /* OpenRouterTranscriptionService.swift in Sources */,
 				A10010000000000000000010 /* SettingsWindowController.swift in Sources */,
 				A10011000000000000000011 /* TextInserter.swift in Sources */,
 				A10019000000000000000019 /* TranscriptionHistory.swift in Sources */,

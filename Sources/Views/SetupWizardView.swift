@@ -156,6 +156,7 @@ struct SetupWizardView: View {
     private var currentTranscriptionApiKeyBinding: Binding<String> {
         switch settings.transcriptionProvider {
         case .openai: return $settings.openaiTranscriptionApiKey
+        case .openrouter: return $settings.openrouterTranscriptionApiKey
         case .elevenlabs: return $settings.elevenlabsApiKey
         case .mistral: return $settings.mistralTranscriptionApiKey
         case .doubao: return $settings.doubaoAccessKey
@@ -169,6 +170,12 @@ struct SetupWizardView: View {
         case .openai:
             Picker("", selection: $settings.openaiTranscriptionModel) {
                 ForEach(Settings.openaiTranscriptionModels, id: \.self) { Text($0).tag($0) }
+            }
+            .labelsHidden()
+            .font(.system(size: 12, design: .monospaced))
+        case .openrouter:
+            Picker("", selection: $settings.openrouterTranscriptionModel) {
+                ForEach(Settings.openrouterTranscriptionModels, id: \.self) { Text($0).tag($0) }
             }
             .labelsHidden()
             .font(.system(size: 12, design: .monospaced))

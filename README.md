@@ -59,7 +59,9 @@ The main window organizes Airtype into four pages: **Home**, **History**, **Voca
 
 ## Cloud transcription and enhancement
 
-Local transcription is the simplest private setup, but Airtype also supports cloud transcription through **OpenAI**, **ElevenLabs**, **Mistral**, and **Doubao**. These providers require their own credentials and send audio to the selected service.
+Local transcription is the simplest private setup, but Airtype also supports cloud transcription through **OpenAI**, **OpenRouter**, **ElevenLabs**, **Mistral**, and **Doubao**. These providers require their own credentials and send audio to the selected service.
+
+OpenRouter transcription currently supports two selectable Qwen models: `qwen/qwen3-asr-0.6b` and `qwen/qwen3-asr-1.7b`. Airtype sends recordings to OpenRouter's dedicated speech-to-text endpoint and identifies itself through OpenRouter's application attribution headers.
 
 Optional AI enhancement can clean up a completed transcription without changing its intent. It supports OpenAI-compatible providers including OpenAI, OpenRouter, Together AI, Groq, DeepSeek, Moonshot AI, z.ai, Azure OpenAI, Cloudflare Workers AI, custom endpoints, and LM Studio for local enhancement.
 
