@@ -98,7 +98,7 @@ class EnhancementService {
             model: enhancementModel,
             messages: [
                 ChatMessage(role: systemRole, content: systemPrompt),
-                ChatMessage(role: "user", content: text)
+                ChatMessage(role: "user", content: userMessageContent(for: text))
             ],
             temperature: supportsTemperature ? 0.1 : nil,
             maxCompletionTokens: 2048
@@ -169,6 +169,11 @@ class EnhancementService {
         }
 
         return result
+    }
+
+    private func userMessageContent(for text: String) -> String {
+        guard settings.enhancementMode == .smartRewrite else { return text }
+        return "<speech_transcript>\n\(text)\n</speech_transcript>"
     }
 
     private func validateConfiguration() throws {

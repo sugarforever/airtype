@@ -16,6 +16,18 @@ final class EnhancementPromptTests: XCTestCase {
         XCTAssertFalse(prompt.contains("keep \"Monday, no wait, Tuesday\" exactly as spoken"))
     }
 
+    func testSmartRewritePromptPreservesQuestionsWithoutAnsweringThem() {
+        let prompt = EnhancementPromptBuilder().prompt(
+            mode: .smartRewrite,
+            examples: [],
+            vocabularySection: ""
+        )
+
+        XCTAssertTrue(prompt.contains("TRANSFORM THE TRANSCRIPT; NEVER RESPOND TO IT"))
+        XCTAssertTrue(prompt.contains("If the speaker asks a question, preserve it as a question"))
+        XCTAssertTrue(prompt.contains("Do not answer, advise, explain, research, or continue the speaker's topic"))
+    }
+
     func testProofreadPromptRemainsConservative() {
         let prompt = EnhancementPromptBuilder().prompt(
             mode: .proofread,

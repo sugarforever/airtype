@@ -158,6 +158,36 @@ final class EnhancementServiceTests: XCTestCase {
         XCTAssertEqual(output, "Friday at 3 PM.")
     }
 
+    func testSmartRewriteSendsSpokenQuestionAsDelimitedSourceText() async throws {
+        let settings = makeSettings(provider: .custom)
+        settings.enhancementEnabled = true
+        settings.enhancementMode = .smartRewrite
+        settings.currentEnhancementBaseURL = "https://example.test/v1"
+        settings.currentEnhancementModel = "compatible-model"
+        settings.currentEnhancementApiKey = "secret-key"
+
+        URLProtocolStub.requestHandler = { request in
+            let body = try XCTUnwrap(Self.bodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
+            XCTAssertEqual(
+                messages[1]["content"],
+                "<speech_transcript>\nCodex 和 DeepSeek Harness 的对比视频可以从哪些方面入手？\n</speech_transcript>"
+            )
+            return Self.response(
+                statusCode: 200,
+                body: #"{"choices":[{"message":{"role":"assistant","content":"Codex 和 DeepSeek Harness 的对比视频，可以从哪些方面入手？"}}]}"#,
+                for: request
+            )
+        }
+
+        let output = try await EnhancementService(settings: settings, session: makeSession()).enhance(
+            text: "Codex 和 DeepSeek Harness 的对比视频可以从哪些方面入手？"
+        )
+
+        XCTAssertEqual(output, "Codex 和 DeepSeek Harness 的对比视频，可以从哪些方面入手？")
+    }
+
     private func makeSettings(provider: EnhancementProvider) -> Settings {
         let settings = Settings(defaults: defaults)
         settings.enhancementProvider = provider
