@@ -634,6 +634,10 @@ class Settings: ObservableObject {
         enhancementConfigurationError == nil
     }
 
+    var canRecordWithSelectedEnhancementMode: Bool {
+        !enhancementEnabled || enhancementMode != .smartRewrite || isEnhancementConfigured
+    }
+
     var enhancementConfigurationError: String? {
         guard enhancementEnabled else {
             return "Enable Enhancement to use Smart Rewrite."

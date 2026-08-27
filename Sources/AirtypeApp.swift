@@ -418,7 +418,7 @@ class AppState: ObservableObject {
             debugLog("Already recording or processing, skipping")
             return
         }
-        guard canUseSelectedEnhancementMode else {
+        guard settings.canRecordWithSelectedEnhancementMode else {
             promptForEnhancementConfiguration()
             return
         }
@@ -461,10 +461,6 @@ class AppState: ObservableObject {
         }
         lastError = nil
         lastNotice = "Enhancement mode: \(mode.rawValue)"
-    }
-
-    private var canUseSelectedEnhancementMode: Bool {
-        settings.enhancementMode != .smartRewrite || settings.isEnhancementConfigured
     }
 
     private func promptForEnhancementConfiguration() {

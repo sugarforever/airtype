@@ -137,6 +137,17 @@ final class TranscriptionRequestTests: XCTestCase {
         XCTAssertEqual(settings.enhancementMode, .smartRewrite)
     }
 
+    func testDisabledEnhancementDoesNotBlockRecordingForStoredSmartRewriteMode() throws {
+        let suiteName = "airtype-enhancement-recording-guard-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.enhancementEnabled = false
+        settings.enhancementMode = .smartRewrite
+
+        XCTAssertTrue(settings.canRecordWithSelectedEnhancementMode)
+    }
+
     func testShortcutConflictNamesTheExistingAirtypeAction() throws {
         let suiteName = "airtype-shortcut-conflict-tests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
