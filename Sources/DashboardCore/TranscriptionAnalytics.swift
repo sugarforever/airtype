@@ -132,6 +132,7 @@ public struct AnalyticsSummary: Equatable, Sendable {
     public let averageLatencyMilliseconds: Double
     public let p95LatencyMilliseconds: Double
     public let audioDurationSeconds: Double
+    public let hasAudioDurationData: Bool
     public let inputTokens: Int
     public let outputTokens: Int
     public let totalTokens: Int
@@ -148,17 +149,23 @@ public struct AnalyticsSummary: Equatable, Sendable {
         let latencies = records.map(\.latencyMilliseconds)
         averageLatencyMilliseconds = latencies.isEmpty ? 0 : latencies.reduce(0, +) / Double(latencies.count)
         p95LatencyMilliseconds = Self.percentile95(latencies)
-        audioDurationSeconds = records.compactMap(\.audioDurationSeconds).reduce(0, +)
+        let audioDurations = records.compactMap(\.audioDurationSeconds)
+        audioDurationSeconds = audioDurations.reduce(0, +)
+        hasAudioDurationData = !audioDurations.isEmpty
 
         let inputs = records.compactMap(\.inputTokens)
         let outputs = records.compactMap(\.outputTokens)
-        let totals = records.compactMap(\.totalTokens)
         let costs = records.compactMap(\.costUSD)
         inputTokens = inputs.reduce(0, +)
         outputTokens = outputs.reduce(0, +)
-        totalTokens = totals.reduce(0, +)
+        let derivedTotals = records.compactMap { record -> Int? in
+            if let total = record.totalTokens { return total }
+            guard let input = record.inputTokens, let output = record.outputTokens else { return nil }
+            return input + output
+        }
+        totalTokens = derivedTotals.reduce(0, +)
         costUSD = costs.reduce(0, +)
-        hasTokenData = !inputs.isEmpty || !outputs.isEmpty || !totals.isEmpty
+        hasTokenData = !derivedTotals.isEmpty
         hasCostData = !costs.isEmpty
 
         modelSummaries = Dictionary(grouping: records) { record in
@@ -166,7 +173,11 @@ public struct AnalyticsSummary: Equatable, Sendable {
         }.values.map { group in
             let successes = group.count { $0.outcome == .success }
             let modelLatencies = group.map(\.latencyMilliseconds)
-            let modelTokens = group.compactMap(\.totalTokens)
+            let modelTokens = group.compactMap { record -> Int? in
+                if let total = record.totalTokens { return total }
+                guard let input = record.inputTokens, let output = record.outputTokens else { return nil }
+                return input + output
+            }
             let modelCosts = group.compactMap(\.costUSD)
             return ModelAnalyticsSummary(
                 provider: group[0].provider,

@@ -68,7 +68,11 @@ class ElevenLabsService {
             label: "ElevenLabs transcription decoded",
             characterCount: transcription.text.count
         ))
-        return transcription.text
+        let text = transcription.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            throw ElevenLabsError.emptyTranscription
+        }
+        return text
     }
 
     func createMultipartBody(audioData: Data, fileName: String, modelId: String, boundary: String, context: TranscriptionContext = .empty) -> Data {
@@ -131,6 +135,7 @@ enum ElevenLabsError: LocalizedError {
     case invalidResponse
     case httpError(Int)
     case apiError(String)
+    case emptyTranscription
 
     var errorDescription: String? {
         switch self {
@@ -142,6 +147,8 @@ enum ElevenLabsError: LocalizedError {
             return "HTTP error: \(code)"
         case .apiError(let message):
             return "API error: \(message)"
+        case .emptyTranscription:
+            return "Recording is empty or too short"
         }
     }
 }

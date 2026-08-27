@@ -139,6 +139,50 @@ final class TranscriptionAttempt {
             case .invalidResponse, .httpError, .apiError: return "provider"
             }
         }
+        if let whisperError = error as? WhisperError {
+            switch whisperError {
+            case .noAPIKey: return "authentication"
+            case .networkTimeout: return "timeout"
+            case .emptyRecording: return "empty"
+            case .invalidAudioFile, .audioProcessingFailed: return "audio"
+            case .fileTooLarge: return "file_size"
+            case .httpError(let status): return category(forHTTPStatus: status)
+            case .invalidResponse, .apiError: return "provider"
+            }
+        }
+        if let elevenLabsError = error as? ElevenLabsError {
+            switch elevenLabsError {
+            case .noAPIKey: return "authentication"
+            case .emptyTranscription: return "empty"
+            case .httpError(let status): return category(forHTTPStatus: status)
+            case .invalidResponse, .apiError: return "provider"
+            }
+        }
+        if let mistralError = error as? MistralTranscriptionError {
+            switch mistralError {
+            case .noAPIKey: return "authentication"
+            case .emptyRecording: return "empty"
+            case .httpError(let status): return category(forHTTPStatus: status)
+            case .invalidResponse, .apiError: return "provider"
+            }
+        }
+        if let localError = error as? LocalMLXTranscriptionError {
+            switch localError {
+            case .modelNotInstalled, .modelFileMissing: return "model"
+            case .emptyRecording: return "empty"
+            case .invalidAudioFile: return "audio"
+            case .runtimeUnavailable, .runtimeDependencyMissing, .runtimeExecutionFailed: return "runtime"
+            }
+        }
         return "unknown"
+    }
+
+    private static func category(forHTTPStatus status: Int) -> String {
+        switch status {
+        case 401, 403: return "authentication"
+        case 408, 504: return "timeout"
+        case 429: return "rate_limit"
+        default: return "provider"
+        }
     }
 }

@@ -265,6 +265,32 @@ final class TranscriptionRequestTests: XCTestCase {
         XCTAssertTrue(text.hasSuffix("\r\n--b--\r\n"))
     }
 
+    func testElevenLabsRejectsBlankTranscription() async throws {
+        let suiteName = "airtype-elevenlabs-empty-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = Settings(defaults: defaults)
+        settings.elevenlabsApiKey = "test-only"
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [TranscriptionCaptureProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer {
+            TranscriptionCaptureProtocol.setResponse()
+            session.invalidateAndCancel()
+        }
+        TranscriptionCaptureProtocol.setResponse(body: #"{"text":"  \n"}"#)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("airtype-elevenlabs-empty-\(UUID().uuidString).m4a")
+        try Data([1]).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        do {
+            _ = try await ElevenLabsService(settings: settings, session: session).transcribe(audioURL: file)
+            XCTFail("Expected blank transcription to fail")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "Recording is empty or too short")
+        }
+    }
+
     func testMistralActualMultipartIncludesContextBias() {
         let body = MistralTranscriptionService().createMultipartBody(audioData: Data([1, 2]), fileName: "a.wav", model: "voxtral-mini-2602", boundary: "b", context: TranscriptionContext(terms: ["Airtype"]))
         XCTAssertTrue(String(decoding: body, as: UTF8.self).contains("name=\"context_bias\"\r\n\r\nAirtype\r\n"))

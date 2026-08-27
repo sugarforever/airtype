@@ -115,4 +115,3 @@
 - [ ] **Step 3: Review the final diff** for credential/text/audio leakage, unrelated files, and migration risks.
 - [ ] **Step 4: Request code review**, address findings with failing tests first, and rerun verification.
 - [ ] **Step 5: Launch** with `./scripts/run-debug-app.sh`, confirm the fixed signed app path, and commit any final corrections.
-

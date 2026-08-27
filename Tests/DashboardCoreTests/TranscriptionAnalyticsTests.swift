@@ -85,9 +85,23 @@ final class TranscriptionAnalyticsTests: XCTestCase {
 
         XCTAssertFalse(AnalyticsSummary(records: [records[0]]).hasTokenData)
         XCTAssertFalse(AnalyticsSummary(records: [records[0]]).hasCostData)
+        XCTAssertFalse(AnalyticsSummary(records: [records[0]]).hasAudioDurationData)
         XCTAssertEqual(summary.modelSummaries.map(\.displayName), ["Local MLX · Small", "OpenRouter · Qwen"])
         let openRouterCost = try XCTUnwrap(summary.modelSummaries.last?.costUSD)
         XCTAssertEqual(openRouterCost, 0.004, accuracy: 0.000_001)
+    }
+
+    func testSummaryDerivesTotalTokensFromCompleteInputAndOutputPair() {
+        let completePair = TranscriptionMetric.fixture(inputTokens: 83, outputTokens: 30)
+        let inputOnly = TranscriptionMetric.fixture(inputTokens: 10)
+
+        let completeSummary = AnalyticsSummary(records: [completePair])
+        let partialSummary = AnalyticsSummary(records: [inputOnly])
+
+        XCTAssertTrue(completeSummary.hasTokenData)
+        XCTAssertEqual(completeSummary.totalTokens, 113)
+        XCTAssertFalse(partialSummary.hasTokenData)
+        XCTAssertEqual(partialSummary.totalTokens, 0)
     }
 
     func testClearRemovesPersistedRecordsAndPostsChange() {

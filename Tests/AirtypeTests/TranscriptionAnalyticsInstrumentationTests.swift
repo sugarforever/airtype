@@ -73,5 +73,30 @@ final class TranscriptionAnalyticsInstrumentationTests: XCTestCase {
         XCTAssertEqual(saved.count, 1)
         XCTAssertEqual(saved.first?.outcome, .success)
     }
+
+    func testProviderErrorsUseSanitizedUsefulCategories() {
+        let cases: [(Error, String)] = [
+            (WhisperError.networkTimeout, "timeout"),
+            (ElevenLabsError.noAPIKey, "authentication"),
+            (MistralTranscriptionError.emptyRecording, "empty"),
+            (LocalMLXTranscriptionError.modelNotInstalled("private model path"), "model"),
+        ]
+
+        for (error, expectedCategory) in cases {
+            var saved: [TranscriptionMetric] = []
+            let attempt = TranscriptionAttempt(
+                provider: "Test",
+                model: "Test",
+                audioDurationSeconds: nil,
+                elapsedMilliseconds: { 1 },
+                save: { saved.append($0) }
+            )
+
+            attempt.fail(error)
+
+            XCTAssertEqual(saved.first?.errorCategory, expectedCategory)
+            XCTAssertFalse(String(describing: saved.first).contains("private model path"))
+        }
+    }
 }
 #endif

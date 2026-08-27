@@ -22,4 +22,3 @@ Add a local analytics dashboard that measures transcription reliability and perf
 
 - Never persist API keys, audio bytes, raw transcription, enhanced text, prompts, or vocabulary in analytics records.
 - Never print OpenRouter credentials in logs.
-

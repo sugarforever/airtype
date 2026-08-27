@@ -741,6 +741,9 @@ class AppState: ObservableObject {
                         context: context
                     )
                 }
+                guard !transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw WhisperError.emptyRecording
+                }
                 analyticsAttempt.succeed(metadata: usageMetadata)
             } catch {
                 analyticsAttempt.fail(error)
@@ -753,11 +756,6 @@ class AppState: ObservableObject {
             ))
             streamOutput("\n\n--- Raw transcription ---")
             streamOutput(transcription)
-
-            // Check for empty transcription
-            if transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                throw WhisperError.emptyRecording
-            }
 
             // Step 2: Enhance (if enabled)
             let finalText: String

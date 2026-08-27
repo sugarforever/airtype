@@ -84,8 +84,8 @@ struct AnalyticsView: View {
                 )
                 MetricCard(
                     title: "Audio processed",
-                    value: Self.audioDuration(model.summary.audioDurationSeconds),
-                    detail: "Provider-reported when available"
+                    value: model.summary.hasAudioDurationData ? Self.audioDuration(model.summary.audioDurationSeconds) : "—",
+                    detail: model.summary.hasAudioDurationData ? "Provider-reported when available" : "Audio duration unavailable"
                 )
                 MetricCard(
                     title: "Tokens",
