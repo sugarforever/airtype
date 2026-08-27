@@ -29,6 +29,19 @@ final class ModelDownloadSizeProviderTests: XCTestCase {
         XCTAssertEqual(estimate, .init(bytes: 710_000_000, source: .catalogFallback))
     }
 
+    func testPartiallyMissingRemoteMetadataFallsBackInsteadOfUnderreporting() async {
+        let provider = ModelDownloadSizeProvider { _ in
+            [
+                .init(path: "model.safetensors", size: nil),
+                .init(path: "config.json", size: 2_000)
+            ]
+        }
+
+        let estimate = await provider.estimate(for: .qwen3ASR17B4bit)
+
+        XCTAssertEqual(estimate, .init(bytes: 1_610_000_000, source: .catalogFallback))
+    }
+
     func testSuccessfulRemoteEstimateIsCachedPerModel() async {
         let counter = RequestCounter()
         let provider = ModelDownloadSizeProvider { _ in
@@ -40,6 +53,46 @@ final class ModelDownloadSizeProviderTests: XCTestCase {
         _ = await provider.estimate(for: .qwen3ASR06B5bit)
 
         let requestCount = await counter.value
+        XCTAssertEqual(requestCount, 1)
+    }
+
+    func testConcurrentRequestsForSameModelShareOneMetadataLoad() async {
+        let counter = RequestCounter()
+        let provider = ModelDownloadSizeProvider { _ in
+            await counter.increment()
+            try await Task.sleep(for: .milliseconds(50))
+            return [.init(path: "model.safetensors", size: 84)]
+        }
+
+        async let first = provider.estimate(for: .qwen3ASR06B6bit)
+        async let second = provider.estimate(for: .qwen3ASR06B6bit)
+        let estimates = await [first, second]
+
+        let requestCount = await counter.value
+        XCTAssertEqual(estimates, [
+            .init(bytes: 84, source: .remote),
+            .init(bytes: 84, source: .remote)
+        ])
+        XCTAssertEqual(requestCount, 1)
+    }
+
+    func testCancellingOneCallerDoesNotPoisonSharedRemoteEstimate() async {
+        let counter = RequestCounter()
+        let provider = ModelDownloadSizeProvider { _ in
+            await counter.increment()
+            try await Task.sleep(for: .milliseconds(50))
+            return [.init(path: "MODEL.SAFETENSORS", size: 126)]
+        }
+        let cancelledCaller = Task {
+            await provider.estimate(for: .qwen3ASR06B8bit)
+        }
+        await Task.yield()
+        cancelledCaller.cancel()
+
+        let estimate = await provider.estimate(for: .qwen3ASR06B8bit)
+
+        let requestCount = await counter.value
+        XCTAssertEqual(estimate, .init(bytes: 126, source: .remote))
         XCTAssertEqual(requestCount, 1)
     }
 }

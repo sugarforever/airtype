@@ -27,6 +27,7 @@ actor ModelDownloadSizeProvider {
 
     private let metadataLoader: MetadataLoader
     private var cache: [LocalMLXModel: ModelDownloadSizeEstimate] = [:]
+    private var inFlight: [LocalMLXModel: Task<ModelDownloadSizeEstimate, Never>] = [:]
 
     init(metadataLoader: @escaping MetadataLoader) {
         self.metadataLoader = metadataLoader
@@ -42,25 +43,45 @@ actor ModelDownloadSizeProvider {
         if let cached = cache[model] {
             return cached
         }
-
-        let estimate: ModelDownloadSizeEstimate
-        do {
-            let files = try await metadataLoader(model.repoID)
-            let bytes = files.reduce(into: Int64.zero) { total, file in
-                guard Self.downloadedExtensions.contains(
-                    URL(fileURLWithPath: file.path).pathExtension.lowercased()
-                ), let size = file.size else { return }
-                total += size
-            }
-            estimate = bytes > 0
-                ? .init(bytes: bytes, source: .remote)
-                : .init(bytes: model.catalogDownloadSizeBytes, source: .catalogFallback)
-        } catch {
-            estimate = .init(bytes: model.catalogDownloadSizeBytes, source: .catalogFallback)
+        if let task = inFlight[model] {
+            return await task.value
         }
 
-        cache[model] = estimate
+        let loader = metadataLoader
+        let task = Task {
+            do {
+                let files = try await loader(model.repoID)
+                return Self.remoteEstimate(from: files)
+                    ?? .init(bytes: model.catalogDownloadSizeBytes, source: .catalogFallback)
+            } catch {
+                return .init(bytes: model.catalogDownloadSizeBytes, source: .catalogFallback)
+            }
+        }
+        inFlight[model] = task
+        let estimate = await task.value
+        inFlight[model] = nil
+        if estimate.source == .remote {
+            cache[model] = estimate
+        }
         return estimate
+    }
+
+    private static func remoteEstimate(from files: [RemoteModelFile]) -> ModelDownloadSizeEstimate? {
+        let downloadedFiles = files.filter {
+            downloadedExtensions.contains(
+                URL(fileURLWithPath: $0.path).pathExtension.lowercased()
+            )
+        }
+        guard !downloadedFiles.isEmpty else { return nil }
+
+        var bytes: Int64 = 0
+        for file in downloadedFiles {
+            guard let size = file.size, size > 0 else { return nil }
+            let addition = bytes.addingReportingOverflow(size)
+            guard !addition.overflow else { return nil }
+            bytes = addition.partialValue
+        }
+        return .init(bytes: bytes, source: .remote)
     }
 
     private static func loadRemoteFiles(repoID: String) async throws -> [RemoteModelFile] {
