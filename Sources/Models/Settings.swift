@@ -51,7 +51,7 @@ enum LocalMLXModel: String, CaseIterable, Identifiable {
     case qwen3ASR17B8bit = "Qwen3-ASR-1.7B-8bit"
     case qwen3ASR17Bbf16 = "Qwen3-ASR-1.7B-bf16"
 
-    private static let legacy17BName = "Qwen3-ASR-1.7B"
+    fileprivate static let legacy17BName = "Qwen3-ASR-1.7B"
 
     var id: String { rawValue }
 
@@ -261,18 +261,22 @@ class Settings: ObservableObject {
         return [dotCache]
     }
 
-    static private func localModelDirectoryURLCandidates(for model: LocalMLXModel) -> [URL] {
+    static func localModelDirectoryURLCandidates(for model: LocalMLXModel) -> [URL] {
         let repoFolderName = model.repoID.replacingOccurrences(of: "/", with: "_")
         let primaryCandidates = preferredLocalModelRootURLCandidates.map {
             $0.appendingPathComponent(repoFolderName, isDirectory: true)
         }
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let legacy = appSupport
-            .appendingPathComponent("Airtype/MLXModels", isDirectory: true)
-            .appendingPathComponent(model.directoryName, isDirectory: true)
+        let legacyRoot = appSupport.appendingPathComponent("Airtype/MLXModels", isDirectory: true)
+        var legacy = [legacyRoot.appendingPathComponent(model.directoryName, isDirectory: true)]
+        if model == .qwen3ASR17B4bit {
+            legacy.append(
+                legacyRoot.appendingPathComponent(LocalMLXModel.legacy17BName, isDirectory: true)
+            )
+        }
 
-        return primaryCandidates + [legacy]
+        return primaryCandidates + legacy
     }
 
     private let defaults: UserDefaults
@@ -711,7 +715,7 @@ class Settings: ObservableObject {
         let migratedChecksums = LocalMLXModel.migratedModelValues(storedChecksums)
         self.localMLXChecksums = migratedChecksums
 
-        if localModelRaw == "Qwen3-ASR-1.7B" {
+        if localModelRaw == LocalMLXModel.legacy17BName {
             defaults.set(LocalMLXModel.qwen3ASR17B4bit.rawValue, forKey: Keys.localMLXModel)
         }
         if migratedInstalledModels != storedInstalledModels {

@@ -61,6 +61,14 @@ final class LocalModelManagerTests: XCTestCase {
         XCTAssertEqual(migrated.currentLocalModelChecksum, "abc123")
     }
 
+    func testMigrated17BModelStillDiscoversLegacyApplicationSupportDirectory() {
+        let directoryNames = Settings.localModelDirectoryURLCandidates(for: .qwen3ASR17B4bit)
+            .map(\.lastPathComponent)
+
+        XCTAssertTrue(directoryNames.contains("Qwen3-ASR-1.7B"))
+        XCTAssertTrue(directoryNames.contains("Qwen3-ASR-1.7B-4bit"))
+    }
+
     func testInstallsSelectedVariantRepository() async {
         settings.localMLXModel = .qwen3ASR17Bbf16
         let manager = LocalModelManager(installer: { modelID, report in
