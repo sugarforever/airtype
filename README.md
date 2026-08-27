@@ -8,10 +8,20 @@ Airtype can transcribe entirely on your Mac with Apple MLX. No account or API ke
 
 ### Supported local models
 
-| Model | Best for |
-|---|---|
-| `Qwen3-ASR-0.6B-4bit` | Faster transcription with lower memory use; the default choice |
-| `Qwen3-ASR-1.7B-4bit` | A larger model when transcription quality is the priority |
+| Model | Approx. download | Best for |
+|---|---:|---|
+| `Qwen3-ASR-0.6B-4bit` | 0.71 GB | Lowest memory use; the default choice |
+| `Qwen3-ASR-0.6B-5bit` | 0.79 GB | Compact 0.6B model with higher precision |
+| `Qwen3-ASR-0.6B-6bit` | 0.86 GB | Middle ground for the 0.6B model |
+| `Qwen3-ASR-0.6B-8bit` | 1.01 GB | Higher-precision 0.6B model |
+| `Qwen3-ASR-0.6B-bf16` | 1.57 GB | Unquantized 0.6B model |
+| `Qwen3-ASR-1.7B-4bit` | 1.61 GB | Larger model with the lowest 1.7B memory use |
+| `Qwen3-ASR-1.7B-5bit` | 1.82 GB | Compact 1.7B model with higher precision |
+| `Qwen3-ASR-1.7B-6bit` | 2.04 GB | Middle ground for the 1.7B model |
+| `Qwen3-ASR-1.7B-8bit` | 2.47 GB | Higher-precision 1.7B model |
+| `Qwen3-ASR-1.7B-bf16` | 4.08 GB | Unquantized 1.7B model; highest resource use |
+
+Download sizes are approximate and do not include temporary files or duplicate cache copies. Higher precision increases resource use but does not guarantee better recognition for every recording.
 
 Local transcription currently supports automatic language detection, English, and Chinese.
 
@@ -61,7 +71,7 @@ Airtype automatically uses your existing proper nouns to guide recognition, even
 
 | Backend | Recognition-time guidance |
 | --- | --- |
-| MLX Local (both Qwen3-ASR models) | Native `context` text, entirely on-device |
+| MLX Local (all Qwen3-ASR models) | Native `context` text, entirely on-device |
 | OpenAI (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `whisper-1`) | `prompt` text; soft guidance, not forced replacements |
 | ElevenLabs (`scribe_v2`) | `keyterms`; incurs an additional 20% transcription surcharge under current provider pricing |
 | Mistral (`voxtral-mini-2602`, `voxtral-mini-latest`) | `context_bias`; optimized for English, other languages experimental |

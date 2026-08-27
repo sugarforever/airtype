@@ -14,20 +14,11 @@ struct QwenASRAdapter: LocalASRAdapter {
     ) async throws -> String {
         _ = computeMode // reserved for future runtime tuning flags
         return try await MLXAudioRunner.transcribe(
-            modelID: modelID,
+            modelID: model.repoID,
             audioPath: audioURL.path,
             languageCode: languageCode(for: language),
             context: context
         )
-    }
-
-    private var modelID: String {
-        switch model {
-        case .qwen3ASR06B4bit:
-            return "mlx-community/Qwen3-ASR-0.6B-4bit"
-        case .qwen3ASR17B:
-            return "mlx-community/Qwen3-ASR-1.7B-4bit"
-        }
     }
 
     private func languageCode(for language: LocalMLXLanguage) -> String? {

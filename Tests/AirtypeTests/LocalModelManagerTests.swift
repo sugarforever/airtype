@@ -20,6 +20,59 @@ final class LocalModelManagerTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
     }
 
+    func testModelCatalogMapsEverySupportedVariantToItsRepository() {
+        let expected: [(LocalMLXModel, String)] = [
+            (.qwen3ASR06B4bit, "Qwen3-ASR-0.6B-4bit"),
+            (.qwen3ASR06B5bit, "Qwen3-ASR-0.6B-5bit"),
+            (.qwen3ASR06B6bit, "Qwen3-ASR-0.6B-6bit"),
+            (.qwen3ASR06B8bit, "Qwen3-ASR-0.6B-8bit"),
+            (.qwen3ASR06Bbf16, "Qwen3-ASR-0.6B-bf16"),
+            (.qwen3ASR17B4bit, "Qwen3-ASR-1.7B-4bit"),
+            (.qwen3ASR17B5bit, "Qwen3-ASR-1.7B-5bit"),
+            (.qwen3ASR17B6bit, "Qwen3-ASR-1.7B-6bit"),
+            (.qwen3ASR17B8bit, "Qwen3-ASR-1.7B-8bit"),
+            (.qwen3ASR17Bbf16, "Qwen3-ASR-1.7B-bf16")
+        ]
+
+        XCTAssertEqual(LocalMLXModel.allCases.map(\.rawValue), expected.map(\.1))
+        for (model, name) in expected {
+            XCTAssertEqual(model.repoID, "mlx-community/\(name)")
+            XCTAssertEqual(
+                model.defaultDownloadURL,
+                "https://huggingface.co/mlx-community/\(name)/resolve/main/model.safetensors"
+            )
+        }
+    }
+
+    func testLegacy17BSelectionAndInstalledRecordMigrateToExplicit4bitIdentity() throws {
+        defaults.set("Qwen3-ASR-1.7B", forKey: "local_mlx_model")
+        defaults.set(["Qwen3-ASR-0.6B-4bit", "Qwen3-ASR-1.7B"], forKey: "local_mlx_installed_models")
+        defaults.set(["Qwen3-ASR-1.7B": "https://example.com/model.safetensors"], forKey: "local_mlx_download_urls")
+        defaults.set(["Qwen3-ASR-1.7B": "abc123"], forKey: "local_mlx_checksums")
+
+        let migrated = Settings(defaults: defaults)
+
+        XCTAssertEqual(migrated.localMLXModel, .qwen3ASR17B4bit)
+        XCTAssertEqual(
+            migrated.localMLXInstalledModels,
+            ["Qwen3-ASR-0.6B-4bit", "Qwen3-ASR-1.7B-4bit"]
+        )
+        XCTAssertEqual(migrated.currentLocalModelDownloadURLOverride, "https://example.com/model.safetensors")
+        XCTAssertEqual(migrated.currentLocalModelChecksum, "abc123")
+    }
+
+    func testInstallsSelectedVariantRepository() async {
+        settings.localMLXModel = .qwen3ASR17Bbf16
+        let manager = LocalModelManager(installer: { modelID, report in
+            XCTAssertEqual(modelID, "mlx-community/Qwen3-ASR-1.7B-bf16")
+            report(.loading)
+        })
+
+        await manager.installSelectedModel(settings: settings)
+
+        XCTAssertEqual(settings.localMLXInstalledModels, ["Qwen3-ASR-1.7B-bf16"])
+    }
+
     func testPublishesDownloadAndLoadingBeforeMarkingInstalled() async {
         var manager: LocalModelManager!
         manager = LocalModelManager(installer: { modelID, report in
@@ -47,7 +100,7 @@ final class LocalModelManagerTests: XCTestCase {
     func testSelectionChangeDoesNotChangeInstalledModelIdentity() async {
         let manager = LocalModelManager(installer: { _, report in
             report(.downloading(0.5))
-            self.settings.localMLXModel = .qwen3ASR17B
+            self.settings.localMLXModel = .qwen3ASR17B4bit
             await Task.yield()
             report(.loading)
         })
@@ -66,7 +119,7 @@ final class LocalModelManagerTests: XCTestCase {
             calls += 1
             guard calls == 1 else { return }
             report(.downloading(0.42))
-            self.settings.localMLXModel = .qwen3ASR17B
+            self.settings.localMLXModel = .qwen3ASR17B4bit
             await manager.installSelectedModel(settings: self.settings)
             XCTAssertEqual(manager.phase, .downloading(0.42))
             XCTAssertEqual(manager.model, .qwen3ASR06B4bit)
@@ -165,9 +218,9 @@ final class LocalModelManagerTests: XCTestCase {
         XCTAssertNil(manager.phase)
         XCTAssertFalse(manager.isInstalling)
 
-        settings.localMLXModel = .qwen3ASR17B
+        settings.localMLXModel = .qwen3ASR17B4bit
         await manager.installSelectedModel(settings: settings)
-        XCTAssertEqual(settings.localMLXInstalledModels, ["Qwen3-ASR-0.6B-4bit", "Qwen3-ASR-1.7B"])
+        XCTAssertEqual(settings.localMLXInstalledModels, ["Qwen3-ASR-0.6B-4bit", "Qwen3-ASR-1.7B-4bit"])
     }
 
     func testRemovalClearsModelAndHubCacheWithoutTouchingOtherModels() throws {

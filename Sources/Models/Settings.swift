@@ -41,7 +41,17 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
 
 enum LocalMLXModel: String, CaseIterable, Identifiable {
     case qwen3ASR06B4bit = "Qwen3-ASR-0.6B-4bit"
-    case qwen3ASR17B = "Qwen3-ASR-1.7B"
+    case qwen3ASR06B5bit = "Qwen3-ASR-0.6B-5bit"
+    case qwen3ASR06B6bit = "Qwen3-ASR-0.6B-6bit"
+    case qwen3ASR06B8bit = "Qwen3-ASR-0.6B-8bit"
+    case qwen3ASR06Bbf16 = "Qwen3-ASR-0.6B-bf16"
+    case qwen3ASR17B4bit = "Qwen3-ASR-1.7B-4bit"
+    case qwen3ASR17B5bit = "Qwen3-ASR-1.7B-5bit"
+    case qwen3ASR17B6bit = "Qwen3-ASR-1.7B-6bit"
+    case qwen3ASR17B8bit = "Qwen3-ASR-1.7B-8bit"
+    case qwen3ASR17Bbf16 = "Qwen3-ASR-1.7B-bf16"
+
+    private static let legacy17BName = "Qwen3-ASR-1.7B"
 
     var id: String { rawValue }
 
@@ -50,21 +60,36 @@ enum LocalMLXModel: String, CaseIterable, Identifiable {
     }
 
     var repoID: String {
-        switch self {
-        case .qwen3ASR06B4bit:
-            return "mlx-community/Qwen3-ASR-0.6B-4bit"
-        case .qwen3ASR17B:
-            return "mlx-community/Qwen3-ASR-1.7B-4bit"
-        }
+        "mlx-community/\(rawValue)"
     }
 
     var defaultDownloadURL: String {
-        switch self {
-        case .qwen3ASR06B4bit:
-            return "https://huggingface.co/mlx-community/Qwen3-ASR-0.6B-4bit/resolve/main/model.safetensors"
-        case .qwen3ASR17B:
-            return "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-4bit/resolve/main/model.safetensors"
+        "https://huggingface.co/\(repoID)/resolve/main/model.safetensors"
+    }
+
+    static func model(forPersistedRawValue rawValue: String) -> Self? {
+        if rawValue == legacy17BName {
+            return .qwen3ASR17B4bit
         }
+        return Self(rawValue: rawValue)
+    }
+
+    static func migratedInstalledModelNames(_ names: [String]) -> [String] {
+        var seen = Set<String>()
+        return names.compactMap { name in
+            let migrated = name == legacy17BName ? Self.qwen3ASR17B4bit.rawValue : name
+            return seen.insert(migrated).inserted ? migrated : nil
+        }
+    }
+
+    static func migratedModelValues(_ values: [String: String]) -> [String: String] {
+        guard let legacyValue = values[legacy17BName] else { return values }
+        var migrated = values
+        if migrated[qwen3ASR17B4bit.rawValue] == nil {
+            migrated[qwen3ASR17B4bit.rawValue] = legacyValue
+        }
+        migrated.removeValue(forKey: legacy17BName)
+        return migrated
     }
 }
 
@@ -671,14 +696,33 @@ class Settings: ObservableObject {
         self.doubaoResourceId = defaults.string(forKey: Keys.doubaoResourceId) ?? "volc.seedasr.sauc.duration"
         self.doubaoLanguage = defaults.string(forKey: Keys.doubaoLanguage) ?? "zh-CN"
         let localModelRaw = defaults.string(forKey: Keys.localMLXModel) ?? LocalMLXModel.qwen3ASR06B4bit.rawValue
-        self.localMLXModel = LocalMLXModel(rawValue: localModelRaw) ?? .qwen3ASR06B4bit
+        self.localMLXModel = LocalMLXModel.model(forPersistedRawValue: localModelRaw) ?? .qwen3ASR06B4bit
         let localLanguageRaw = defaults.string(forKey: Keys.localMLXLanguage) ?? LocalMLXLanguage.auto.rawValue
         self.localMLXLanguage = LocalMLXLanguage(rawValue: localLanguageRaw) ?? .auto
         let localComputeModeRaw = defaults.string(forKey: Keys.localMLXComputeMode) ?? LocalMLXComputeMode.balanced.rawValue
         self.localMLXComputeMode = LocalMLXComputeMode(rawValue: localComputeModeRaw) ?? .balanced
-        self.localMLXInstalledModels = defaults.stringArray(forKey: Keys.localMLXInstalledModels) ?? []
-        self.localMLXDownloadURLs = defaults.dictionary(forKey: Keys.localMLXDownloadURLs) as? [String: String] ?? [:]
-        self.localMLXChecksums = defaults.dictionary(forKey: Keys.localMLXChecksums) as? [String: String] ?? [:]
+        let storedInstalledModels = defaults.stringArray(forKey: Keys.localMLXInstalledModels) ?? []
+        let migratedInstalledModels = LocalMLXModel.migratedInstalledModelNames(storedInstalledModels)
+        self.localMLXInstalledModels = migratedInstalledModels
+        let storedDownloadURLs = defaults.dictionary(forKey: Keys.localMLXDownloadURLs) as? [String: String] ?? [:]
+        let migratedDownloadURLs = LocalMLXModel.migratedModelValues(storedDownloadURLs)
+        self.localMLXDownloadURLs = migratedDownloadURLs
+        let storedChecksums = defaults.dictionary(forKey: Keys.localMLXChecksums) as? [String: String] ?? [:]
+        let migratedChecksums = LocalMLXModel.migratedModelValues(storedChecksums)
+        self.localMLXChecksums = migratedChecksums
+
+        if localModelRaw == "Qwen3-ASR-1.7B" {
+            defaults.set(LocalMLXModel.qwen3ASR17B4bit.rawValue, forKey: Keys.localMLXModel)
+        }
+        if migratedInstalledModels != storedInstalledModels {
+            defaults.set(migratedInstalledModels, forKey: Keys.localMLXInstalledModels)
+        }
+        if migratedDownloadURLs != storedDownloadURLs {
+            defaults.set(migratedDownloadURLs, forKey: Keys.localMLXDownloadURLs)
+        }
+        if migratedChecksums != storedChecksums {
+            defaults.set(migratedChecksums, forKey: Keys.localMLXChecksums)
+        }
 
         // Enhancement settings
         self.enhancementEnabled = defaults.object(forKey: Keys.enhancementEnabled) as? Bool ?? true
