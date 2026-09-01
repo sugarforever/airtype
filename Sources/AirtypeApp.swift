@@ -238,6 +238,8 @@ class AppState: ObservableObject {
     private var preconnectedStreamingService: DoubaoStreamingService?
     private var preconnectTask: Task<Void, Never>?
     private var processingTask: Task<Void, Never>?
+    private let recordingAudioInterruptionController = RecordingAudioInterruptionController()
+    private var isStartingRecording = false
 
     var menuBarIcon: String {
         if isRecording {
@@ -403,7 +405,7 @@ class AppState: ObservableObject {
 
     func startRecording() async {
         debugLog("startRecording called")
-        guard !isRecording && !isProcessing else {
+        guard !isRecording && !isProcessing && !isStartingRecording else {
             debugLog("Already recording or processing, skipping")
             return
         }
@@ -412,7 +414,13 @@ class AppState: ObservableObject {
             lastError = settings.configurationError ?? "Please configure API keys in Settings"
             return
         }
+        isStartingRecording = true
         do {
+            await recordingAudioInterruptionController.recordingDidStart()
+            guard isStartingRecording else {
+                await recordingAudioInterruptionController.recordingDidEnd()
+                return
+            }
             if shouldUseStreaming {
                 try await startStreamingRecording()
             } else {
@@ -421,6 +429,7 @@ class AppState: ObservableObject {
             }
 
             isRecording = true
+            isStartingRecording = false
             recordingStartTime = Date()
             lastError = nil
             lastNotice = nil
@@ -430,11 +439,16 @@ class AppState: ObservableObject {
             if settings.showFloatingWindow {
                 floatingWindowManager.show(with: self)
             }
+        } catch is CancellationError {
+            isStartingRecording = false
+            await recordingAudioInterruptionController.recordingDidEnd()
         } catch {
             debugLog(PrivacySafeDiagnostics.errorEvent(
                 label: "Failed to start recording",
                 error: error
             ))
+            isStartingRecording = false
+            await recordingAudioInterruptionController.recordingDidEnd()
             lastError = error.localizedDescription
         }
     }
@@ -442,6 +456,8 @@ class AppState: ObservableObject {
     private func startStreamingRecording() async throws {
         let service: DoubaoStreamingService
         if let preconnected = preconnectedStreamingService, await !preconnected.isStale() {
+            try Task.checkCancellation()
+            guard isStartingRecording else { throw CancellationError() }
             service = preconnected
             preconnectedStreamingService = nil
             debugLog("Using pre-connected streaming service")
@@ -458,6 +474,10 @@ class AppState: ObservableObject {
                 language: settings.doubaoLanguage
             )
             try await service.connect()
+            guard isStartingRecording else {
+                await service.disconnect()
+                throw CancellationError()
+            }
             debugLog("Streaming WebSocket connected (fresh)")
         }
         // Snapshot at session start, not transport preconnection, so vocabulary edits are fresh.
@@ -465,8 +485,16 @@ class AppState: ObservableObject {
             repository: vocabularyRepository,
             enabled: settings.transcriptionVocabularyEnabled
         )
+        guard isStartingRecording else {
+            await service.disconnect()
+            throw CancellationError()
+        }
         // Send init message now — starts the server's audio timeout
         try await service.startSession(context: context)
+        guard isStartingRecording else {
+            await service.disconnect()
+            throw CancellationError()
+        }
         self.streamingService = service
 
         finalizedStreamText = ""
@@ -603,10 +631,17 @@ class AppState: ObservableObject {
 
     func stopAndProcess() async {
         debugLog("stopAndProcess called, isRecording: \(isRecording)")
+        if isStartingRecording {
+            isStartingRecording = false
+            await recordingAudioInterruptionController.recordingDidEnd()
+            return
+        }
         guard isRecording else {
             debugLog("Not recording, skipping")
             return
         }
+
+        await recordingAudioInterruptionController.recordingDidEnd()
 
         if shouldUseStreaming {
             await stopStreamingAndProcess()
@@ -807,6 +842,10 @@ class AppState: ObservableObject {
     }
 
     func cancelRecording() {
+        isStartingRecording = false
+        Task { @MainActor in
+            await recordingAudioInterruptionController.recordingDidEnd()
+        }
         if shouldUseStreaming {
             streamingCapture?.stop()
             streamingCapture = nil

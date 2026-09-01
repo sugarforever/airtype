@@ -28,6 +28,7 @@
 		A10008000000000000000008 /* FloatingGlassBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20008000000000000000008 /* FloatingGlassBackgroundView.swift */; };
 		A10009000000000000000009 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20009000000000000000009 /* WaveformView.swift */; };
 		A1000A00000000000000000A /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000A00000000000000000A /* AudioRecorder.swift */; };
+		C10001000000000000000001 /* RecordingAudioInterruptionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001000000000000000001 /* RecordingAudioInterruptionController.swift */; };
 		A1000B00000000000000000B /* ElevenLabsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000B00000000000000000B /* ElevenLabsService.swift */; };
 		A1000C00000000000000000C /* EnhancementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000C00000000000000000C /* EnhancementService.swift */; };
 		A1000D00000000000000000D /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000D00000000000000000D /* HotkeyManager.swift */; };
@@ -86,6 +87,7 @@
 		A20009000000000000000009 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
 		A20014000000000000000014 /* SetupWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupWizardView.swift; sourceTree = "<group>"; };
 		A2000A00000000000000000A /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
+		C20001000000000000000001 /* RecordingAudioInterruptionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingAudioInterruptionController.swift; sourceTree = "<group>"; };
 		A2000B00000000000000000B /* ElevenLabsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevenLabsService.swift; sourceTree = "<group>"; };
 		A2000C00000000000000000C /* EnhancementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementService.swift; sourceTree = "<group>"; };
 		A2000D00000000000000000D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
@@ -204,6 +206,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000A00000000000000000A /* AudioRecorder.swift */,
+				C20001000000000000000001 /* RecordingAudioInterruptionController.swift */,
 				B22900000000000000000001 /* AppUpdater.swift */,
 				A2000B00000000000000000B /* ElevenLabsService.swift */,
 				A2000C00000000000000000C /* EnhancementService.swift */,
@@ -380,6 +383,7 @@
 				A10014000000000000000014 /* SetupWizardView.swift in Sources */,
 				A1001A00000000000000001A /* TranscriptionHistoryView.swift in Sources */,
 				A1000A00000000000000000A /* AudioRecorder.swift in Sources */,
+				C10001000000000000000001 /* RecordingAudioInterruptionController.swift in Sources */,
 				B12900000000000000000002 /* AppUpdater.swift in Sources */,
 				A1000B00000000000000000B /* ElevenLabsService.swift in Sources */,
 				A1000C00000000000000000C /* EnhancementService.swift in Sources */,
