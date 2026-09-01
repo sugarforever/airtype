@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [v0.14.4] - 2026-09-01
+
+### Added
+- OpenRouter transcription with Qwen3 ASR 0.6B and 1.7B model selection and AirType attribution
+- Analytics dashboard for transcription reliability, latency, processed audio, token usage, API cost, and OpenRouter key usage
+- Automatic pausing of active media while recording, with safe restoration when the same media item remains active
+
+### Changed
+- Analytics uses a flatter, full-width layout with smoother native scrolling and resilient metric-card number formatting
+
+### Fixed
+- OpenRouter timeout failures now show a clearer message in the floating recording panel
+- Media playback is not resumed when the active application or media item changes during recording
+
+### Privacy
+- Analytics stores only local request metrics and provider-reported usage; it does not store transcript or audio content
+
 ## [v0.14.3] - 2026-08-27
 
 ### Added
