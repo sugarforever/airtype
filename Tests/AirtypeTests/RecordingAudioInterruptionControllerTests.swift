@@ -10,8 +10,25 @@ final class RecordingAudioInterruptionControllerTests: XCTestCase {
         XCTAssertFalse(MediaRemotePlaybackState(rawValue: 3).isPlaying)
     }
 
+    func testWeakNowPlayingMetadataDoesNotCreateMediaIdentifier() {
+        let info: CFDictionary = [
+            "kMRMediaRemoteNowPlayingInfoTitle": "Repeated title"
+        ] as CFDictionary
+
+        XCTAssertNil(nowPlayingMediaIdentifier(from: info))
+    }
+
     func testRecordingTemporarilyPausesActivePlayback() async {
-        let playback = TestMediaPlayback(session: .init(processIdentifier: 42, isPlaying: true))
+        let playback = TestMediaPlayback(session: .init(
+            processIdentifier: 42,
+            isPlaying: true,
+            mediaIdentifier: "video-a"
+        ))
+        playback.sessionAfterPause = .init(
+            processIdentifier: 42,
+            isPlaying: false,
+            mediaIdentifier: "video-a"
+        )
         let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
 
         await controller.recordingDidStart()
@@ -21,14 +38,25 @@ final class RecordingAudioInterruptionControllerTests: XCTestCase {
         XCTAssertEqual(playback.resumeCallCount, 1)
     }
 
-    func testRecordingDoesNotStartPlaybackThatWasAlreadyPaused() async {
+    func testRecordingSendsExplicitPauseButDoesNotResumePlaybackThatWasAlreadyPaused() async {
         let playback = TestMediaPlayback(session: .init(processIdentifier: 42, isPlaying: false))
         let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
 
         await controller.recordingDidStart()
-        XCTAssertEqual(playback.pauseCallCount, 0)
+        XCTAssertEqual(playback.pauseCallCount, 1)
         await controller.recordingDidEnd()
 
+        XCTAssertEqual(playback.resumeCallCount, 0)
+    }
+
+    func testRecordingSendsExplicitPauseWhenNowPlayingQueryTimesOutWithoutResuming() async {
+        let playback = TestMediaPlayback(session: nil)
+        let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
+
+        await controller.recordingDidStart()
+        XCTAssertEqual(playback.pauseCallCount, 1)
+
+        await controller.recordingDidEnd()
         XCTAssertEqual(playback.resumeCallCount, 0)
     }
 
@@ -43,11 +71,24 @@ final class RecordingAudioInterruptionControllerTests: XCTestCase {
     }
 
     func testRecordingDoesNotResumeDifferentPlaybackSession() async {
-        let playback = TestMediaPlayback(session: .init(processIdentifier: 42, isPlaying: true))
+        let playback = TestMediaPlayback(session: .init(
+            processIdentifier: 42,
+            isPlaying: true,
+            mediaIdentifier: "video-a"
+        ))
+        playback.sessionAfterPause = .init(
+            processIdentifier: 42,
+            isPlaying: false,
+            mediaIdentifier: "video-a"
+        )
         let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
 
         await controller.recordingDidStart()
-        playback.session = .init(processIdentifier: 99, isPlaying: false)
+        playback.session = .init(
+            processIdentifier: 99,
+            isPlaying: false,
+            mediaIdentifier: "video-b"
+        )
         await controller.recordingDidEnd()
 
         XCTAssertEqual(playback.resumeCallCount, 0)
@@ -62,6 +103,42 @@ final class RecordingAudioInterruptionControllerTests: XCTestCase {
         XCTAssertEqual(playback.resumeCallCount, 0)
 
         await controller.recordingDidEnd()
+        XCTAssertEqual(playback.resumeCallCount, 0)
+    }
+
+    func testOwnerChangeDuringPauseDoesNotResumeOriginalSessionIfItReturns() async {
+        let playback = TestMediaPlayback(session: .init(processIdentifier: 42, isPlaying: true))
+        playback.sessionAfterPause = .init(processIdentifier: 99, isPlaying: false)
+        let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
+
+        await controller.recordingDidStart()
+        playback.session = .init(processIdentifier: 42, isPlaying: false)
+        await controller.recordingDidEnd()
+
+        XCTAssertEqual(playback.resumeCallCount, 0)
+    }
+
+    func testRecordingDoesNotResumeDifferentMediaItemInSameApplication() async {
+        let playback = TestMediaPlayback(session: .init(
+            processIdentifier: 42,
+            isPlaying: true,
+            mediaIdentifier: "video-a"
+        ))
+        playback.sessionAfterPause = .init(
+            processIdentifier: 42,
+            isPlaying: false,
+            mediaIdentifier: "video-a"
+        )
+        let controller = RecordingAudioInterruptionController(mediaPlayback: playback)
+
+        await controller.recordingDidStart()
+        playback.session = .init(
+            processIdentifier: 42,
+            isPlaying: false,
+            mediaIdentifier: "video-b"
+        )
+        await controller.recordingDidEnd()
+
         XCTAssertEqual(playback.resumeCallCount, 0)
     }
 }

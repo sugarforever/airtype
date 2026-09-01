@@ -7,7 +7,7 @@ struct AnalyticsView: View {
     @Bindable var model: AnalyticsPageModel
 
     private let columns = [
-        GridItem(.adaptive(minimum: 145, maximum: 220), spacing: 12),
+        GridItem(.adaptive(minimum: 180, maximum: 280), spacing: 12),
     ]
 
     var body: some View {
@@ -26,44 +26,23 @@ struct AnalyticsView: View {
                 openRouterUsage
                 privacyNote
             }
-            .padding(28)
-            .frame(maxWidth: 980, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .confirmationDialog(
-            "Clear analytics data?",
-            isPresented: Binding(
-                get: { model.isClearConfirmationPresented },
-                set: { if !$0 { model.cancelClear() } }
-            )
-        ) {
-            Button("Clear analytics", role: .destructive, action: model.confirmClear)
-            Button("Cancel", role: .cancel, action: model.cancelClear)
-        } message: {
-            Text("This removes locally stored request metrics. It does not affect OpenRouter billing history.")
-        }
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .task {
             await model.refreshOpenRouterUsage()
         }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Analytics")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                Text("Transcription reliability, speed, and provider usage")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
-            Spacer()
-
-            if model.summary.callCount > 0 {
-                Button("Clear", action: model.requestClear)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(Theme.statusRed)
-            }
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Analytics")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(Theme.textPrimary)
+            Text("Transcription reliability, speed, and provider usage")
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.textSecondary)
         }
     }
 
@@ -132,18 +111,15 @@ struct AnalyticsView: View {
                     }
                 }
             }
-            .background(Theme.cardBg, in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Theme.border, lineWidth: 1)
-            }
+            .overlay(alignment: .top) { Divider() }
+            .overlay(alignment: .bottom) { Divider() }
         }
     }
 
     private var recentRequests: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("Recent requests")
-            LazyVStack(spacing: 0) {
+            VStack(spacing: 0) {
                 ForEach(model.recentRecords) { record in
                     HStack(spacing: 12) {
                         Image(systemName: record.outcome == .success ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
@@ -173,11 +149,8 @@ struct AnalyticsView: View {
                     }
                 }
             }
-            .background(Theme.cardBg, in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Theme.border, lineWidth: 1)
-            }
+            .overlay(alignment: .top) { Divider() }
+            .overlay(alignment: .bottom) { Divider() }
         }
     }
 
@@ -216,13 +189,10 @@ struct AnalyticsView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
-            .padding(14)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.cardBg, in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Theme.border, lineWidth: 1)
-            }
+            .overlay(alignment: .top) { Divider() }
+            .overlay(alignment: .bottom) { Divider() }
         }
     }
 
@@ -253,9 +223,14 @@ struct AnalyticsView: View {
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .allowsTightening(true)
             Text(label)
                 .font(.system(size: 9))
                 .foregroundStyle(Theme.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(minWidth: 54, alignment: .trailing)
     }
@@ -275,7 +250,8 @@ struct AnalyticsView: View {
     }
 
     private static func currency(_ value: Double) -> String {
-        value.formatted(.currency(code: "USD").precision(.fractionLength(value < 0.01 ? 6 : 2)))
+        let fractionLength = value > 0 && value < 0.01 ? 6 : 2
+        return "$" + value.formatted(.number.precision(.fractionLength(fractionLength)))
     }
 }
 
@@ -293,6 +269,9 @@ private struct MetricCard: View {
                 .font(.system(size: 21, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .allowsTightening(true)
             Text(detail)
                 .font(.system(size: 9))
                 .foregroundStyle(Theme.textTertiary)
